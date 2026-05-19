@@ -17,6 +17,7 @@ async function fetchDiagnostic(name, url, token) {
 
   try {
     const response = await fetch(url, {
+      method: 'GET',
       headers: {
         Authorization: `Bearer ${token.access_token}`,
       },
@@ -33,6 +34,7 @@ async function fetchDiagnostic(name, url, token) {
 
     return {
       name,
+      method: 'GET',
       url,
       status: response.status,
       ok: response.ok,
@@ -42,6 +44,7 @@ async function fetchDiagnostic(name, url, token) {
   } catch (error) {
     return {
       name,
+      method: 'GET',
       url,
       status: null,
       ok: false,
@@ -53,13 +56,10 @@ async function fetchDiagnostic(name, url, token) {
 
 function findAdvertisersFromResponse(data) {
   if (!data) return [];
-
   if (Array.isArray(data)) return data;
   if (Array.isArray(data.advertisers)) return data.advertisers;
   if (Array.isArray(data.results)) return data.results;
-
   if (data.advertiser_id || data.id) return [data];
-
   return [];
 }
 
@@ -68,7 +68,150 @@ function getAdvertiserId(candidate) {
   return candidate.advertiser_id || candidate.id || candidate.user_id || null;
 }
 
-async function diagnoseAccount(accountKey, req, res) {
+function compactEndpointResult(endpoint) {
+  return {
+    name: endpoint.name,
+    status: endpoint.status,
+    ok: endpoint.ok,
+    has_array_data: Array.isArray(endpoint.data),
+    has_results: Array.isArray(endpoint.data?.results),
+    results_count: Array.isArray(endpoint.data?.results)
+      ? endpoint.data.results.length
+      : Array.isArray(endpoint.data)
+        ? endpoint.data.length
+        : null,
+    error: endpoint.data?.error || endpoint.error || null,
+    message: endpoint.data?.message || endpoint.data?.description || null,
+    url: endpoint.url,
+  };
+}
+
+async function discoverAdvertiser(token) {
+  const tests = [
+    {
+      name: 'Advertisers PADS',
+      url: `${ML_API}/advertising/advertisers?product_id=PADS`,
+    },
+    {
+      name: 'Advertisers PLA',
+      url: `${ML_API}/advertising/advertisers?product_id=PLA`,
+    },
+    {
+      name: 'Advertisers sin product_id',
+      url: `${ML_API}/advertising/advertisers`,
+    },
+  ];
+
+  const endpoints = [];
+  let advertisers = [];
+
+  for (const test of tests) {
+    const result = await fetchDiagnostic(test.name, test.url, token);
+    endpoints.push(result);
+
+    const found = findAdvertisersFromResponse(result.data);
+    if (found.length) advertisers = advertisers.concat(found);
+  }
+
+  const unique = [];
+  const seen = new Set();
+
+  for (const advertiser of advertisers) {
+    const id = getAdvertiserId(advertiser);
+    const key = String(id || JSON.stringify(advertiser));
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(advertiser);
+  }
+
+  return {
+    endpoints,
+    advertisers: unique,
+    advertiser_id: getAdvertiserId(unique[0]),
+  };
+}
+
+function buildReadOnlyEndpointCandidates({ token, advertiserId, desde, hasta }) {
+  const today = hasta || new Date().toISOString().slice(0, 10);
+  const dateFrom = desde || '2026-01-01';
+
+  // Solo GET. No probamos POST sobre campaigns porque podría crear/modificar cosas.
+  // Sí, por una vez no vamos a tocar botones rojos en producción, qué aburrido pero sano.
+  return [
+    {
+      name: 'User token control',
+      url: `${ML_API}/users/${token.user_id}`,
+    },
+
+    // Variantes de campañas / listados.
+    {
+      name: 'Campaigns root con advertiser_id',
+      url: `${ML_API}/advertising/product_ads/campaigns?advertiser_id=${advertiserId}&limit=5`,
+    },
+    {
+      name: 'Campaigns search con advertiser_id',
+      url: `${ML_API}/advertising/product_ads/campaigns/search?advertiser_id=${advertiserId}&limit=5`,
+    },
+    {
+      name: 'Campaigns por advertiser path',
+      url: `${ML_API}/advertising/product_ads/advertisers/${advertiserId}/campaigns?limit=5`,
+    },
+    {
+      name: 'Product Ads campaign listado alternativo',
+      url: `${ML_API}/advertising/product_ads/advertiser/${advertiserId}/campaigns?limit=5`,
+    },
+
+    // Variantes de items / anuncios.
+    {
+      name: 'Items root con advertiser_id',
+      url: `${ML_API}/advertising/product_ads/items?advertiser_id=${advertiserId}&limit=5`,
+    },
+    {
+      name: 'Items search con advertiser_id',
+      url: `${ML_API}/advertising/product_ads/items/search?advertiser_id=${advertiserId}&limit=5`,
+    },
+    {
+      name: 'Items por advertiser path',
+      url: `${ML_API}/advertising/product_ads/advertisers/${advertiserId}/items?limit=5`,
+    },
+    {
+      name: 'Ads root con advertiser_id',
+      url: `${ML_API}/advertising/product_ads/ads?advertiser_id=${advertiserId}&limit=5`,
+    },
+    {
+      name: 'Ads search con advertiser_id',
+      url: `${ML_API}/advertising/product_ads/ads/search?advertiser_id=${advertiserId}&limit=5`,
+    },
+
+    // Variantes de performance/reportes.
+    {
+      name: 'Performance actual',
+      url: `${ML_API}/advertising/product_ads/reports/performance?advertiser_id=${advertiserId}&date_from=${dateFrom}&date_to=${today}&group_by=ITEM&limit=5`,
+    },
+    {
+      name: 'Reports root',
+      url: `${ML_API}/advertising/product_ads/reports?advertiser_id=${advertiserId}&date_from=${dateFrom}&date_to=${today}&group_by=ITEM&limit=5`,
+    },
+    {
+      name: 'Reports search',
+      url: `${ML_API}/advertising/product_ads/reports/search?advertiser_id=${advertiserId}&date_from=${dateFrom}&date_to=${today}&group_by=ITEM&limit=5`,
+    },
+    {
+      name: 'Performance por advertiser path',
+      url: `${ML_API}/advertising/product_ads/advertisers/${advertiserId}/reports/performance?date_from=${dateFrom}&date_to=${today}&group_by=ITEM&limit=5`,
+    },
+    {
+      name: 'Metrics root',
+      url: `${ML_API}/advertising/product_ads/metrics?advertiser_id=${advertiserId}&date_from=${dateFrom}&date_to=${today}&group_by=ITEM&limit=5`,
+    },
+    {
+      name: 'Metrics por advertiser path',
+      url: `${ML_API}/advertising/product_ads/advertisers/${advertiserId}/metrics?date_from=${dateFrom}&date_to=${today}&group_by=ITEM&limit=5`,
+    },
+  ];
+}
+
+async function diagnoseAccount(accountKey, req, res, query) {
   const token = await getValidToken(req, res, accountKey);
 
   const result = {
@@ -79,84 +222,52 @@ async function diagnoseAccount(accountKey, req, res) {
     advertiser_discovered: false,
     advertiser_id: null,
     advertisers: [],
+    advertiser_discovery_endpoints: [],
     endpoints_tested: [],
-    next_step: null,
+    working_endpoints: [],
+    compact: [],
+    conclusion: null,
   };
 
   if (!token) {
-    result.next_step = 'Reconectar esta cuenta con /api/login?account=' + accountKey;
+    result.conclusion = 'Cuenta sin token. Reconectar con /api/login?account=' + accountKey;
     return result;
   }
 
-  const baseTests = [
-    {
-      name: 'Control token: usuario ML',
-      url: `${ML_API}/users/${token.user_id}`,
-    },
-    {
-      name: 'Advertisers PADS',
-      url: `${ML_API}/advertising/advertisers?product_id=PADS`,
-    },
-    {
-      name: 'Advertisers sin product_id',
-      url: `${ML_API}/advertising/advertisers`,
-    },
-    {
-      name: 'Product Ads performance actual',
-      url: `${ML_API}/advertising/product_ads/reports/performance?advertiser_id=${token.user_id}&date_from=2026-01-01&date_to=${new Date().toISOString().slice(0, 10)}&group_by=ITEM&limit=5`,
-    },
-    {
-      name: 'Product Ads campaigns posible',
-      url: `${ML_API}/advertising/product_ads/campaigns?advertiser_id=${token.user_id}&limit=5`,
-    },
-    {
-      name: 'Product Ads items posible',
-      url: `${ML_API}/advertising/product_ads/items?advertiser_id=${token.user_id}&limit=5`,
-    },
-  ];
+  const discovery = await discoverAdvertiser(token);
+  result.advertiser_discovery_endpoints = discovery.endpoints;
+  result.advertisers = discovery.advertisers;
+  result.advertiser_id = discovery.advertiser_id;
+  result.advertiser_discovered = Boolean(discovery.advertiser_id);
 
-  for (const test of baseTests) {
-    const diagnostic = await fetchDiagnostic(test.name, test.url, token);
-    result.endpoints_tested.push(diagnostic);
-
-    if (test.name.includes('Advertisers')) {
-      const advertisers = findAdvertisersFromResponse(diagnostic.data);
-      if (advertisers.length) {
-        result.advertisers.push(...advertisers);
-      }
-    }
+  if (!discovery.advertiser_id) {
+    result.compact = discovery.endpoints.map(compactEndpointResult);
+    result.conclusion = 'El token funciona, pero no se pudo obtener advertiser_id. Revisar permisos de Ads o producto habilitado.';
+    return result;
   }
 
-  const firstAdvertiser = result.advertisers.find(a => getAdvertiserId(a));
-  const advertiserId = getAdvertiserId(firstAdvertiser);
+  const candidates = buildReadOnlyEndpointCandidates({
+    token,
+    advertiserId: discovery.advertiser_id,
+    desde: query.desde,
+    hasta: query.hasta,
+  });
 
-  if (advertiserId) {
-    result.advertiser_discovered = true;
-    result.advertiser_id = advertiserId;
+  for (const candidate of candidates) {
+    const endpointResult = await fetchDiagnostic(candidate.name, candidate.url, token);
+    result.endpoints_tested.push(endpointResult);
+    if (endpointResult.ok) result.working_endpoints.push(endpointResult);
+  }
 
-    const advertiserTests = [
-      {
-        name: 'Performance con advertiser_id detectado',
-        url: `${ML_API}/advertising/product_ads/reports/performance?advertiser_id=${advertiserId}&date_from=2026-01-01&date_to=${new Date().toISOString().slice(0, 10)}&group_by=ITEM&limit=5`,
-      },
-      {
-        name: 'Campaigns con advertiser_id detectado',
-        url: `${ML_API}/advertising/product_ads/campaigns?advertiser_id=${advertiserId}&limit=5`,
-      },
-      {
-        name: 'Items con advertiser_id detectado',
-        url: `${ML_API}/advertising/product_ads/items?advertiser_id=${advertiserId}&limit=5`,
-      },
-    ];
+  result.compact = [
+    ...discovery.endpoints.map(compactEndpointResult),
+    ...result.endpoints_tested.map(compactEndpointResult),
+  ];
 
-    for (const test of advertiserTests) {
-      const diagnostic = await fetchDiagnostic(test.name, test.url, token);
-      result.endpoints_tested.push(diagnostic);
-    }
-
-    result.next_step = 'Usar advertiser_id detectado si algún endpoint de Product Ads devuelve status 200.';
+  if (result.working_endpoints.length) {
+    result.conclusion = 'Hay endpoints funcionando. Usar el primero que devuelva datos útiles para reescribir api/ads.js.';
   } else {
-    result.next_step = 'No se detectó advertiser_id. Revisar permisos de la app en Mercado Libre Developers o endpoint correcto de Mercado Ads.';
+    result.conclusion = 'Se encontró advertiser_id, pero los endpoints de Product Ads probados no devolvieron 200. Probable cambio de endpoint, falta de permiso específico o API Ads restringida.';
   }
 
   return result;
@@ -168,30 +279,64 @@ export default async function handler(req, res) {
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
 
-  const { account = 'all' } = req.query;
+  const { account = 'all', compact = '1' } = req.query;
   const requestedAccounts = getRequestedAccounts(account);
 
   try {
     const accounts = {};
 
     for (const accountKey of requestedAccounts) {
-      accounts[accountKey] = await diagnoseAccount(accountKey, req, res);
+      accounts[accountKey] = await diagnoseAccount(accountKey, req, res, req.query);
     }
 
-    res.status(200).json({
+    if (compact === '1') {
+      const compactAccounts = {};
+
+      Object.entries(accounts).forEach(([key, accountData]) => {
+        compactAccounts[key] = {
+          account: accountData.account,
+          label: accountData.label,
+          connected: accountData.connected,
+          user_id: accountData.user_id,
+          advertiser_discovered: accountData.advertiser_discovered,
+          advertiser_id: accountData.advertiser_id,
+          working_endpoints_count: accountData.working_endpoints.length,
+          working_endpoints: accountData.working_endpoints.map(compactEndpointResult),
+          compact: accountData.compact,
+          conclusion: accountData.conclusion,
+        };
+      });
+
+      return res.status(200).json({
+        ok: true,
+        mode: 'compact',
+        requested_account: account,
+        accounts: compactAccounts,
+        summary: {
+          connected_accounts: Object.values(accounts).filter(a => a.connected).length,
+          advertiser_discovered_accounts: Object.values(accounts).filter(a => a.advertiser_discovered).length,
+          working_accounts: Object.values(accounts).filter(a => a.working_endpoints.length > 0).length,
+          total_accounts: Object.keys(accounts).length,
+        },
+      });
+    }
+
+    return res.status(200).json({
       ok: true,
+      mode: 'full',
       requested_account: account,
       accounts,
       summary: {
         connected_accounts: Object.values(accounts).filter(a => a.connected).length,
         advertiser_discovered_accounts: Object.values(accounts).filter(a => a.advertiser_discovered).length,
+        working_accounts: Object.values(accounts).filter(a => a.working_endpoints.length > 0).length,
         total_accounts: Object.keys(accounts).length,
       },
       instructions: [
-        'Si /users/{user_id} devuelve 200, el token está bien.',
-        'Si advertisers devuelve 401/403, faltan permisos o la app no tiene acceso a Mercado Ads.',
-        'Si advertisers devuelve 404 o recurso no disponible, el endpoint no corresponde para esta app/API.',
-        'No tocar el dashboard hasta detectar un endpoint de Ads con status 200 y datos reales.',
+        'compact=1 devuelve resumen legible.',
+        'compact=0 devuelve respuestas completas de Mercado Libre.',
+        'No usar endpoints que devuelvan 405/404 para api/ads.js.',
+        'Si solo funciona /advertising/advertisers?product_id=PADS, falta encontrar el endpoint real de reportes o habilitar permisos específicos.',
       ],
     });
   } catch (error) {
