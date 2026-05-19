@@ -6,8 +6,8 @@ export default async function handler(req, res) {
   const token = await getValidToken(req, res);
   if (!token) return res.status(401).json({ error: 'No autenticado', redirect: '/api/login' });
 
- const { desde, hasta, offset = 0 } = req.query;
-const limit = 50;
+  const { desde, hasta, offset = 0 } = req.query;
+  const limit = 50;
 
   const dateFrom = desde ? `${desde}T00:00:00.000-03:00` : (() => {
     const d = new Date(); d.setDate(d.getDate() - 30); return d.toISOString();
@@ -24,9 +24,44 @@ const limit = 50;
 
     if (searchData.error) return res.status(400).json({ error: searchData.error, message: searchData.message });
 
-    const orders = (searchData.results || []).map(order => {
+    const orders = await Promise.all((searchData.results || []).map(async order => {
       const item = order.order_items?.[0] || {};
       const shipping = order.shipping || {};
+
+      let ml_fee = 0;
+      let envio_ml_costo = 0;
+      let es_flex = false;
+      let localidad = '—';
+      let partido = '—';
+
+      try {
+        const paymentsRes = await fetch(
+          `https://api.mercadolibre.com/orders/${order.id}/payments`,
+          { headers: { Authorization: `Bearer ${token.access_token}` } }
+        );
+        const paymentsData = await paymentsRes.json();
+        const payment = (paymentsData || [])[0];
+        if (payment) {
+          ml_fee = Math.abs(payment.marketplace_fee || 0);
+          envio_ml_costo = Math.abs(payment.shipping_cost || 0);
+        }
+      } catch(e) {}
+
+      if (shipping.id) {
+        try {
+          const shipRes = await fetch(
+            `https://api.mercadolibre.com/shipments/${shipping.id}`,
+            { headers: { Authorization: `Bearer ${token.access_token}` } }
+          );
+          const shipData = await shipRes.json();
+          localidad = shipData.receiver_address?.city?.name || '—';
+          partido = shipData.receiver_address?.state?.name || '—';
+          es_flex = shipData.logistic_type === 'self_service' ||
+                    (shipData.mode === 'me2' && shipData.sub_mode === 'flex') ||
+                    (shipData.tags || []).includes('self_service');
+        } catch(e) {}
+      }
+
       return {
         id: order.id,
         fecha: order.date_created?.slice(0, 10),
@@ -35,14 +70,16 @@ const limit = 50;
         cantidad: item.quantity || 1,
         precio_unitario: item.unit_price || 0,
         precio_total: order.total_amount || 0,
-        ml_fee: order.marketplace_fee || 0,
+        ml_fee,
+        envio_ml_costo,
+        es_flex,
         envio_id: shipping.id || null,
-        localidad: shipping.receiver_address?.city?.name || '—',
-        partido: shipping.receiver_address?.state?.name || '—',
+        localidad,
+        partido,
         estado: order.status,
         comprador: order.buyer?.nickname || '—',
       };
-    });
+    }));
 
     res.status(200).json({
       total: searchData.paging?.total || 0,
