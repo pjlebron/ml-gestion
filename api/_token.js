@@ -1,3 +1,9 @@
+import {
+  getMlToken,
+  isSupabaseConfigured,
+  saveMlToken,
+} from './_supabase.js';
+
 const ACCOUNT_CONFIG = {
   lebron: {
     label: 'Lebron Store',
@@ -49,6 +55,23 @@ function decodeToken(payload) {
   } catch {
     return null;
   }
+}
+
+function appendSetCookies(res, cookies) {
+  if (!res || !res.setHeader || !cookies) return;
+
+  const newCookies = Array.isArray(cookies) ? cookies : [cookies];
+  const current = typeof res.getHeader === 'function' ? res.getHeader('Set-Cookie') : null;
+
+  let existingCookies = [];
+
+  if (Array.isArray(current)) {
+    existingCookies = current;
+  } else if (typeof current === 'string') {
+    existingCookies = [current];
+  }
+
+  res.setHeader('Set-Cookie', [...existingCookies, ...newCookies]);
 }
 
 export function buildTokenCookie(account, token) {
@@ -119,71 +142,112 @@ export async function refreshToken(token) {
   return response.json();
 }
 
+async function getStoredToken(req, account) {
+  const safeAccount = normalizeAccount(account);
+
+  // 1) Fuente principal: Supabase.
+  // Si ya guardamos el token en Supabase, no dependemos del navegador.
+  if (isSupabaseConfigured()) {
+    try {
+      const supabaseToken = await getMlToken(safeAccount);
+      if (supabaseToken) {
+        return {
+          token: supabaseToken,
+          source: 'supabase',
+        };
+      }
+    } catch (error) {
+      console.error(`Error leyendo token de Supabase para ${safeAccount}:`, error.message);
+    }
+  }
+
+  // 2) Compatibilidad: cookies viejas del navegador.
+  const cookieToken = getToken(req, safeAccount);
+
+  if (cookieToken) {
+    return {
+      token: cookieToken,
+      source: 'cookie',
+    };
+  }
+
+  return {
+    token: null,
+    source: 'none',
+  };
+}
+
+async function saveTokenEverywhere(res, account, token) {
+  const safeAccount = normalizeAccount(account);
+  const label = getAccountLabel(safeAccount);
+  const cookies = [buildTokenCookie(safeAccount, token)];
+
+  // Compatibilidad con el sistema anterior.
+  // Lebron también mantiene ml_token para que nada viejo se rompa.
+  if (safeAccount === DEFAULT_ACCOUNT) {
+    cookies.push(buildLegacyTokenCookie(token));
+  }
+
+  appendSetCookies(res, cookies);
+
+  if (isSupabaseConfigured()) {
+    try {
+      await saveMlToken(safeAccount, label, token);
+    } catch (error) {
+      console.error(`Error guardando token de ${safeAccount} en Supabase:`, error.message);
+    }
+  }
+}
+
 export async function getValidToken(req, res, account = DEFAULT_ACCOUNT) {
   const safeAccount = normalizeAccount(account);
-  const token = getToken(req, safeAccount);
+  const { token, source } = await getStoredToken(req, safeAccount);
 
   if (!token) return null;
 
-  if (Date.now() < token.expires - 60000) return token;
+  // Si el token vino de cookie y todavía es válido, lo migramos a Supabase.
+  // Así una conexión vieja también queda disponible para otros navegadores.
+  if (Date.now() < token.expires - 60000) {
+    if (source === 'cookie' && isSupabaseConfigured()) {
+      try {
+        await saveMlToken(safeAccount, getAccountLabel(safeAccount), token);
+      } catch (error) {
+        console.error(`Error migrando token de ${safeAccount} a Supabase:`, error.message);
+      }
+    }
+
+    return token;
+  }
 
   const refreshed = await refreshToken(token);
-  if (refreshed.error) return null;
+
+  if (refreshed.error) {
+    console.error(`Error refrescando token de ${safeAccount}:`, refreshed.message || refreshed.error);
+    return null;
+  }
 
   const updated = {
     access_token: refreshed.access_token,
     refresh_token: refreshed.refresh_token || token.refresh_token,
-    user_id: token.user_id,
+    user_id: refreshed.user_id || token.user_id,
     expires: Date.now() + refreshed.expires_in * 1000,
   };
 
-  const cookies = [buildTokenCookie(safeAccount, updated)];
-
-  if (safeAccount === DEFAULT_ACCOUNT) {
-    cookies.push(buildLegacyTokenCookie(updated));
-  }
-
-  res.setHeader('Set-Cookie', cookies);
+  await saveTokenEverywhere(res, safeAccount, updated);
 
   return updated;
 }
 
 export async function getValidTokens(req, res, accounts = getAccountKeys()) {
   const result = {};
-  const cookiesToSet = [];
 
   for (const account of accounts) {
     const safeAccount = normalizeAccount(account);
-    const token = getToken(req, safeAccount);
+    const token = await getValidToken(req, res, safeAccount);
 
-    if (!token) continue;
-
-    if (Date.now() < token.expires - 60000) {
+    if (token) {
       result[safeAccount] = token;
-      continue;
     }
-
-    const refreshed = await refreshToken(token);
-    if (refreshed.error) continue;
-
-    const updated = {
-      access_token: refreshed.access_token,
-      refresh_token: refreshed.refresh_token || token.refresh_token,
-      user_id: token.user_id,
-      expires: Date.now() + refreshed.expires_in * 1000,
-    };
-
-    cookiesToSet.push(buildTokenCookie(safeAccount, updated));
-
-    if (safeAccount === DEFAULT_ACCOUNT) {
-      cookiesToSet.push(buildLegacyTokenCookie(updated));
-    }
-
-    result[safeAccount] = updated;
-  }
-
-  if (cookiesToSet.length) {
-    res.setHeader('Set-Cookie', cookiesToSet);
   }
 
   return result;
