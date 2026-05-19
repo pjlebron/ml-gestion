@@ -1,8 +1,259 @@
-// CAMBIO APLICAR EN public/index.html
-// Este bloque reemplaza el criterio de normalización y agrupación de envíos.
-// Como el index completo ya está funcionando, el cambio real son estas 2 partes:
-// 1) reemplazar normalizarCodigo
-// 2) reemplazar renderEnvios
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ML Gestión</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;font-size:14px;background:#f5f5f5;color:#1a1a1a}
+.shell{display:grid;grid-template-columns:200px 1fr;min-height:100vh}
+.sidebar{background:#fff;border-right:1px solid #e5e5e5;padding:1rem 0;display:flex;flex-direction:column}
+.logo{padding:0 1rem 1rem;border-bottom:1px solid #e5e5e5;margin-bottom:.5rem}
+.logo-name{font-size:15px;font-weight:600}
+.logo-tag{font-size:11px;color:#888;margin-top:2px}
+.nl{font-size:11px;color:#aaa;padding:.8rem 1rem .3rem;letter-spacing:.04em;text-transform:uppercase}
+.ni{display:flex;align-items:center;gap:8px;padding:8px 1rem;font-size:13px;cursor:pointer;color:#666;border-left:2px solid transparent}
+.ni:hover{color:#1a1a1a;background:#f5f5f5}
+.ni.on{color:#1a1a1a;font-weight:600;border-left:2px solid #1a1a1a;background:#f5f5f5}
+.conn{margin:auto 1rem 1rem;padding:.5rem .75rem;border-radius:8px;font-size:11px;display:flex;align-items:center;gap:6px}
+.conn.ok{background:#eaf3de;color:#27500a;border:1px solid #c0dd97}
+.conn.warn{background:#faeeda;color:#633806;border:1px solid #fac775}
+.conn.no{background:#fcebeb;color:#a32d2d;border:1px solid #f3b5b5;cursor:pointer}
+.main{padding:1.5rem;overflow-y:auto}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:8px}
+.page-title{font-size:18px;font-weight:600}
+.date-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.date-inp{padding:5px 9px;font-size:12px;border:1px solid #ddd;border-radius:6px;background:#fff}
+.qpill{display:inline-flex;align-items:center;padding:5px 11px;border:1px solid #ddd;border-radius:20px;font-size:12px;color:#666;cursor:pointer;background:#fff;user-select:none}
+.qpill:hover,.qpill.on{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.sep{color:#ccc;font-size:12px}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:1.25rem}
+.mc{background:#fff;border-radius:8px;padding:.85rem 1rem;border:1px solid #e5e5e5}
+.mc-lbl{font-size:11px;color:#888;margin-bottom:4px}
+.mc-val{font-size:20px;font-weight:600}
+.mc-sub{font-size:11px;color:#888;margin-top:3px}
+.green{color:#27500a}.red{color:#a32d2d}.blue{color:#0c447c}.amber{color:#633806}
+.two-col{display:grid;grid-template-columns:1.6fr 1fr;gap:10px;margin-bottom:1.25rem}
+.card{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:1rem}
+.ct{font-size:13px;font-weight:600;margin-bottom:.85rem}
+.br{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.bl{font-size:12px;color:#888;width:130px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bt{flex:1;height:7px;background:#f0f0f0;border-radius:4px;overflow:hidden}
+.bf{height:100%;border-radius:4px}
+.bv{font-size:12px;width:72px;text-align:right;flex-shrink:0}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:7px 8px;color:#888;font-weight:400;border-bottom:1px solid #e5e5e5;white-space:nowrap}
+td{padding:7px 8px;border-bottom:1px solid #f0f0f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+.badge{display:inline-block;font-size:11px;padding:2px 7px;border-radius:20px;font-weight:600;white-space:nowrap}
+.bg{background:#eaf3de;color:#27500a}.br2{background:#fcebeb;color:#a32d2d}.ba{background:#faeeda;color:#633806}.bb{background:#e6f1fb;color:#0c447c}.bn{background:#f2f2f2;color:#666}
+.view{display:none}.view.on{display:block}
+.roas-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:1rem}
+.rc{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:.9rem}
+.rv{font-size:24px;font-weight:700;margin:.25rem 0}
+.sem{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;padding:.35rem .7rem;border-radius:6px;margin:.4rem 0}
+.sg{background:#eaf3de;color:#27500a}.sa{background:#faeeda;color:#633806}.sr{background:#fcebeb;color:#a32d2d}
+.dot{width:8px;height:8px;border-radius:50%}
+.dg{background:#639922}.da{background:#ba7517}.dr{background:#e24b4a}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid #ddd;border-top-color:#888;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:2rem;color:#aaa;font-size:13px}
+.alert{padding:.65rem .9rem;border-radius:8px;font-size:13px;margin-bottom:1rem}
+.alert-warn{background:#faeeda;color:#633806;border:1px solid #fac775}
+.alert-info{background:#e6f1fb;color:#0c447c;border:1px solid #b5d4f4}
+.row-warn{background:#fff1f1}
+.row-flex-warn{background:#fff8ea}
+.cost-warn{color:#a32d2d!important;font-weight:700}
+.flex-warn{color:#633806!important;font-weight:700}
+.small-muted{font-size:11px;color:#888;margin-top:3px;line-height:1.4}
+.account-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:1.25rem}
+.account-card{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:1rem}
+.account-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:.8rem}
+.account-name{font-size:14px;font-weight:700}
+.account-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:.6rem}
+.account-stat{background:#f7f7f7;border-radius:8px;padding:.55rem .65rem}
+.account-stat span{display:block;font-size:10px;color:#888;margin-bottom:2px}
+.account-stat b{font-size:13px}
+.account-actions{margin-top:.7rem;display:flex;gap:6px;flex-wrap:wrap}
+.linkbtn{font-size:11px;padding:4px 8px;border-radius:7px;border:1px solid #ddd;background:#fff;color:#333;text-decoration:none;display:inline-block}
+.linkbtn:hover{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+@media(max-width:820px){
+  .shell{grid-template-columns:1fr}
+  .sidebar{position:sticky;top:0;z-index:10;border-right:none;border-bottom:1px solid #e5e5e5;display:block;padding:.75rem}
+  .logo{border-bottom:none;margin-bottom:.5rem;padding:0}
+  .nl{display:none}
+  .ni{display:inline-flex;border-left:none;border-radius:8px;padding:7px 9px;margin:2px}
+  .ni.on{border-left:none}
+  .conn{margin:.5rem 0 0;display:inline-flex}
+  .main{padding:1rem}
+  .two-col{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="sidebar">
+    <div class="logo">
+      <div class="logo-name">🛒 ML Gestión</div>
+      <div class="logo-tag">Panel multicuenta</div>
+    </div>
+    <div class="nl">Principal</div>
+    <div class="ni on" onclick="nav(this,'dash')">📊 Dashboard</div>
+    <div class="ni" onclick="nav(this,'ventas')">🛍️ Ventas</div>
+    <div class="ni" onclick="nav(this,'roas')">📣 Mercado Ads</div>
+    <div class="ni" onclick="nav(this,'envios')">🚚 Envíos</div>
+    <div class="nl">Configuración</div>
+    <div class="ni" onclick="nav(this,'localidades')">📍 Localidades</div>
+    <div id="conn-badge" class="conn no" onclick="conectar('lebron')">⚠️ ML no conectado</div>
+  </div>
+
+  <div class="main">
+    <div class="view on" id="view-connecting" style="max-width:520px;margin:3rem auto;text-align:center">
+      <div style="font-size:48px;margin-bottom:1rem">🔌</div>
+      <h2 style="font-size:18px;font-weight:600;margin-bottom:.5rem">Conectá tus cuentas de Mercado Libre</h2>
+      <p style="font-size:13px;color:#888;margin-bottom:1.5rem;line-height:1.6">Para ver ventas reales, comisiones y rentabilidad por cuenta necesitás conectar Lebron Store y Fragantify.</p>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+        <button onclick="conectar('lebron')" style="padding:.65rem 1.2rem;font-size:14px;font-weight:600;background:#1a1a1a;color:#fff;border:none;border-radius:8px;cursor:pointer">Conectar Lebron Store</button>
+        <button onclick="conectar('fragantify')" style="padding:.65rem 1.2rem;font-size:14px;font-weight:600;background:#1a1a1a;color:#fff;border:none;border-radius:8px;cursor:pointer">Conectar Fragantify</button>
+      </div>
+      <p style="font-size:11px;color:#aaa;margin-top:1rem">Los tokens se guardan en Supabase, no dependen del navegador.</p>
+    </div>
+
+    <div class="view" id="view-dash">
+      <div class="topbar">
+        <div class="page-title">Dashboard</div>
+        <div class="date-row">
+          <div class="qpill on" onclick="setAccountFilter(this,'all')">Todas</div>
+          <div class="qpill" onclick="setAccountFilter(this,'lebron')">Lebron</div>
+          <div class="qpill" onclick="setAccountFilter(this,'fragantify')">Fragantify</div>
+          <span class="sep">|</span>
+          <div class="qpill" onclick="setQ(this,7)">7d</div>
+          <div class="qpill" onclick="setQ(this,15)">15d</div>
+          <div class="qpill" onclick="setQ(this,30)">30d</div>
+          <span class="sep">|</span>
+          <input type="date" id="d-from" class="date-inp">
+          <span class="sep">→</span>
+          <input type="date" id="d-to" class="date-inp">
+          <div class="qpill" onclick="loadAll()" style="background:#1a1a1a;color:#fff;border-color:#1a1a1a">Aplicar</div>
+          <button onclick="loadAll()" style="background:none;border:none;cursor:pointer;font-size:16px;color:#888" title="Actualizar">↻</button>
+        </div>
+      </div>
+
+      <div id="account-status" class="account-grid"></div>
+
+      <div id="dash-loading" class="empty"><span class="spinner"></span> Cargando ventas...</div>
+      <div id="dash-content" style="display:none">
+        <div class="metrics" id="met"></div>
+        <div class="account-grid" id="account-profit"></div>
+        <div class="two-col">
+          <div class="card"><div class="ct">Margen real por producto</div><div id="prod-bars"></div></div>
+          <div class="card"><div class="ct">Estructura del precio</div><div id="cost-bars"></div></div>
+        </div>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.85rem">
+            <div class="ct" style="margin:0">Últimas ventas</div>
+            <div class="qpill" onclick="nav(document.querySelectorAll('.ni')[1],'ventas')">Ver todas</div>
+          </div>
+          <table>
+            <thead><tr><th>Cuenta</th><th style="width:22%">Producto</th><th>Localidad</th><th>Precio</th><th>Comisión</th><th>Envío ML</th><th>Mensajería</th><th>Imp.</th><th>Costo</th><th>Ganancia</th><th>Margen</th></tr></thead>
+            <tbody id="t-dash"></tbody>
+          </table>
+        </div>
+
+        <div class="card" style="margin-top:1rem">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.85rem;gap:8px;flex-wrap:wrap">
+            <div>
+              <div class="ct" style="margin:0">Ventas sin costo asignado</div>
+              <div class="small-muted">Acá solo aparecen ventas sin coincidencia en la planilla. Los productos con COSTO $0 bonificado no aparecen como error.</div>
+            </div>
+            <div class="badge br2" id="missing-count">0 pendientes</div>
+          </div>
+          <div id="missing-costs"></div>
+        </div>
+
+        <div class="card" style="margin-top:1rem">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.85rem;gap:8px;flex-wrap:wrap">
+            <div>
+              <div class="ct" style="margin:0">Ventas Flex sin costo de mensajería</div>
+              <div class="small-muted">Estas ventas son Flex y no encontraron tarifa cargada por localidad/partido. Si no las corregís, la ganancia queda inflada.</div>
+            </div>
+            <div class="badge ba" id="flex-missing-count">0 pendientes</div>
+          </div>
+          <div id="flex-missing-costs"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="view" id="view-ventas">
+      <div class="topbar">
+        <div class="page-title">Ventas</div>
+        <div class="date-row">
+          <div class="qpill on" onclick="setAccountFilter(this,'all')">Todas</div>
+          <div class="qpill" onclick="setAccountFilter(this,'lebron')">Lebron</div>
+          <div class="qpill" onclick="setAccountFilter(this,'fragantify')">Fragantify</div>
+          <span class="sep">|</span>
+          <input type="date" id="vd-from" class="date-inp">
+          <span class="sep">→</span>
+          <input type="date" id="vd-to" class="date-inp">
+          <div class="qpill" onclick="loadAll()" style="background:#1a1a1a;color:#fff;border-color:#1a1a1a">Aplicar</div>
+        </div>
+      </div>
+      <div class="metrics" id="v-met"></div>
+      <div class="card">
+        <div id="ventas-loading" class="empty"><span class="spinner"></span> Cargando...</div>
+        <table id="ventas-table" style="display:none">
+          <thead><tr><th>#</th><th>Cuenta</th><th>Fecha</th><th style="width:20%">Producto</th><th>SKU</th><th>Localidad</th><th>Flex</th><th>Precio</th><th>Cobro neto ML</th><th>Mensajería</th><th>Costo</th><th>Ganancia</th><th>Margen</th></tr></thead>
+          <tbody id="t-ventas"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="view" id="view-roas">
+      <div class="topbar">
+        <div class="page-title">Mercado Ads — ROAS</div>
+        <div class="date-row"><div class="qpill on">General</div></div>
+      </div>
+      <div class="metrics" id="roas-met"></div>
+      <div id="roas-loading" class="empty"><span class="spinner"></span> Cargando Mercado Ads...</div>
+      <div id="roas-content" style="display:none">
+        <div class="roas-grid" id="roas-cards"></div>
+        <div style="padding:.65rem .85rem;background:#f5f5f5;border-radius:8px;font-size:12px;color:#888;line-height:1.7"><strong style="color:#1a1a1a">Semáforo ROAS:</strong> &gt;4x → <span class="badge bg">verde</span> escalar · 2–4x → <span class="badge ba">amarillo</span> revisar · &lt;2x → <span class="badge br2">rojo</span> pausar</div>
+      </div>
+    </div>
+
+    <div class="view" id="view-envios">
+      <div class="topbar"><div class="page-title">Envíos por zona</div></div>
+      <div class="metrics" id="env-met"></div>
+      <div class="card"><div class="ct">Gasto por partido</div><div id="env-bars"></div></div>
+    </div>
+
+    <div class="view" id="view-localidades">
+      <div class="topbar"><div class="page-title">Localidades y tarifas</div></div>
+      <div class="alert alert-info">Estas tarifas corresponden a tu mensajería/manual por localidad. Se descuentan siempre de la ganancia, además de los descuentos que ya haga Mercado Libre.</div>
+      <div class="card">
+        <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap">
+          <input type="text" id="inp-partido" placeholder="Partido" style="flex:1;min-width:90px;padding:6px 10px;font-size:13px;border:1px solid #ddd;border-radius:6px">
+          <input type="text" id="inp-loc" placeholder="Localidad" style="flex:1.2;min-width:110px;padding:6px 10px;font-size:13px;border:1px solid #ddd;border-radius:6px">
+          <input type="number" id="inp-tarifa" placeholder="Tarifa $" style="width:90px;padding:6px 10px;font-size:13px;border:1px solid #ddd;border-radius:6px">
+          <button onclick="addLoc()" style="padding:6px 14px;font-size:13px;font-weight:600;background:#1a1a1a;color:#fff;border:none;border-radius:6px;cursor:pointer">Agregar</button>
+        </div>
+        <table><thead><tr><th>Partido</th><th>Localidad</th><th>Tarifa</th><th></th></tr></thead><tbody id="t-loc"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const fmt = n => '$' + Math.round(num(n)).toLocaleString('es-AR');
+const fmtPct = n => num(n).toFixed(1) + '%';
+const toISO = d => d.toISOString().slice(0,10);
+const daysAgo = n => { const d = new Date(); d.setDate(d.getDate()-n); return d; };
+function num(value) { const parsed = Number(value ?? 0); return Number.isFinite(parsed) ? parsed : 0; }
+
+let STATE = { connected: false, auth: null, ventas: [], ads: null, dias: 7, accountFilter: 'all' };
+let LOCALIDADES = JSON.parse(localStorage.getItem('ml_localidades') || '[]');
+let COSTOS = {};
 
 function normalizarCodigo(value) {
   return String(value ?? '')
@@ -13,9 +264,305 @@ function normalizarCodigo(value) {
     .replace(/\s+/g, ' ');
 }
 
+function ordenarTexto(a, b) {
+  return normalizarCodigo(a).localeCompare(normalizarCodigo(b), 'es', {
+    sensitivity: 'base',
+    numeric: true,
+  });
+}
+
 function nombreZonaDisplay(value) {
   return String(value || '—').trim() || '—';
 }
+
+function tieneTilde(value) {
+  return /[áéíóúÁÉÍÓÚ]/.test(String(value || ''));
+}
+
+async function loadCostos() {
+  try {
+    const r = await fetch('/api/costos?cb=' + Date.now(), { cache: 'no-store' });
+    const d = await r.json();
+    if (d.error) throw new Error(d.detail || d.error);
+    const costosCrudos = d.costos || {};
+    COSTOS = {};
+    Object.entries(costosCrudos).forEach(([codigo, costo]) => {
+      const keyOriginal = String(codigo ?? '').trim();
+      const keyNormalizada = normalizarCodigo(codigo);
+      const valor = num(costo);
+      if (keyOriginal) COSTOS[keyOriginal] = valor;
+      if (keyNormalizada) COSTOS[keyNormalizada] = valor;
+    });
+  } catch(e) { console.error('Error cargando costos', e); COSTOS = {}; }
+}
+
+function nav(el, view) {
+  document.querySelectorAll('.ni').forEach(n => n.classList.remove('on'));
+  if (el) el.classList.add('on');
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('on'));
+  document.getElementById('view-' + view).classList.add('on');
+}
+
+function syncDatesToAll(from, to) {
+  ['d-from','vd-from'].forEach(id => { const el = document.getElementById(id); if(el) el.value = from; });
+  ['d-to','vd-to'].forEach(id => { const el = document.getElementById(id); if(el) el.value = to; });
+}
+
+function setQ(el, dias) {
+  document.querySelectorAll('.date-row .qpill').forEach(p => {
+    if(['7d','15d','30d'].includes(p.textContent.trim())) p.classList.remove('on');
+  });
+  el.classList.add('on');
+  STATE.dias = dias;
+  syncDatesToAll(toISO(daysAgo(dias)), toISO(new Date()));
+  loadAll();
+}
+
+function setAccountFilter(el, account) {
+  STATE.accountFilter = account;
+  document.querySelectorAll('.date-row .qpill').forEach(p => {
+    const t = p.textContent.trim().toLowerCase();
+    if(['todas','lebron','fragantify'].includes(t)) p.classList.remove('on');
+  });
+  document.querySelectorAll('.date-row .qpill').forEach(p => {
+    const t = p.textContent.trim().toLowerCase();
+    if ((account === 'all' && t === 'todas') || (account === 'lebron' && t === 'lebron') || (account === 'fragantify' && t === 'fragantify')) p.classList.add('on');
+  });
+  loadAll();
+}
+
+function conectar(account='lebron') { window.location.href = `/api/login?account=${encodeURIComponent(account)}`; }
+
+function getEnvioCosto(localidad, partido) {
+  const locTxt = normalizarCodigo(localidad);
+  const partTxt = normalizarCodigo(partido);
+
+  const loc = LOCALIDADES.find(l => normalizarCodigo(l.localidad) === locTxt);
+  if (loc) return num(loc.tarifa);
+
+  const part = LOCALIDADES.find(l => normalizarCodigo(l.partido) === partTxt);
+  return part ? num(part.tarifa) : 0;
+}
+
+function getCostoProducto(venta) {
+  const posiblesCodigos = [venta?.sku, venta?.item_id, venta?.item_id_ml];
+  for (const codigo of posiblesCodigos) {
+    const keyOriginal = String(codigo ?? '').trim();
+    const keyNormalizada = normalizarCodigo(codigo);
+    if (keyOriginal && Object.prototype.hasOwnProperty.call(COSTOS, keyOriginal)) return { costo: num(COSTOS[keyOriginal]), tieneCosto: true };
+    if (keyNormalizada && Object.prototype.hasOwnProperty.call(COSTOS, keyNormalizada)) return { costo: num(COSTOS[keyNormalizada]), tieneCosto: true };
+  }
+  return { costo: 0, tieneCosto: false };
+}
+
+function getMargenClass(margen, sinCosto = false) {
+  if (sinCosto) return 'br2';
+  return margen >= 15 ? 'bg' : margen >= 5 ? 'ba' : 'br2';
+}
+
+async function checkAuth() {
+  try {
+    const r = await fetch('/api/me?cb=' + Date.now(), { cache: 'no-store' });
+    const d = await r.json();
+    STATE.auth = d;
+    STATE.connected = !!d.connected;
+    renderAccountStatus();
+
+    const badge = document.getElementById('conn-badge');
+    if (d.all_connected) {
+      badge.className = 'conn ok';
+      badge.textContent = '✓ 2/2 cuentas conectadas';
+      badge.onclick = null;
+      document.getElementById('view-connecting').classList.remove('on');
+      nav(document.querySelectorAll('.ni')[0], 'dash');
+      loadAll();
+    } else if (d.connected) {
+      badge.className = 'conn warn';
+      badge.textContent = `⚠️ ${d.connected_count}/${d.total_accounts} cuentas conectadas`;
+      document.getElementById('view-connecting').classList.remove('on');
+      nav(document.querySelectorAll('.ni')[0], 'dash');
+      loadAll();
+    } else {
+      badge.className = 'conn no';
+      badge.textContent = '⚠️ ML no conectado';
+      document.getElementById('view-connecting').classList.add('on');
+    }
+  } catch(e) { console.error('Auth check failed', e); }
+}
+
+function renderAccountStatus() {
+  const box = document.getElementById('account-status');
+  if (!box || !STATE.auth?.accounts) return;
+  const accounts = STATE.auth.accounts;
+  box.innerHTML = Object.values(accounts).map(a => `
+    <div class="account-card">
+      <div class="account-head">
+        <div>
+          <div class="account-name">${a.label}</div>
+          <div class="small-muted">User ID: ${a.user_id || '—'}</div>
+        </div>
+        <span class="badge ${a.connected ? 'bg' : 'br2'}">${a.connected ? 'Conectada' : 'Desconectada'}</span>
+      </div>
+      <div class="account-actions">
+        <a class="linkbtn" href="/api/login?account=${a.account}">Reconectar</a>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function loadVentas() {
+  const desde = document.getElementById('d-from')?.value || toISO(daysAgo(STATE.dias));
+  const hasta = document.getElementById('d-to')?.value || toISO(new Date());
+  document.getElementById('dash-loading').style.display = 'block';
+  document.getElementById('dash-content').style.display = 'none';
+  document.getElementById('ventas-loading').style.display = 'block';
+  document.getElementById('ventas-table').style.display = 'none';
+  try {
+    await loadCostos();
+    const r = await fetch(`/api/ventas?account=${encodeURIComponent(STATE.accountFilter)}&desde=${desde}&hasta=${hasta}&cb=${Date.now()}`, { cache: 'no-store' });
+    const d = await r.json();
+    if (d.error) throw new Error(d.message || d.detail || d.error);
+    STATE.ventas = (d.orders || []).map(o => {
+      const precioTotal = num(o.precio_total);
+      const cargoVenta = num(o.cargo_venta || o.ml_fee);
+      const cargoEnvioMl = num(o.cargo_envio_ml);
+      const cargoFinanciacion = num(o.cargo_financiacion);
+      const descuentos = num(o.descuentos);
+      const bonificaciones = num(o.bonificaciones);
+      const impuestos = num(o.impuestos);
+      const retenciones = num(o.retenciones);
+      const otrosGastos = num(o.otros_gastos);
+      const costoInfo = getCostoProducto(o);
+      const costo = costoInfo.costo;
+      const sinCosto = !costoInfo.tieneCosto;
+      const bonificado = costoInfo.tieneCosto && costo === 0;
+      const esFlex = !!o.es_flex;
+      const mensajeria = getEnvioCosto(o.localidad, o.partido);
+      const flexSinMensajeria = esFlex && mensajeria === 0;
+      const cobroNetoMl = num(o.cobro_neto) || (precioTotal - cargoVenta - cargoEnvioMl - cargoFinanciacion - descuentos - impuestos - retenciones - otrosGastos + bonificaciones);
+      const ganancia = cobroNetoMl - costo - mensajeria;
+      const margen = precioTotal > 0 ? (ganancia / precioTotal * 100) : 0;
+      return { ...o, precio_total: precioTotal, cargo_venta: cargoVenta, ml_fee: cargoVenta, cargo_envio_ml: cargoEnvioMl, cargo_financiacion: cargoFinanciacion, descuentos, bonificaciones, impuestos, retenciones, otros_gastos: otrosGastos, cobro_neto: cobroNetoMl, costo, tiene_costo: costoInfo.tieneCosto, bonificado, es_flex: esFlex, flex_sin_mensajeria: flexSinMensajeria, envio_costo: cargoEnvioMl + mensajeria, envio_ml: cargoEnvioMl, mensajeria, envio_flex_manual: mensajeria, ganancia, margen, sin_costo: sinCosto, cuenta: o.cuenta || o.account || '—', cuenta_key: o.cuenta_key || o.account || '—' };
+    });
+    renderDash(); renderVentas(); renderEnvios(); renderMissingCosts(); renderFlexMissingMensajeria(); renderAccountStatus();
+  } catch(e) {
+    document.getElementById('dash-loading').textContent = 'Error: ' + e.message;
+    document.getElementById('ventas-loading').textContent = 'Error: ' + e.message;
+  }
+}
+
+async function loadAds() {
+  document.getElementById('roas-loading').style.display = 'block';
+  document.getElementById('roas-content').style.display = 'none';
+  try {
+    const desde = document.getElementById('d-from')?.value || toISO(daysAgo(STATE.dias));
+    const hasta = document.getElementById('d-to')?.value || toISO(new Date());
+    const r = await fetch(`/api/ads?desde=${desde}&hasta=${hasta}`);
+    STATE.ads = await r.json();
+    renderRoas();
+  } catch(e) { document.getElementById('roas-loading').textContent = 'Error cargando Ads: ' + e.message; }
+}
+
+function loadAll() { loadVentas(); loadAds(); }
+
+function groupByAccount(v) {
+  const base = {};
+  v.forEach(x => {
+    const key = x.cuenta_key || 'sin_cuenta';
+    const label = x.cuenta || key;
+    if (!base[key]) base[key] = { key, label, ventas: 0, facturacion: 0, cobroNeto: 0, ganancia: 0, comisiones: 0, envioMl: 0, mensajeria: 0, impuestos: 0, sinCosto: 0, flexSinMensajeria: 0, bonificados: 0 };
+    base[key].ventas += 1;
+    base[key].facturacion += x.precio_total;
+    base[key].cobroNeto += x.cobro_neto;
+    base[key].ganancia += x.ganancia;
+    base[key].comisiones += x.ml_fee;
+    base[key].envioMl += x.cargo_envio_ml;
+    base[key].mensajeria += x.mensajeria;
+    base[key].impuestos += x.impuestos;
+    if (x.sin_costo) base[key].sinCosto += 1;
+    if (x.flex_sin_mensajeria) base[key].flexSinMensajeria += 1;
+    if (x.bonificado) base[key].bonificados += 1;
+  });
+  return Object.values(base);
+}
+
+function renderDash() {
+  const v = STATE.ventas;
+  const tot = v.reduce((s,x)=>s+x.precio_total,0);
+  const totGan = v.reduce((s,x)=>s+x.ganancia,0);
+  const totEnvMl = v.reduce((s,x)=>s+num(x.cargo_envio_ml),0);
+  const totMensajeria = v.reduce((s,x)=>s+num(x.mensajeria),0);
+  const totFee = v.reduce((s,x)=>s+x.ml_fee,0);
+  const totImp = v.reduce((s,x)=>s+num(x.impuestos),0);
+  const totDesc = v.reduce((s,x)=>s+num(x.descuentos),0);
+  const sinCosto = v.filter(x=>x.sin_costo).length;
+  const bonificados = v.filter(x=>x.bonificado).length;
+  const flexSinMensajeria = v.filter(x=>x.flex_sin_mensajeria).length;
+  const margen = tot ? totGan/tot*100 : 0;
+  document.getElementById('met').innerHTML = [
+    {lbl:'Facturación',val:fmt(tot),sub:v.length+' ventas',cls:''},
+    {lbl:'Ganancia neta',val:fmt(totGan),sub:fmtPct(margen)+' margen',cls:margen>0?'green':'red'},
+    {lbl:'Sin costo',val:sinCosto,sub:'ventas a revisar',cls:sinCosto>0?'red':'green'},
+    {lbl:'Flex sin mensajería',val:flexSinMensajeria,sub:'tarifa faltante',cls:flexSinMensajeria>0?'red':'green'},
+    {lbl:'Bonificados',val:bonificados,sub:'costo $0 válido',cls:'blue'},
+    {lbl:'Comisiones ML',val:fmt(totFee),sub:tot?fmtPct(totFee/tot*100)+' del total':'',cls:'blue'},
+    {lbl:'Envíos ML',val:fmt(totEnvMl),sub:tot?fmtPct(totEnvMl/tot*100)+' del total':'',cls:'amber'},
+    {lbl:'Mensajería',val:fmt(totMensajeria),sub:'costo manual/localidad',cls:'amber'},
+    {lbl:'Impuestos',val:fmt(totImp),sub:tot?fmtPct(totImp/tot*100)+' del total':'',cls:'red'},
+    {lbl:'Descuentos',val:fmt(totDesc),sub:tot?fmtPct(totDesc/tot*100)+' del total':'',cls:'amber'},
+  ].map(m=>`<div class="mc"><div class="mc-lbl">${m.lbl}</div><div class="mc-val ${m.cls}">${m.val}</div><div class="mc-sub">${m.sub}</div></div>`).join('');
+  renderAccountProfit(); renderProductBars(v, tot, totFee, totEnvMl, totMensajeria, totImp, totGan); renderLatestRows(v);
+  document.getElementById('dash-loading').style.display='none'; document.getElementById('dash-content').style.display='block';
+}
+
+function renderAccountProfit() {
+  const box = document.getElementById('account-profit');
+  const groups = groupByAccount(STATE.ventas);
+  if (!box) return;
+  if (!groups.length) { box.innerHTML = ''; return; }
+  box.innerHTML = groups.map(g => {
+    const margen = g.facturacion ? g.ganancia / g.facturacion * 100 : 0;
+    return `<div class="account-card"><div class="account-head"><div><div class="account-name">${g.label}</div><div class="small-muted">${g.ventas} ventas</div></div><span class="badge ${margen>=15?'bg':margen>=5?'ba':'br2'}">${fmtPct(margen)}</span></div><div class="account-stats"><div class="account-stat"><span>Facturación</span><b>${fmt(g.facturacion)}</b></div><div class="account-stat"><span>Ganancia</span><b>${fmt(g.ganancia)}</b></div><div class="account-stat"><span>Cobro neto ML</span><b>${fmt(g.cobroNeto)}</b></div><div class="account-stat"><span>Mensajería</span><b>${fmt(g.mensajeria)}</b></div></div><div class="small-muted" style="margin-top:.7rem">Sin costo: ${g.sinCosto} · Flex sin mensajería: ${g.flexSinMensajeria} · Bonificados: ${g.bonificados}</div></div>`;
+  }).join('');
+}
+
+function renderProductBars(v, tot, totFee, totEnvMl, totMensajeria, totImp, totGan) {
+  const byProd = {};
+  v.forEach(x=>{ const name = `${x.cuenta_key === 'fragantify' ? 'FRA' : 'LS'} · ${x.producto}`; if(!byProd[name]) byProd[name]={gan:0,precio:0,sinCosto:false,bonificado:false,flexSinMensajeria:false}; byProd[name].gan+=x.ganancia; byProd[name].precio+=x.precio_total; byProd[name].sinCosto ||= x.sin_costo; byProd[name].bonificado ||= x.bonificado; byProd[name].flexSinMensajeria ||= x.flex_sin_mensajeria; });
+  const prods = Object.entries(byProd).sort((a,b)=>b[1].gan-a[1].gan).slice(0,8);
+  const maxG = Math.max(...prods.map(p=>Math.abs(p[1].gan)),1);
+  document.getElementById('prod-bars').innerHTML = prods.map(([name,d])=>{ const m=d.precio?d.gan/d.precio*100:0; const w=Math.max(4,Math.round(Math.abs(d.gan)/maxG*100)); const col=d.sinCosto?'#E24B4A':d.flexSinMensajeria?'#BA7517':m>=15?'#1D9E75':m>=5?'#BA7517':'#E24B4A'; const cls=d.flexSinMensajeria&&!d.sinCosto?'ba':getMargenClass(m,d.sinCosto); const label=d.sinCosto?'SIN COSTO':d.flexSinMensajeria?'FLEX S/M':d.bonificado?'BONIF. '+fmtPct(m):fmtPct(m); return `<div class="br"><div class="bl">${name}</div><div class="bt"><div class="bf" style="width:${w}%;background:${col}"></div></div><div class="bv"><span class="badge ${d.bonificado&&!d.sinCosto&&!d.flexSinMensajeria?'bb':cls}">${label}</span></div></div>`; }).join('') || '<div class="empty">Sin datos</div>';
+  if(tot>0){ const totCosto = v.reduce((s,x)=>s+x.costo,0); const segs=[{lbl:'Costo producto',val:totCosto,col:'#1D9E75'},{lbl:'Comisión ML',val:totFee,col:'#378ADD'},{lbl:'Envíos ML',val:totEnvMl,col:'#EF9F27'},{lbl:'Mensajería',val:totMensajeria,col:'#BA7517'},{lbl:'Impuestos',val:totImp,col:'#E24B4A'},{lbl:'Ganancia',val:totGan,col:'#534AB7'}]; document.getElementById('cost-bars').innerHTML = segs.map(s=>{ const w=Math.max(3,Math.round((s.val/tot)*100)); return `<div class="br"><div class="bl" style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:${s.col};display:inline-block"></span>${s.lbl}</div><div class="bt"><div class="bf" style="width:${w}%;background:${s.col}"></div></div><div class="bv" style="width:48px;font-size:11px">${fmtPct(s.val/tot*100)}</div></div>`; }).join(''); } else document.getElementById('cost-bars').innerHTML = '<div class="empty">Sin datos</div>';
+}
+
+function renderLatestRows(v) {
+  document.getElementById('t-dash').innerHTML = v.slice(0,8).map(x=>{ const cls=getMargenClass(x.margen,x.sin_costo); const rowClass=x.sin_costo?' class="row-warn"':x.flex_sin_mensajeria?' class="row-flex-warn"':''; const marginTxt=x.sin_costo?'SIN COSTO':fmtPct(x.margen); const costoTxt=x.sin_costo?'SIN COSTO':x.bonificado?'$0 BONIF.':fmt(x.costo); const mensajeriaTxt=x.flex_sin_mensajeria?'FALTA':fmt(x.mensajeria); return `<tr${rowClass}><td><span class="badge ${x.cuenta_key==='fragantify'?'bb':'bn'}">${x.cuenta}</span></td><td title="${x.producto}">${String(x.producto||'—').substring(0,32)}</td><td>${x.localidad}</td><td>${fmt(x.precio_total)}</td><td style="color:#185FA5">${fmt(x.ml_fee)}</td><td style="color:#854F0B">${fmt(x.cargo_envio_ml)}</td><td class="${x.flex_sin_mensajeria?'flex-warn':''}">${mensajeriaTxt}</td><td style="color:#a32d2d">${fmt(x.impuestos)}</td><td class="${x.sin_costo?'cost-warn':''}">${costoTxt}</td><td>${fmt(x.ganancia)}</td><td><span class="badge ${x.bonificado&&!x.sin_costo?'bb':cls}">${marginTxt}</span></td></tr>`; }).join('') || '<tr><td colspan="11" class="empty">Sin ventas en el período</td></tr>';
+}
+
+function renderMissingCosts() {
+  const faltantes = STATE.ventas.filter(x => x.sin_costo);
+  const badge = document.getElementById('missing-count'); const box = document.getElementById('missing-costs'); if (!badge || !box) return;
+  badge.textContent = `${faltantes.length} pendientes`;
+  if (!faltantes.length) { box.innerHTML = '<div class="empty">No hay ventas sin costo. Los productos bonificados con COSTO $0 se toman como válidos.</div>'; return; }
+  box.innerHTML = `<table><thead><tr><th>Cuenta</th><th>Producto</th><th>SKU detectado</th><th>Item ID</th><th>Precio</th><th>Cobro neto ML</th></tr></thead><tbody>${faltantes.map(x=>`<tr class="row-warn"><td>${x.cuenta}</td><td title="${x.producto}">${String(x.producto||'—').substring(0,44)}</td><td class="cost-warn">${x.sku||'—'}</td><td>${x.item_id||x.item_id_ml||'—'}</td><td>${fmt(x.precio_total)}</td><td>${fmt(x.cobro_neto)}</td></tr>`).join('')}</tbody></table>`;
+}
+
+function renderFlexMissingMensajeria() {
+  const faltantes = STATE.ventas.filter(x => x.flex_sin_mensajeria);
+  const badge = document.getElementById('flex-missing-count'); const box = document.getElementById('flex-missing-costs'); if (!badge || !box) return;
+  badge.textContent = `${faltantes.length} pendientes`;
+  if (!faltantes.length) { box.innerHTML = '<div class="empty">No hay ventas Flex sin costo de mensajería.</div>'; return; }
+  box.innerHTML = `<table><thead><tr><th>Cuenta</th><th>Producto</th><th>Localidad</th><th>Partido</th><th>SKU</th><th>Precio</th><th>Cobro neto ML</th></tr></thead><tbody>${faltantes.map(x=>`<tr class="row-flex-warn"><td>${x.cuenta}</td><td title="${x.producto}">${String(x.producto||'—').substring(0,44)}</td><td class="flex-warn">${x.localidad||'—'}</td><td class="flex-warn">${x.partido||'—'}</td><td>${x.sku||'—'}</td><td>${fmt(x.precio_total)}</td><td>${fmt(x.cobro_neto)}</td></tr>`).join('')}</tbody></table>`;
+}
+
+function renderVentas() {
+  const v=STATE.ventas; const tot=v.reduce((s,x)=>s+x.precio_total,0); const totGan=v.reduce((s,x)=>s+x.ganancia,0); const margen=tot?totGan/tot*100:0; const sinCosto=v.filter(x=>x.sin_costo).length; const bonificados=v.filter(x=>x.bonificado).length; const flexSinMensajeria=v.filter(x=>x.flex_sin_mensajeria).length;
+  document.getElementById('v-met').innerHTML = [{lbl:'Ventas',val:v.length,sub:'en el período',cls:''},{lbl:'Facturado',val:fmt(tot),sub:'',cls:''},{lbl:'Ganancia neta',val:fmt(totGan),sub:fmtPct(margen),cls:margen>0?'green':'red'},{lbl:'Sin costo',val:sinCosto,sub:'productos a corregir',cls:sinCosto>0?'red':'green'},{lbl:'Flex sin mensajería',val:flexSinMensajeria,sub:'tarifa faltante',cls:flexSinMensajeria>0?'red':'green'},{lbl:'Bonificados',val:bonificados,sub:'costo $0 válido',cls:'blue'},{lbl:'Mensajería',val:fmt(v.reduce((s,x)=>s+x.mensajeria,0)),sub:'descontada de ganancia',cls:'amber'}].map(m=>`<div class="mc"><div class="mc-lbl">${m.lbl}</div><div class="mc-val ${m.cls}">${m.val}</div><div class="mc-sub">${m.sub}</div></div>`).join('');
+  document.getElementById('t-ventas').innerHTML = v.map((x,i)=>{ const cls=getMargenClass(x.margen,x.sin_costo); const rowClass=x.sin_costo?' class="row-warn"':x.flex_sin_mensajeria?' class="row-flex-warn"':''; const costoTxt=x.sin_costo?'SIN COSTO':x.bonificado?'$0 BONIF.':fmt(x.costo); const mensajeriaTxt=x.flex_sin_mensajeria?'FALTA':fmt(x.mensajeria); const margenTxt=x.sin_costo?'SIN COSTO':fmtPct(x.margen); return `<tr${rowClass}><td>${i+1}</td><td><span class="badge ${x.cuenta_key==='fragantify'?'bb':'bn'}">${x.cuenta}</span></td><td>${x.fecha}</td><td title="${x.producto}">${String(x.producto||'—').substring(0,28)}</td><td class="${x.sin_costo?'cost-warn':''}">${x.sku||'—'}</td><td>${x.localidad}</td><td>${x.es_flex?'SI':'NO'}</td><td>${fmt(x.precio_total)}</td><td>${fmt(x.cobro_neto)}</td><td class="${x.flex_sin_mensajeria?'flex-warn':''}">${mensajeriaTxt}</td><td class="${x.sin_costo?'cost-warn':''}">${costoTxt}</td><td>${fmt(x.ganancia)}</td><td><span class="badge ${x.bonificado&&!x.sin_costo?'bb':cls}">${margenTxt}</span></td></tr>`; }).join('') || '<tr><td colspan="13" class="empty">Sin ventas</td></tr>';
+  document.getElementById('ventas-loading').style.display='none'; document.getElementById('ventas-table').style.display='table';
+}
+
+function renderRoas(){ const ads=STATE.ads; if(!ads||ads.error){document.getElementById('roas-loading').textContent=ads?.message||'Sin datos de Mercado Ads';return;} document.getElementById('roas-met').innerHTML=[{lbl:'ROAS global',val:num(ads.roas_global).toFixed(2)+'x',sub:'ingresos / gasto',cls:ads.roas_global>=4?'green':ads.roas_global>=2?'amber':'red'},{lbl:'Gasto en ads',val:fmt(ads.gasto_total),sub:'período',cls:''},{lbl:'Ingresos por ads',val:fmt(ads.ingresos_total),sub:'atribuidos',cls:'green'},{lbl:'Retorno neto',val:fmt(num(ads.ingresos_total)-num(ads.gasto_total)),sub:'ingresos − gasto',cls:(num(ads.ingresos_total)-num(ads.gasto_total))>0?'green':'red'}].map(m=>`<div class="mc"><div class="mc-lbl">${m.lbl}</div><div class="mc-val ${m.cls}">${m.val}</div><div class="mc-sub">${m.sub}</div></div>`).join(''); document.getElementById('roas-cards').innerHTML=(ads.items||[]).map(item=>{const r=num(item.roas);const semCls=r>=4?'sg':r>=2?'sa':'sr';const dotCls=r>=4?'dg':r>=2?'da':'dr';const label=r>=4?'Escalar campaña':r>=2?'Revisar creativos':'Pausar campaña';return `<div class="rc"><div style="font-size:13px;font-weight:600;margin-bottom:.4rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.titulo}</div><div class="rv">${r.toFixed(2)}x</div><div style="font-size:11px;color:#888;margin-bottom:.5rem">ROAS</div><div class="sem ${semCls}"><div class="dot ${dotCls}"></div>${label}</div><div style="display:flex;justify-content:space-between;font-size:11px;color:#888;margin-top:.5rem;padding-top:.5rem;border-top:1px solid #f0f0f0"><span>Gasto ${fmt(item.gasto)}</span><span>Ingresos ${fmt(item.ingresos)}</span></div></div>`;}).join('')||'<div class="empty">Sin campañas activas en el período</div>'; document.getElementById('roas-loading').style.display='none'; document.getElementById('roas-content').style.display='block'; }
 
 function renderEnvios(){
   const v=STATE.ventas;
@@ -27,23 +574,10 @@ function renderEnvios(){
     const zonaLabel = nombreZonaDisplay(rawZona);
 
     if(!byZone[zonaKey]){
-      byZone[zonaKey]={
-        label: zonaLabel,
-        total:0,
-        n:0
-      };
+      byZone[zonaKey]={label: zonaLabel,total:0,n:0};
     }
 
-    // Si alguna venta viene con tilde y otra sin tilde, conservamos el nombre más lindo.
-    // Ejemplo: si primero vino Moron y después Morón, mostramos Morón.
-    if(
-      !byZone[zonaKey].label.includes('ó') &&
-      !byZone[zonaKey].label.includes('á') &&
-      !byZone[zonaKey].label.includes('é') &&
-      !byZone[zonaKey].label.includes('í') &&
-      !byZone[zonaKey].label.includes('ú') &&
-      /[áéíóúÁÉÍÓÚ]/.test(zonaLabel)
-    ){
+    if(!tieneTilde(byZone[zonaKey].label) && tieneTilde(zonaLabel)){
       byZone[zonaKey].label = zonaLabel;
     }
 
@@ -68,3 +602,73 @@ function renderEnvios(){
     return `<div class="br"><div class="bl">${z.label}</div><div class="bt"><div class="bf" style="width:${w}%;background:#EF9F27"></div></div><div class="bv">${fmt(z.total)}</div></div>`;
   }).join('')||'<div class="empty">Sin datos de mensajería</div>';
 }
+
+function ordenarLocalidadesGuardadas(){
+  LOCALIDADES.sort((a, b) => {
+    const partidoCompare = ordenarTexto(a.partido, b.partido);
+    if (partidoCompare !== 0) return partidoCompare;
+    return ordenarTexto(a.localidad, b.localidad);
+  });
+}
+
+function addLoc(){
+  const partido=document.getElementById('inp-partido').value.trim();
+  const localidad=document.getElementById('inp-loc').value.trim();
+  const tarifa=parseFloat(document.getElementById('inp-tarifa').value);
+
+  if(!partido||!localidad||isNaN(tarifa))return alert('Completá todos los campos');
+
+  LOCALIDADES.push({partido,localidad,tarifa});
+  ordenarLocalidadesGuardadas();
+  localStorage.setItem('ml_localidades',JSON.stringify(LOCALIDADES));
+  renderLoc();
+
+  document.getElementById('inp-partido').value='';
+  document.getElementById('inp-loc').value='';
+  document.getElementById('inp-tarifa').value='';
+}
+
+function removeLoc(i){
+  LOCALIDADES.splice(i,1);
+  ordenarLocalidadesGuardadas();
+  localStorage.setItem('ml_localidades',JSON.stringify(LOCALIDADES));
+  renderLoc();
+}
+
+function renderLoc(){
+  ordenarLocalidadesGuardadas();
+  localStorage.setItem('ml_localidades',JSON.stringify(LOCALIDADES));
+
+  const grouped={};
+
+  LOCALIDADES.forEach((l,i)=>{
+    const partidoKey = normalizarCodigo(l.partido);
+    const partidoLabel = String(l.partido || '—').trim() || '—';
+
+    if(!grouped[partidoKey]){
+      grouped[partidoKey]={label:partidoLabel,localidades:[]};
+    }
+
+    if(!tieneTilde(grouped[partidoKey].label) && tieneTilde(partidoLabel)){
+      grouped[partidoKey].label = partidoLabel;
+    }
+
+    grouped[partidoKey].localidades.push({...l,i});
+  });
+
+  const partidosOrdenados = Object.values(grouped).sort((a,b)=>ordenarTexto(a.label,b.label));
+
+  document.getElementById('t-loc').innerHTML = partidosOrdenados.map(grupo=>{
+    const localidadesOrdenadas = grupo.localidades.sort((a,b)=>ordenarTexto(a.localidad,b.localidad));
+
+    return `<tr style="background:#f5f5f5"><td colspan="4" style="padding:5px 8px;font-size:11px;font-weight:600;color:#888">${grupo.label}</td></tr>`+
+      localidadesOrdenadas.map(l=>`<tr><td></td><td>${l.localidad}</td><td>${fmt(l.tarifa)}</td><td><button onclick="removeLoc(${l.i})" style="background:none;border:none;cursor:pointer;font-size:12px;color:#a32d2d">Eliminar</button></td></tr>`).join('');
+  }).join('')||'<tr><td colspan="4" class="empty">Sin localidades cargadas</td></tr>';
+}
+
+const today=toISO(new Date()); const start= '2026-01-01'; syncDatesToAll(start, today);
+renderLoc(); loadCostos().then(()=>checkAuth());
+if(window.location.search.includes('connected=1')) history.replaceState({}, '', '/');
+</script>
+</body>
+</html>
