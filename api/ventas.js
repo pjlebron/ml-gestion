@@ -313,9 +313,12 @@ async function normalizarOrden(order, token, account) {
   const partido = shipData?.receiver_address?.state?.name || '—';
   const esFlex = detectarFlex(shipData);
   const sku = getSkuFromOrderItem(firstItem);
+  const sellerId = order.seller?.id || token.user_id || null;
 
   return {
     id: order.id,
+    order_id: order.id,
+    seller_id: sellerId,
     fecha: order.date_created?.slice(0, 10),
     producto: firstItem.item?.title || '—',
     item_id: firstItem.item?.id || null,
@@ -357,6 +360,46 @@ async function normalizarOrden(order, token, account) {
   };
 }
 
+function deduplicarOrdenes(orders) {
+  const byId = new Map();
+  const duplicados = [];
+
+  for (const order of orders) {
+    const key = String(order.id || order.order_id || '');
+
+    if (!key) continue;
+
+    if (!byId.has(key)) {
+      byId.set(key, order);
+      continue;
+    }
+
+    const existente = byId.get(key);
+
+    duplicados.push({
+      order_id: key,
+      primera_cuenta: existente.cuenta,
+      primera_cuenta_key: existente.cuenta_key,
+      segunda_cuenta: order.cuenta,
+      segunda_cuenta_key: order.cuenta_key,
+      producto: order.producto,
+      fecha: order.fecha,
+    });
+
+    // Si el duplicado viene marcado como Fragantify y el anterior como Lebron,
+    // dejamos Fragantify porque fue el caso detectado en producción.
+    // Si aparece otro caso, queda auditado en duplicados_eliminados.
+    if (existente.cuenta_key === 'lebron' && order.cuenta_key === 'fragantify') {
+      byId.set(key, order);
+    }
+  }
+
+  return {
+    orders: Array.from(byId.values()),
+    duplicados,
+  };
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -370,7 +413,7 @@ export default async function handler(req, res) {
 
   try {
     const accounts = {};
-    const allOrders = [];
+    const allOrdersRaw = [];
 
     for (const accountKey of requestedAccounts) {
       const token = await getValidToken(req, res, accountKey);
@@ -382,6 +425,7 @@ export default async function handler(req, res) {
         user_id: token?.user_id || null,
         total: 0,
         returned: 0,
+        returned_raw: 0,
         truncated: false,
         error: null,
       };
@@ -392,7 +436,7 @@ export default async function handler(req, res) {
         const searchData = await buscarOrdenesPaginadas(token, dateFrom, dateTo);
 
         accounts[accountKey].total = searchData.total;
-        accounts[accountKey].returned = searchData.returned;
+        accounts[accountKey].returned_raw = searchData.returned;
         accounts[accountKey].truncated = searchData.truncated;
         accounts[accountKey].max_orders = searchData.max_orders;
 
@@ -400,17 +444,24 @@ export default async function handler(req, res) {
           searchData.results.map(order => normalizarOrden(order, token, accountKey))
         );
 
-        allOrders.push(...normalizedOrders);
+        allOrdersRaw.push(...normalizedOrders);
       } catch (accountError) {
         accounts[accountKey].error = accountError.message;
       }
     }
+
+    const dedupeResult = deduplicarOrdenes(allOrdersRaw);
+    const allOrders = dedupeResult.orders;
 
     allOrders.sort((a, b) => {
       const fechaA = String(a.fecha || '');
       const fechaB = String(b.fecha || '');
       return fechaB.localeCompare(fechaA);
     });
+
+    for (const accountKey of Object.keys(accounts)) {
+      accounts[accountKey].returned = allOrders.filter(order => order.cuenta_key === accountKey).length;
+    }
 
     res.status(200).json({
       desde: dateFrom,
@@ -420,7 +471,10 @@ export default async function handler(req, res) {
       connected_accounts: Object.values(accounts).filter(a => a.connected).length,
       total_accounts: Object.keys(accounts).length,
       total: Object.values(accounts).reduce((s, a) => s + (a.total || 0), 0),
+      returned_raw: allOrdersRaw.length,
       returned: allOrders.length,
+      duplicated_removed: dedupeResult.duplicados.length,
+      duplicados_eliminados: dedupeResult.duplicados,
       truncated: Object.values(accounts).some(a => a.truncated),
       orders: allOrders,
     });
