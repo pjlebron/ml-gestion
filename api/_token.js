@@ -107,9 +107,8 @@ export function getToken(req, account = DEFAULT_ACCOUNT) {
     return decodeToken(cookies[cookieName]);
   }
 
-  // Compatibilidad con el sistema viejo:
-  // antes se guardaba todo en ml_token. Si esa cookie existe,
-  // la usamos como Lebron Store para que no se rompa la conexión actual.
+  // Compatibilidad solo para instalaciones sin Supabase.
+  // En producción con Supabase NO vamos a usar esta cookie para evitar que una cuenta pise a la otra.
   if (safeAccount === DEFAULT_ACCOUNT && cookies[LEGACY_COOKIE_NAME]) {
     return decodeToken(cookies[LEGACY_COOKIE_NAME]);
   }
@@ -145,23 +144,27 @@ export async function refreshToken(token) {
 async function getStoredToken(req, account) {
   const safeAccount = normalizeAccount(account);
 
-  // 1) Fuente principal: Supabase.
-  // Si ya guardamos el token en Supabase, no dependemos del navegador.
+  // PRODUCCIÓN: Supabase es la única fuente de verdad.
+  // Motivo: las cookies del navegador pueden quedar cruzadas entre Lebron y Fragantify.
+  // Si usamos cookies como fallback, /api/me puede volver a migrar un token viejo y pisar Supabase.
   if (isSupabaseConfigured()) {
     try {
       const supabaseToken = await getMlToken(safeAccount);
-      if (supabaseToken) {
-        return {
-          token: supabaseToken,
-          source: 'supabase',
-        };
-      }
+
+      return {
+        token: supabaseToken,
+        source: supabaseToken ? 'supabase' : 'none',
+      };
     } catch (error) {
       console.error(`Error leyendo token de Supabase para ${safeAccount}:`, error.message);
+      return {
+        token: null,
+        source: 'none',
+      };
     }
   }
 
-  // 2) Compatibilidad: cookies viejas del navegador.
+  // Fallback solo para entorno local sin Supabase.
   const cookieToken = getToken(req, safeAccount);
 
   if (cookieToken) {
@@ -182,8 +185,8 @@ async function saveTokenEverywhere(res, account, token) {
   const label = getAccountLabel(safeAccount);
   const cookies = [buildTokenCookie(safeAccount, token)];
 
-  // Compatibilidad con el sistema anterior.
-  // Lebron también mantiene ml_token para que nada viejo se rompa.
+  // Mantengo esta cookie legacy solo para no romper archivos viejos si todavía existe alguno.
+  // Pero getStoredToken ya no la usa cuando Supabase está configurado.
   if (safeAccount === DEFAULT_ACCOUNT) {
     cookies.push(buildLegacyTokenCookie(token));
   }
@@ -201,21 +204,11 @@ async function saveTokenEverywhere(res, account, token) {
 
 export async function getValidToken(req, res, account = DEFAULT_ACCOUNT) {
   const safeAccount = normalizeAccount(account);
-  const { token, source } = await getStoredToken(req, safeAccount);
+  const { token } = await getStoredToken(req, safeAccount);
 
   if (!token) return null;
 
-  // Si el token vino de cookie y todavía es válido, lo migramos a Supabase.
-  // Así una conexión vieja también queda disponible para otros navegadores.
   if (Date.now() < token.expires - 60000) {
-    if (source === 'cookie' && isSupabaseConfigured()) {
-      try {
-        await saveMlToken(safeAccount, getAccountLabel(safeAccount), token);
-      } catch (error) {
-        console.error(`Error migrando token de ${safeAccount} a Supabase:`, error.message);
-      }
-    }
-
     return token;
   }
 
