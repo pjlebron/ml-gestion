@@ -1,7 +1,18 @@
-export default async function handler(req, res) {
-  const { code } = req.query;
-  if (!code) return res.status(400).json({ error: 'Falta el código de autorización' });
+import {
+  buildLegacyTokenCookie,
+  buildTokenCookie,
+  getAccountLabel,
+  normalizeAccount,
+} from './_token.js';
 
+export default async function handler(req, res) {
+  const { code, state } = req.query;
+
+  if (!code) {
+    return res.status(400).json({ error: 'Falta el código de autorización' });
+  }
+
+  const account = normalizeAccount(state || 'lebron');
   const { ML_APP_ID, ML_CLIENT_SECRET, ML_REDIRECT_URI } = process.env;
 
   try {
@@ -19,15 +30,30 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    if (data.error) return res.status(400).json({ error: data.error, message: data.message });
+    if (data.error) {
+      return res.status(400).json({ error: data.error, message: data.message });
+    }
 
     const { access_token, refresh_token, user_id, expires_in } = data;
     const expires = Date.now() + expires_in * 1000;
 
-    const tokenPayload = Buffer.from(JSON.stringify({ access_token, refresh_token, user_id, expires })).toString('base64');
+    const token = {
+      access_token,
+      refresh_token,
+      user_id,
+      expires,
+    };
 
-    res.setHeader('Set-Cookie', `ml_token=${tokenPayload}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${60 * 60 * 24 * 30}`);
-    res.redirect('/?connected=1');
+    const cookies = [buildTokenCookie(account, token)];
+
+    // Compatibilidad con el sistema actual: Lebron Store también se guarda
+    // como ml_token para que las partes viejas no se rompan.
+    if (account === 'lebron') {
+      cookies.push(buildLegacyTokenCookie(token));
+    }
+
+    res.setHeader('Set-Cookie', cookies);
+    res.redirect(`/?connected=1&account=${encodeURIComponent(account)}&label=${encodeURIComponent(getAccountLabel(account))}`);
   } catch (err) {
     res.status(500).json({ error: 'Error al obtener el token', detail: err.message });
   }
