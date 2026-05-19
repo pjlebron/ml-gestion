@@ -3,9 +3,13 @@ import { getValidToken } from './_token.js';
 const ML_API = 'https://api.mercadolibre.com';
 const MP_API = 'https://api.mercadopago.com';
 
-function n(value) {
+function toNumber(value) {
   const parsed = Number(value || 0);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function absNumber(value) {
+  return Math.abs(toNumber(value));
 }
 
 async function fetchJson(url, token) {
@@ -22,18 +26,38 @@ async function fetchJson(url, token) {
   return data;
 }
 
+async function fetchJsonSafe(url, token) {
+  try {
+    return await fetchJson(url, token);
+  } catch (error) {
+    return null;
+  }
+}
+
+function getSkuFromOrderItem(orderItem = {}) {
+  return String(
+    orderItem.seller_sku ||
+    orderItem.seller_custom_field ||
+    orderItem.item?.seller_sku ||
+    orderItem.item?.seller_custom_field ||
+    orderItem.item?.seller_sku_id ||
+    orderItem.item?.id ||
+    ''
+  ).trim();
+}
+
 function sumarOrderItems(order) {
   const items = order.order_items || [];
 
-  return items.reduce((acc, item) => {
-    const cantidad = n(item.quantity) || 1;
-    const unitPrice = n(item.unit_price);
-    const fullUnitPrice = n(item.full_unit_price);
-    const saleFee = Math.abs(n(item.sale_fee));
+  return items.reduce((acc, orderItem) => {
+    const cantidad = toNumber(orderItem.quantity) || 1;
+    const unitPrice = toNumber(orderItem.unit_price);
+    const fullUnitPrice = toNumber(orderItem.full_unit_price) || unitPrice;
+    const saleFee = absNumber(orderItem.sale_fee);
 
     acc.cantidad += cantidad;
     acc.precio_items += unitPrice * cantidad;
-    acc.precio_lista += (fullUnitPrice || unitPrice) * cantidad;
+    acc.precio_lista += fullUnitPrice * cantidad;
     acc.sale_fee += saleFee * cantidad;
 
     return acc;
@@ -49,13 +73,14 @@ function sumarPayments(order) {
   const payments = order.payments || [];
 
   return payments.reduce((acc, payment) => {
-    acc.payment_ids.push(payment.id);
-    acc.transaction_amount += n(payment.transaction_amount);
-    acc.total_paid_amount += n(payment.total_paid_amount);
-    acc.shipping_cost += n(payment.shipping_cost);
-    acc.marketplace_fee += Math.abs(n(payment.marketplace_fee));
-    acc.coupon_amount += Math.abs(n(payment.coupon_amount));
-    acc.taxes_amount += Math.abs(n(payment.taxes_amount));
+    if (payment.id) acc.payment_ids.push(payment.id);
+
+    acc.transaction_amount += toNumber(payment.transaction_amount);
+    acc.total_paid_amount += toNumber(payment.total_paid_amount);
+    acc.shipping_cost += absNumber(payment.shipping_cost);
+    acc.marketplace_fee += absNumber(payment.marketplace_fee);
+    acc.coupon_amount += absNumber(payment.coupon_amount);
+    acc.taxes_amount += absNumber(payment.taxes_amount);
 
     return acc;
   }, {
@@ -78,64 +103,66 @@ function clasificarBillingFees(billingInfo) {
     bonificaciones: 0,
     impuestos: 0,
     retenciones: 0,
+    otros_gastos: 0,
+    detalle_fees: [],
   };
 
   const fees = billingInfo?.sale_fees || [];
 
   fees.forEach(fee => {
     const type = String(fee.type || '').toLowerCase();
-    const detail = String(fee.detail || fee.name || '').toLowerCase();
-    const amount = Math.abs(n(fee.amount));
+    const detail = String(fee.detail || fee.name || fee.description || '').toLowerCase();
+    const amount = absNumber(fee.amount);
 
     if (!amount) return;
 
-    if (type.includes('shipping') || detail.includes('env')) {
+    const item = {
+      type: fee.type || '',
+      detail: fee.detail || fee.name || fee.description || '',
+      amount,
+    };
+
+    result.detalle_fees.push(item);
+
+    if (type.includes('shipping') || detail.includes('envío') || detail.includes('envio') || detail.includes('shipping')) {
       result.cargo_envio_ml += amount;
-    } else if (type.includes('financing') || detail.includes('financi')) {
-      result.cargo_financiacion += amount;
-    } else if (type.includes('tax') || type.includes('iva') || detail.includes('iva') || detail.includes('impuesto')) {
-      result.impuestos += amount;
-    } else if (type.includes('retention') || detail.includes('retenci')) {
-      result.retenciones += amount;
-    } else if (type.includes('discount') || detail.includes('descuento')) {
-      result.descuentos += amount;
-    } else if (type.includes('bonus') || detail.includes('bonific')) {
-      result.bonificaciones += amount;
-    } else {
-      result.cargo_venta += amount;
+      return;
     }
+
+    if (type.includes('financing') || detail.includes('financi')) {
+      result.cargo_financiacion += amount;
+      return;
+    }
+
+    if (type.includes('tax') || type.includes('iva') || detail.includes('iva') || detail.includes('impuesto')) {
+      result.impuestos += amount;
+      return;
+    }
+
+    if (type.includes('retention') || detail.includes('retenci') || detail.includes('percepci')) {
+      result.retenciones += amount;
+      return;
+    }
+
+    if (type.includes('discount') || detail.includes('descuento')) {
+      result.descuentos += amount;
+      return;
+    }
+
+    if (type.includes('bonus') || detail.includes('bonific')) {
+      result.bonificaciones += amount;
+      return;
+    }
+
+    if (type.includes('ml_fee') || type.includes('sale_fee') || detail.includes('cargo por venta') || detail.includes('comisión') || detail.includes('comision')) {
+      result.cargo_venta += amount;
+      return;
+    }
+
+    result.otros_gastos += amount;
   });
 
   return result;
-}
-
-async function leerBillingInfo(orderId, token) {
-  try {
-    const data = await fetchJson(`${ML_API}/orders/${orderId}/billing_info`, token);
-    return data;
-  } catch (error) {
-    return null;
-  }
-}
-
-async function leerShipment(shippingId, token) {
-  if (!shippingId) return null;
-
-  try {
-    return await fetchJson(`${ML_API}/shipments/${shippingId}`, token);
-  } catch (error) {
-    return null;
-  }
-}
-
-async function leerMercadoPago(paymentId, token) {
-  if (!paymentId) return null;
-
-  try {
-    return await fetchJson(`${MP_API}/v1/payments/${paymentId}`, token);
-  } catch (error) {
-    return null;
-  }
 }
 
 function resumirMercadoPago(mpPayments) {
@@ -147,15 +174,15 @@ function resumirMercadoPago(mpPayments) {
   };
 
   mpPayments.filter(Boolean).forEach(payment => {
-    result.mp_net_received_amount += n(payment.transaction_details?.net_received_amount);
-    result.mp_shipping_amount += n(payment.shipping_amount);
+    result.mp_net_received_amount += toNumber(payment.transaction_details?.net_received_amount);
+    result.mp_shipping_amount += absNumber(payment.shipping_amount);
 
     (payment.fee_details || []).forEach(fee => {
-      result.mp_fee_details_total += Math.abs(n(fee.amount));
+      result.mp_fee_details_total += absNumber(fee.amount);
     });
 
     (payment.taxes || []).forEach(tax => {
-      result.mp_taxes_total += Math.abs(n(tax.value || tax.amount));
+      result.mp_taxes_total += absNumber(tax.value || tax.amount);
     });
   });
 
@@ -170,6 +197,18 @@ function detectarFlex(shipData) {
   return shipData.logistic_type === 'self_service' ||
     (shipData.mode === 'me2' && shipData.sub_mode === 'flex') ||
     tags.includes('self_service');
+}
+
+function getShipmentCost(shipData) {
+  if (!shipData) return 0;
+
+  return absNumber(
+    shipData.base_cost ||
+    shipData.shipping_option?.cost ||
+    shipData.shipping_option?.list_cost ||
+    shipData.cost_components?.loyal_discount ||
+    0
+  );
 }
 
 export default async function handler(req, res) {
@@ -194,44 +233,62 @@ export default async function handler(req, res) {
     const searchData = await fetchJson(searchUrl, token);
 
     const orders = await Promise.all((searchData.results || []).map(async order => {
-      const item = order.order_items?.[0] || {};
+      const firstItem = order.order_items?.[0] || {};
       const shipping = order.shipping || {};
+
       const orderItems = sumarOrderItems(order);
       const payments = sumarPayments(order);
 
+      const billingInfoPromise = fetchJsonSafe(`${ML_API}/orders/${order.id}/billing_info`, token);
+      const shipmentPromise = shipping.id ? fetchJsonSafe(`${ML_API}/shipments/${shipping.id}`, token) : Promise.resolve(null);
+      const mpPromises = payments.payment_ids.map(paymentId => fetchJsonSafe(`${MP_API}/v1/payments/${paymentId}`, token));
+
       const [billingInfo, shipData, ...mpPayments] = await Promise.all([
-        leerBillingInfo(order.id, token),
-        leerShipment(shipping.id, token),
-        ...payments.payment_ids.map(paymentId => leerMercadoPago(paymentId, token)),
+        billingInfoPromise,
+        shipmentPromise,
+        ...mpPromises,
       ]);
 
-      const billingFees = clasificarBillingFees(billingInfo);
+      const billing = clasificarBillingFees(billingInfo);
       const mp = resumirMercadoPago(mpPayments);
 
-      const cargoVenta = billingFees.cargo_venta || payments.marketplace_fee || orderItems.sale_fee || 0;
-      const cargoEnvioMl = billingFees.cargo_envio_ml || 0;
-      const cargoFinanciacion = billingFees.cargo_financiacion || 0;
-      const descuentos = billingFees.descuentos || payments.coupon_amount || 0;
-      const bonificaciones = billingFees.bonificaciones || 0;
-      const impuestos = billingFees.impuestos || payments.taxes_amount || mp.mp_taxes_total || 0;
-      const retenciones = billingFees.retenciones || 0;
+      const precioTotal = toNumber(order.total_amount) || orderItems.precio_items || payments.transaction_amount;
 
-      const precioTotal = n(order.total_amount) || orderItems.precio_items || payments.transaction_amount;
-      const cobroNeto = n(billingInfo?.net_amount) || mp.mp_net_received_amount || (
-        precioTotal - cargoVenta - cargoEnvioMl - cargoFinanciacion - impuestos - retenciones - descuentos + bonificaciones
-      );
+      const cargoVenta = billing.cargo_venta || payments.marketplace_fee || orderItems.sale_fee || mp.mp_fee_details_total || 0;
+      const cargoEnvioMl = billing.cargo_envio_ml || getShipmentCost(shipData) || 0;
+      const cargoFinanciacion = billing.cargo_financiacion || 0;
+      const descuentos = billing.descuentos || payments.coupon_amount || 0;
+      const bonificaciones = billing.bonificaciones || 0;
+      const impuestos = billing.impuestos || payments.taxes_amount || mp.mp_taxes_total || 0;
+      const retenciones = billing.retenciones || 0;
+      const otrosGastos = billing.otros_gastos || 0;
+
+      const cobroNetoCalculado = precioTotal
+        - cargoVenta
+        - cargoEnvioMl
+        - cargoFinanciacion
+        - descuentos
+        - impuestos
+        - retenciones
+        - otrosGastos
+        + bonificaciones;
+
+      const cobroNeto = toNumber(billingInfo?.net_amount) || mp.mp_net_received_amount || cobroNetoCalculado;
 
       const localidad = shipData?.receiver_address?.city?.name || '—';
       const partido = shipData?.receiver_address?.state?.name || '—';
       const esFlex = detectarFlex(shipData);
+      const sku = getSkuFromOrderItem(firstItem);
 
       return {
         id: order.id,
         fecha: order.date_created?.slice(0, 10),
-        producto: item.item?.title || '—',
-        item_id: item.item?.id || null,
-        cantidad: item.quantity || orderItems.cantidad || 1,
-        precio_unitario: n(item.unit_price),
+        producto: firstItem.item?.title || '—',
+        item_id: firstItem.item?.id || null,
+        item_id_ml: firstItem.item?.id || null,
+        sku,
+        cantidad: firstItem.quantity || orderItems.cantidad || 1,
+        precio_unitario: toNumber(firstItem.unit_price),
         precio_total: precioTotal,
         precio_lista: orderItems.precio_lista,
 
@@ -243,9 +300,13 @@ export default async function handler(req, res) {
         bonificaciones,
         impuestos,
         retenciones,
+        otros_gastos: otrosGastos,
+        cobro_neto: cobroNeto,
+        cobro_neto_calculado: cobroNetoCalculado,
+
         mp_fee_details_total: mp.mp_fee_details_total,
         mp_net_received_amount: mp.mp_net_received_amount,
-        cobro_neto: cobroNeto,
+        mp_shipping_amount: mp.mp_shipping_amount,
 
         es_flex: esFlex,
         envio_id: shipping.id || null,
@@ -254,6 +315,7 @@ export default async function handler(req, res) {
         estado: order.status,
         comprador: order.buyer?.nickname || '—',
         payment_ids: payments.payment_ids,
+        detalle_fees: billing.detalle_fees,
       };
     }));
 
