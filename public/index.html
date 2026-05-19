@@ -40,7 +40,7 @@ body{font-family:system-ui,sans-serif;font-size:14px;background:#f5f5f5;color:#1
 .bl{font-size:12px;color:#888;width:130px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bt{flex:1;height:7px;background:#f0f0f0;border-radius:4px;overflow:hidden}
 .bf{height:100%;border-radius:4px}
-.bv{font-size:12px;width:74px;text-align:right;flex-shrink:0}
+.bv{font-size:12px;width:72px;text-align:right;flex-shrink:0}
 table{width:100%;border-collapse:collapse;font-size:12px}
 th{text-align:left;padding:7px 8px;color:#888;font-weight:400;border-bottom:1px solid #e5e5e5;white-space:nowrap}
 td{padding:7px 8px;border-bottom:1px solid #f0f0f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -62,7 +62,8 @@ tr:last-child td{border-bottom:none}
 .alert-warn{background:#faeeda;color:#633806;border:1px solid #fac775}
 .alert-info{background:#e6f1fb;color:#0c447c;border:1px solid #b5d4f4}
 .row-warn{background:#fff1f1}
-.cost-warn{color:#a32d2d;font-weight:700}
+.cost-warn{color:#a32d2d!important;font-weight:700}
+.small-muted{font-size:11px;color:#888;margin-top:3px;line-height:1.4}
 @media(max-width:820px){
   .shell{grid-template-columns:1fr}
   .sidebar{position:sticky;top:0;z-index:10;border-right:none;border-bottom:1px solid #e5e5e5;display:block;padding:.75rem}
@@ -136,7 +137,33 @@ tr:last-child td{border-bottom:none}
             <div class="ct" style="margin:0">Últimas ventas</div>
             <div class="qpill" onclick="nav(document.querySelectorAll('.ni')[1],'ventas')">Ver todas</div>
           </div>
-          <table><thead><tr><th style="width:28%">Producto</th><th style="width:16%">Localidad</th><th style="width:12%">Precio</th><th style="width:12%">Comisión</th><th style="width:12%">Envío</th><th style="width:12%">Ganancia</th><th style="width:10%">Margen</th></tr></thead><tbody id="t-dash"></tbody></table>
+          <table>
+            <thead>
+              <tr>
+                <th style="width:24%">Producto</th>
+                <th style="width:14%">Localidad</th>
+                <th>Precio</th>
+                <th>Comisión</th>
+                <th>Envío ML</th>
+                <th>Imp.</th>
+                <th>Costo</th>
+                <th>Ganancia</th>
+                <th>Margen</th>
+              </tr>
+            </thead>
+            <tbody id="t-dash"></tbody>
+          </table>
+        </div>
+
+        <div class="card" style="margin-top:1rem">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.85rem;gap:8px;flex-wrap:wrap">
+            <div>
+              <div class="ct" style="margin:0">Ventas sin costo asignado</div>
+              <div class="small-muted">Estos productos no encontraron coincidencia en la planilla de costos. Usá el SKU detectado o el Item ID para corregir la planilla.</div>
+            </div>
+            <div class="badge br2" id="missing-count">0 pendientes</div>
+          </div>
+          <div id="missing-costs"></div>
         </div>
       </div>
     </div>
@@ -159,7 +186,20 @@ tr:last-child td{border-bottom:none}
       <div class="card">
         <div id="ventas-loading" class="empty"><span class="spinner"></span> Cargando...</div>
         <table id="ventas-table" style="display:none">
-          <thead><tr><th>#</th><th style="width:14%">Fecha</th><th style="width:24%">Producto</th><th style="width:14%">Localidad</th><th>Precio</th><th>Comisión ML</th><th>Envío</th><th>Costo</th><th>Margen</th></tr></thead>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th style="width:12%">Fecha</th>
+              <th style="width:22%">Producto</th>
+              <th>SKU</th>
+              <th>Localidad</th>
+              <th>Precio</th>
+              <th>Cobro neto ML</th>
+              <th>Costo</th>
+              <th>Ganancia</th>
+              <th>Margen</th>
+            </tr>
+          </thead>
           <tbody id="t-ventas"></tbody>
         </table>
       </div>
@@ -197,7 +237,7 @@ tr:last-child td{border-bottom:none}
     <!-- LOCALIDADES -->
     <div class="view" id="view-localidades">
       <div class="topbar"><div class="page-title">Localidades y tarifas</div></div>
-      <div class="alert alert-info">Las tarifas que cargues se descuentan del margen en cada venta según la localidad del comprador.</div>
+      <div class="alert alert-info">Estas tarifas se usan solo cuando Mercado Libre no informa costo de envío descontado. Si ML ya trae envío, no se descuenta dos veces.</div>
       <div class="card">
         <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap">
           <input type="text" id="inp-partido" placeholder="Partido" style="flex:1;min-width:90px;padding:6px 10px;font-size:13px;border:1px solid #ddd;border-radius:6px">
@@ -213,22 +253,38 @@ tr:last-child td{border-bottom:none}
 </div>
 
 <script>
-const fmt = n => '$' + Math.round(Number(n || 0)).toLocaleString('es-AR');
-const fmtPct = n => Number(n || 0).toFixed(1) + '%';
+const fmt = n => '$' + Math.round(num(n)).toLocaleString('es-AR');
+const fmtPct = n => num(n).toFixed(1) + '%';
 const toISO = d => d.toISOString().slice(0,10);
 const daysAgo = n => { const d = new Date(); d.setDate(d.getDate()-n); return d; };
-const num = v => Number(v || 0);
+function num(value) { const parsed = Number(value || 0); return Number.isFinite(parsed) ? parsed : 0; }
 
 let STATE = { connected: false, ventas: [], ads: null, dias: 7 };
 let LOCALIDADES = JSON.parse(localStorage.getItem('ml_localidades') || '[]');
 let COSTOS = {};
+
+function normalizarCodigo(value) {
+  return String(value || '').trim().toLowerCase();
+}
 
 async function loadCostos() {
   try {
     const r = await fetch('/api/costos');
     const d = await r.json();
     if (d.error) throw new Error(d.detail || d.error);
-    COSTOS = d.costos || {};
+
+    const costosCrudos = d.costos || {};
+    COSTOS = {};
+
+    Object.entries(costosCrudos).forEach(([codigo, costo]) => {
+      const keyOriginal = String(codigo || '').trim();
+      const keyNormalizada = normalizarCodigo(codigo);
+      const valor = num(costo);
+
+      if (keyOriginal) COSTOS[keyOriginal] = valor;
+      if (keyNormalizada) COSTOS[keyNormalizada] = valor;
+    });
+
     console.log(`Costos cargados: ${Object.keys(COSTOS).length}`);
   } catch(e) {
     console.error('Error cargando costos', e);
@@ -259,19 +315,32 @@ function conectar() {
 }
 
 function getEnvioCosto(localidad, partido) {
-  const locTxt = String(localidad || '').toLowerCase().trim();
-  const partTxt = String(partido || '').toLowerCase().trim();
+  const locTxt = normalizarCodigo(localidad);
+  const partTxt = normalizarCodigo(partido);
 
-  const loc = LOCALIDADES.find(l => String(l.localidad || '').toLowerCase().trim() === locTxt);
+  const loc = LOCALIDADES.find(l => normalizarCodigo(l.localidad) === locTxt);
   if (loc) return num(loc.tarifa);
 
-  const part = LOCALIDADES.find(l => String(l.partido || '').toLowerCase().trim() === partTxt);
+  const part = LOCALIDADES.find(l => normalizarCodigo(l.partido) === partTxt);
   return part ? num(part.tarifa) : 0;
 }
 
-function getCostoProducto(itemId) {
-  const key = String(itemId || '').trim();
-  return num(COSTOS[key]);
+function getCostoProducto(venta) {
+  const posiblesCodigos = [
+    venta?.sku,
+    venta?.item_id,
+    venta?.item_id_ml,
+  ];
+
+  for (const codigo of posiblesCodigos) {
+    const keyOriginal = String(codigo || '').trim();
+    const keyNormalizada = normalizarCodigo(codigo);
+
+    if (keyOriginal && COSTOS[keyOriginal]) return num(COSTOS[keyOriginal]);
+    if (keyNormalizada && COSTOS[keyNormalizada]) return num(COSTOS[keyNormalizada]);
+  }
+
+  return 0;
 }
 
 function getMargenClass(margen, sinCosto = false) {
@@ -312,32 +381,56 @@ async function loadVentas() {
   try {
     const r = await fetch(`/api/ventas?desde=${desde}&hasta=${hasta}&limit=100`);
     const d = await r.json();
-    if (d.error) throw new Error(d.message || d.error);
+    if (d.error) throw new Error(d.message || d.detail || d.error);
 
     STATE.ventas = (d.orders || []).map(o => {
       const precioTotal = num(o.precio_total);
-      const cobroNeto = num(o.cobro_neto);
-      const cargoVenta = num(o.cargo_venta);
+      const cargoVenta = num(o.cargo_venta || o.ml_fee);
+      const cargoEnvioMl = num(o.cargo_envio_ml);
+      const cargoFinanciacion = num(o.cargo_financiacion);
       const descuentos = num(o.descuentos);
+      const bonificaciones = num(o.bonificaciones);
       const impuestos = num(o.impuestos);
-      const costo = getCostoProducto(o.item_id);
-      const envioFlex = getEnvioCosto(o.localidad, o.partido);
-      const baseGanancia = cobroNeto || (precioTotal - cargoVenta - impuestos + descuentos);
-      const ganancia = baseGanancia - costo - envioFlex;
+      const retenciones = num(o.retenciones);
+      const otrosGastos = num(o.otros_gastos);
+      const costo = getCostoProducto(o);
+
+      const envioManual = getEnvioCosto(o.localidad, o.partido);
+      const envioFlexManual = cargoEnvioMl > 0 ? 0 : envioManual;
+
+      const cobroNetoMl = num(o.cobro_neto) || (
+        precioTotal
+        - cargoVenta
+        - cargoEnvioMl
+        - cargoFinanciacion
+        - descuentos
+        - impuestos
+        - retenciones
+        - otrosGastos
+        + bonificaciones
+      );
+
+      const ganancia = cobroNetoMl - costo - envioFlexManual;
       const margen = precioTotal > 0 ? (ganancia / precioTotal * 100) : 0;
       const sinCosto = costo === 0;
 
       return {
         ...o,
         precio_total: precioTotal,
-        cobro_neto: baseGanancia,
         cargo_venta: cargoVenta,
         ml_fee: cargoVenta,
+        cargo_envio_ml: cargoEnvioMl,
+        cargo_financiacion: cargoFinanciacion,
         descuentos,
+        bonificaciones,
         impuestos,
+        retenciones,
+        otros_gastos: otrosGastos,
+        cobro_neto: cobroNetoMl,
         costo,
-        envio_costo: envioFlex,
-        envio_flex: envioFlex,
+        envio_costo: cargoEnvioMl + envioFlexManual,
+        envio_ml: cargoEnvioMl,
+        envio_flex_manual: envioFlexManual,
         ganancia,
         margen,
         sin_costo: sinCosto,
@@ -347,6 +440,7 @@ async function loadVentas() {
     renderDash();
     renderVentas();
     renderEnvios();
+    renderMissingCosts();
   } catch(e) {
     document.getElementById('dash-loading').textContent = 'Error: ' + e.message;
     document.getElementById('ventas-loading').textContent = 'Error: ' + e.message;
@@ -374,7 +468,11 @@ function renderDash() {
   const tot = v.reduce((s,x)=>s+x.precio_total,0);
   const totGan = v.reduce((s,x)=>s+x.ganancia,0);
   const totEnv = v.reduce((s,x)=>s+x.envio_costo,0);
+  const totEnvMl = v.reduce((s,x)=>s+num(x.cargo_envio_ml),0);
+  const totEnvManual = v.reduce((s,x)=>s+num(x.envio_flex_manual),0);
   const totFee = v.reduce((s,x)=>s+x.ml_fee,0);
+  const totImp = v.reduce((s,x)=>s+num(x.impuestos),0);
+  const totDesc = v.reduce((s,x)=>s+num(x.descuentos),0);
   const sinCosto = v.filter(x=>x.sin_costo).length;
   const margen = tot ? totGan/tot*100 : 0;
 
@@ -382,8 +480,11 @@ function renderDash() {
     {lbl:'Facturación',val:fmt(tot),sub:v.length+' ventas',cls:''},
     {lbl:'Ganancia neta',val:fmt(totGan),sub:fmtPct(margen)+' margen',cls:margen>0?'green':'red'},
     {lbl:'Sin costo',val:sinCosto,sub:'ventas a revisar',cls:sinCosto>0?'red':'green'},
-    {lbl:'Gasto envíos',val:fmt(totEnv),sub:tot?fmtPct(totEnv/tot*100)+' del total':'',cls:'amber'},
     {lbl:'Comisiones ML',val:fmt(totFee),sub:tot?fmtPct(totFee/tot*100)+' del total':'',cls:'blue'},
+    {lbl:'Envíos ML',val:fmt(totEnvMl),sub:tot?fmtPct(totEnvMl/tot*100)+' del total':'',cls:'amber'},
+    {lbl:'Impuestos',val:fmt(totImp),sub:tot?fmtPct(totImp/tot*100)+' del total':'',cls:'red'},
+    {lbl:'Descuentos',val:fmt(totDesc),sub:tot?fmtPct(totDesc/tot*100)+' del total':'',cls:'amber'},
+    {lbl:'Flex manual',val:fmt(totEnvManual),sub:'tarifas cargadas',cls:'amber'},
   ].map(m=>`<div class="mc"><div class="mc-lbl">${m.lbl}</div><div class="mc-val ${m.cls}">${m.val}</div><div class="mc-sub">${m.sub}</div></div>`).join('');
 
   const byProd = {};
@@ -410,7 +511,8 @@ function renderDash() {
     const segs=[
       {lbl:'Costo producto',val:totCosto,col:'#1D9E75'},
       {lbl:'Comisión ML',val:totFee,col:'#378ADD'},
-      {lbl:'Envíos',val:totEnv,col:'#EF9F27'},
+      {lbl:'Envíos ML/manual',val:totEnv,col:'#EF9F27'},
+      {lbl:'Impuestos',val:totImp,col:'#E24B4A'},
       {lbl:'Ganancia',val:totGan,col:'#534AB7'}
     ];
     document.getElementById('cost-bars').innerHTML = segs.map(s=>{
@@ -425,11 +527,52 @@ function renderDash() {
     const cls = getMargenClass(x.margen, x.sin_costo);
     const rowClass = x.sin_costo ? ' class="row-warn"' : '';
     const marginTxt = x.sin_costo ? 'SIN COSTO' : fmtPct(x.margen);
-    return `<tr${rowClass}><td>${x.producto}</td><td>${x.localidad}</td><td>${fmt(x.precio_total)}</td><td style="color:#185FA5">${fmt(x.ml_fee)}</td><td style="color:#854F0B">${fmt(x.envio_costo)}</td><td>${fmt(x.ganancia)}</td><td><span class="badge ${cls}">${marginTxt}</span></td></tr>`;
-  }).join('') || '<tr><td colspan="7" class="empty">Sin ventas en el período</td></tr>';
+    const costoTxt = x.sin_costo ? 'SIN COSTO' : fmt(x.costo);
+    return `<tr${rowClass}><td>${x.producto}</td><td>${x.localidad}</td><td>${fmt(x.precio_total)}</td><td style="color:#185FA5">${fmt(x.ml_fee)}</td><td style="color:#854F0B">${fmt(x.cargo_envio_ml)}</td><td style="color:#a32d2d">${fmt(x.impuestos)}</td><td class="${x.sin_costo?'cost-warn':''}">${costoTxt}</td><td>${fmt(x.ganancia)}</td><td><span class="badge ${cls}">${marginTxt}</span></td></tr>`;
+  }).join('') || '<tr><td colspan="9" class="empty">Sin ventas en el período</td></tr>';
 
   document.getElementById('dash-loading').style.display = 'none';
   document.getElementById('dash-content').style.display = 'block';
+}
+
+function renderMissingCosts() {
+  const faltantes = STATE.ventas.filter(x => x.sin_costo);
+  const badge = document.getElementById('missing-count');
+  const box = document.getElementById('missing-costs');
+
+  if (!badge || !box) return;
+
+  badge.textContent = `${faltantes.length} pendientes`;
+
+  if (!faltantes.length) {
+    box.innerHTML = '<div class="empty">No hay ventas sin costo. Una rareza agradable, casi sospechosa.</div>';
+    return;
+  }
+
+  box.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Producto</th>
+          <th>SKU detectado</th>
+          <th>Item ID</th>
+          <th>Precio</th>
+          <th>Cobro neto ML</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${faltantes.map(x => `
+          <tr class="row-warn">
+            <td title="${x.producto}">${String(x.producto || '—').substring(0,44)}</td>
+            <td class="cost-warn">${x.sku || '—'}</td>
+            <td>${x.item_id || x.item_id_ml || '—'}</td>
+            <td>${fmt(x.precio_total)}</td>
+            <td>${fmt(x.cobro_neto)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
 }
 
 function renderVentas() {
@@ -451,10 +594,9 @@ function renderVentas() {
     const cls = getMargenClass(x.margen, x.sin_costo);
     const rowClass = x.sin_costo ? ' class="row-warn"' : '';
     const costoTxt = x.sin_costo ? 'SIN COSTO' : fmt(x.costo);
-    const costoClass = x.sin_costo ? 'cost-warn' : '';
     const margenTxt = x.sin_costo ? 'SIN COSTO' : fmtPct(x.margen);
-    return `<tr${rowClass}><td>${i+1}</td><td>${x.fecha}</td><td title="${x.producto}">${String(x.producto || '—').substring(0,28)}</td><td>${x.localidad}</td><td>${fmt(x.precio_total)}</td><td style="color:#185FA5">${fmt(x.ml_fee)}</td><td style="color:#854F0B">${fmt(x.envio_costo)}</td><td class="${costoClass}" style="color:${x.sin_costo?'#a32d2d':'#888'}">${costoTxt}</td><td><span class="badge ${cls}">${margenTxt}</span></td></tr>`;
-  }).join('') || '<tr><td colspan="9" class="empty">Sin ventas</td></tr>';
+    return `<tr${rowClass}><td>${i+1}</td><td>${x.fecha}</td><td title="${x.producto}">${String(x.producto || '—').substring(0,28)}</td><td class="${x.sin_costo?'cost-warn':''}">${x.sku || '—'}</td><td>${x.localidad}</td><td>${fmt(x.precio_total)}</td><td>${fmt(x.cobro_neto)}</td><td class="${x.sin_costo?'cost-warn':''}">${costoTxt}</td><td>${fmt(x.ganancia)}</td><td><span class="badge ${cls}">${margenTxt}</span></td></tr>`;
+  }).join('') || '<tr><td colspan="10" class="empty">Sin ventas</td></tr>';
 
   document.getElementById('ventas-loading').style.display = 'none';
   document.getElementById('ventas-table').style.display = 'table';
