@@ -10,6 +10,7 @@ const ACCOUNT_CONFIG = {
 };
 
 const DEFAULT_ACCOUNT = 'lebron';
+const LEGACY_COOKIE_NAME = 'ml_token';
 
 export function getAccountConfig(account = DEFAULT_ACCOUNT) {
   return ACCOUNT_CONFIG[account] || ACCOUNT_CONFIG[DEFAULT_ACCOUNT];
@@ -29,6 +30,7 @@ export function normalizeAccount(account = DEFAULT_ACCOUNT) {
 
 function parseCookies(req) {
   const cookieHeader = req.headers.cookie || '';
+
   return cookieHeader.split(';').reduce((acc, cookie) => {
     const [rawKey, ...rawValue] = cookie.trim().split('=');
     if (!rawKey) return acc;
@@ -57,6 +59,11 @@ export function buildTokenCookie(account, token) {
   return `${cookieName}=${tokenPayload}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${60 * 60 * 24 * 30}`;
 }
 
+export function buildLegacyTokenCookie(token) {
+  const tokenPayload = encodeToken(token);
+  return `${LEGACY_COOKIE_NAME}=${tokenPayload}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${60 * 60 * 24 * 30}`;
+}
+
 export function clearTokenCookie(account) {
   const safeAccount = normalizeAccount(account);
   const { cookieName } = getAccountConfig(safeAccount);
@@ -64,14 +71,27 @@ export function clearTokenCookie(account) {
   return `${cookieName}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0`;
 }
 
+export function clearLegacyTokenCookie() {
+  return `${LEGACY_COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0`;
+}
+
 export function getToken(req, account = DEFAULT_ACCOUNT) {
   const safeAccount = normalizeAccount(account);
   const { cookieName } = getAccountConfig(safeAccount);
   const cookies = parseCookies(req);
 
-  if (!cookies[cookieName]) return null;
+  if (cookies[cookieName]) {
+    return decodeToken(cookies[cookieName]);
+  }
 
-  return decodeToken(cookies[cookieName]);
+  // Compatibilidad con el sistema viejo:
+  // antes se guardaba todo en ml_token. Si esa cookie existe,
+  // la usamos como Lebron Store para que no se rompa la conexión actual.
+  if (safeAccount === DEFAULT_ACCOUNT && cookies[LEGACY_COOKIE_NAME]) {
+    return decodeToken(cookies[LEGACY_COOKIE_NAME]);
+  }
+
+  return null;
 }
 
 export function getAllTokens(req) {
@@ -117,7 +137,13 @@ export async function getValidToken(req, res, account = DEFAULT_ACCOUNT) {
     expires: Date.now() + refreshed.expires_in * 1000,
   };
 
-  res.setHeader('Set-Cookie', buildTokenCookie(safeAccount, updated));
+  const cookies = [buildTokenCookie(safeAccount, updated)];
+
+  if (safeAccount === DEFAULT_ACCOUNT) {
+    cookies.push(buildLegacyTokenCookie(updated));
+  }
+
+  res.setHeader('Set-Cookie', cookies);
 
   return updated;
 }
@@ -148,6 +174,11 @@ export async function getValidTokens(req, res, accounts = getAccountKeys()) {
     };
 
     cookiesToSet.push(buildTokenCookie(safeAccount, updated));
+
+    if (safeAccount === DEFAULT_ACCOUNT) {
+      cookiesToSet.push(buildLegacyTokenCookie(updated));
+    }
+
     result[safeAccount] = updated;
   }
 
