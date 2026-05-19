@@ -1,12 +1,17 @@
-import { getValidToken } from './_token.js';
+import {
+  getAccountKeys,
+  getAccountLabel,
+  getValidToken,
+  normalizeAccount,
+} from './_token.js';
 
 const ML_API = 'https://api.mercadolibre.com';
 const MP_API = 'https://api.mercadopago.com';
 
 const DEFAULT_DATE_FROM = '2026-01-01';
 const PAGE_LIMIT = 50;
-const MAX_PAGES = 20;
-const MAX_ORDERS = PAGE_LIMIT * MAX_PAGES;
+const MAX_PAGES_PER_ACCOUNT = 20;
+const MAX_ORDERS_PER_ACCOUNT = PAGE_LIMIT * MAX_PAGES_PER_ACCOUNT;
 
 function toNumber(value) {
   const parsed = Number(value || 0);
@@ -121,13 +126,11 @@ function clasificarBillingFees(billingInfo) {
 
     if (!amount) return;
 
-    const item = {
+    result.detalle_fees.push({
       type: fee.type || '',
       detail: fee.detail || fee.name || fee.description || '',
       amount,
-    };
-
-    result.detalle_fees.push(item);
+    });
 
     if (type.includes('shipping') || detail.includes('envío') || detail.includes('envio') || detail.includes('shipping')) {
       result.cargo_envio_ml += amount;
@@ -226,13 +229,18 @@ function buildDateTo(hasta) {
   return new Date().toISOString();
 }
 
+function getRequestedAccounts(accountQuery) {
+  if (!accountQuery || accountQuery === 'all') return getAccountKeys();
+  return [normalizeAccount(accountQuery)];
+}
+
 async function buscarOrdenesPaginadas(token, dateFrom, dateTo) {
   let offset = 0;
   let total = 0;
   let allResults = [];
   let page = 0;
 
-  while (page < MAX_PAGES) {
+  while (page < MAX_PAGES_PER_ACCOUNT) {
     const searchUrl = `${ML_API}/orders/search?seller=${token.user_id}&order.status=paid&order.date_created.from=${encodeURIComponent(dateFrom)}&order.date_created.to=${encodeURIComponent(dateTo)}&offset=${offset}&limit=${PAGE_LIMIT}&sort=date_desc`;
     const searchData = await fetchJson(searchUrl, token);
 
@@ -243,7 +251,7 @@ async function buscarOrdenesPaginadas(token, dateFrom, dateTo) {
 
     if (!results.length) break;
     if (allResults.length >= total) break;
-    if (allResults.length >= MAX_ORDERS) break;
+    if (allResults.length >= MAX_ORDERS_PER_ACCOUNT) break;
 
     offset += PAGE_LIMIT;
     page += 1;
@@ -253,12 +261,12 @@ async function buscarOrdenesPaginadas(token, dateFrom, dateTo) {
     total,
     returned: allResults.length,
     truncated: total > allResults.length,
-    max_orders: MAX_ORDERS,
+    max_orders: MAX_ORDERS_PER_ACCOUNT,
     results: allResults,
   };
 }
 
-async function normalizarOrden(order, token) {
+async function normalizarOrden(order, token, account) {
   const firstItem = order.order_items?.[0] || {};
   const shipping = order.shipping || {};
 
@@ -342,6 +350,10 @@ async function normalizarOrden(order, token) {
     comprador: order.buyer?.nickname || '—',
     payment_ids: payments.payment_ids,
     detalle_fees: billing.detalle_fees,
+
+    account,
+    cuenta: getAccountLabel(account),
+    cuenta_key: account,
   };
 }
 
@@ -351,29 +363,66 @@ export default async function handler(req, res) {
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
 
-  const token = await getValidToken(req, res);
-  if (!token) return res.status(401).json({ error: 'No autenticado', redirect: '/api/login' });
-
-  const { desde, hasta } = req.query;
-
+  const { desde, hasta, account = 'all' } = req.query;
   const dateFrom = buildDateFrom(desde);
   const dateTo = buildDateTo(hasta);
+  const requestedAccounts = getRequestedAccounts(account);
 
   try {
-    const searchData = await buscarOrdenesPaginadas(token, dateFrom, dateTo);
+    const accounts = {};
+    const allOrders = [];
 
-    const orders = await Promise.all(
-      searchData.results.map(order => normalizarOrden(order, token))
-    );
+    for (const accountKey of requestedAccounts) {
+      const token = await getValidToken(req, res, accountKey);
+
+      accounts[accountKey] = {
+        account: accountKey,
+        label: getAccountLabel(accountKey),
+        connected: !!token,
+        user_id: token?.user_id || null,
+        total: 0,
+        returned: 0,
+        truncated: false,
+        error: null,
+      };
+
+      if (!token) continue;
+
+      try {
+        const searchData = await buscarOrdenesPaginadas(token, dateFrom, dateTo);
+
+        accounts[accountKey].total = searchData.total;
+        accounts[accountKey].returned = searchData.returned;
+        accounts[accountKey].truncated = searchData.truncated;
+        accounts[accountKey].max_orders = searchData.max_orders;
+
+        const normalizedOrders = await Promise.all(
+          searchData.results.map(order => normalizarOrden(order, token, accountKey))
+        );
+
+        allOrders.push(...normalizedOrders);
+      } catch (accountError) {
+        accounts[accountKey].error = accountError.message;
+      }
+    }
+
+    allOrders.sort((a, b) => {
+      const fechaA = String(a.fecha || '');
+      const fechaB = String(b.fecha || '');
+      return fechaB.localeCompare(fechaA);
+    });
 
     res.status(200).json({
       desde: dateFrom,
       hasta: dateTo,
-      total: searchData.total,
-      returned: searchData.returned,
-      truncated: searchData.truncated,
-      max_orders: searchData.max_orders,
-      orders,
+      requested_account: account,
+      accounts,
+      connected_accounts: Object.values(accounts).filter(a => a.connected).length,
+      total_accounts: Object.keys(accounts).length,
+      total: Object.values(accounts).reduce((s, a) => s + (a.total || 0), 0),
+      returned: allOrders.length,
+      truncated: Object.values(accounts).some(a => a.truncated),
+      orders: allOrders,
     });
   } catch (err) {
     res.status(500).json({ error: 'Error al consultar ventas', detail: err.message });
