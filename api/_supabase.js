@@ -14,7 +14,6 @@ function getHeaders(extra = {}) {
     apikey: SUPABASE_SERVICE_ROLE_KEY,
     Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
     'Content-Type': 'application/json',
-    Prefer: 'return=representation',
     ...extra,
   };
 }
@@ -53,7 +52,7 @@ export async function getMlToken(account) {
 
   const response = await fetch(url, {
     method: 'GET',
-    headers: getHeaders({ Prefer: undefined }),
+    headers: getHeaders(),
   });
 
   const data = await response.json().catch(() => []);
@@ -89,11 +88,17 @@ export async function saveMlToken(account, label, token) {
 
   const row = appTokenToRow(account, label, token);
 
+  // UPSERT REAL:
+  // Si account ya existe, actualiza la fila.
+  // Si account no existe, la crea.
+  // Sin esto Supabase tira duplicate key y se hace el ofendido.
   const url = `${SUPABASE_URL}/rest/v1/ml_tokens?on_conflict=account`;
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: getHeaders(),
+    headers: getHeaders({
+      Prefer: 'resolution=merge-duplicates,return=representation',
+    }),
     body: JSON.stringify(row),
   });
 
@@ -113,7 +118,9 @@ export async function deleteMlToken(account) {
 
   const response = await fetch(url, {
     method: 'DELETE',
-    headers: getHeaders(),
+    headers: getHeaders({
+      Prefer: 'return=minimal',
+    }),
   });
 
   if (!response.ok) {
