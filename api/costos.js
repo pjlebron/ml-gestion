@@ -8,40 +8,44 @@ export default async function handler(req, res) {
   const SHEET_NAME = 'PRODUCTOS';
 
   function normalizarTexto(value) {
-    return String(value || '').trim();
+    return String(value ?? '').trim();
   }
 
   function normalizarClave(value) {
-    return String(value || '').trim().toLowerCase();
+    return String(value ?? '').trim().toLowerCase();
+  }
+
+  function tieneValorDeCosto(value) {
+    return value !== null && value !== undefined && String(value).trim() !== '';
   }
 
   function parseCosto(value) {
     if (typeof value === 'number') return value;
 
-    const raw = String(value || '')
+    const raw = String(value ?? '')
       .replace(/\$/g, '')
       .replace(/ARS/gi, '')
       .replace(/\s/g, '')
       .trim();
 
-    if (!raw) return 0;
+    if (raw === '') return null;
 
     // Formato argentino frecuente: 12.500,50
     if (raw.includes(',') && raw.includes('.')) {
-      return Number(raw.replace(/\./g, '').replace(',', '.')) || 0;
+      return Number(raw.replace(/\./g, '').replace(',', '.'));
     }
 
     // Formato argentino sin decimales: 12.500
     if (raw.includes('.') && /^\d{1,3}(\.\d{3})+$/.test(raw)) {
-      return Number(raw.replace(/\./g, '')) || 0;
+      return Number(raw.replace(/\./g, ''));
     }
 
     // Formato con coma decimal: 12500,50
     if (raw.includes(',')) {
-      return Number(raw.replace(',', '.')) || 0;
+      return Number(raw.replace(',', '.'));
     }
 
-    return Number(raw) || 0;
+    return Number(raw);
   }
 
   function getCell(row, index) {
@@ -53,10 +57,11 @@ export default async function handler(req, res) {
     const original = normalizarTexto(key);
     const normalizada = normalizarClave(key);
 
-    if (!original || !costo) return;
+    if (!original) return;
+    if (!Number.isFinite(Number(costo))) return;
 
-    costos[original] = costo;
-    costos[normalizada] = costo;
+    costos[original] = Number(costo);
+    costos[normalizada] = Number(costo);
   }
 
   try {
@@ -104,7 +109,8 @@ export default async function handler(req, res) {
       const sku = normalizarTexto(getCell(row, skuIdx));
       const itemId = normalizarTexto(getCell(row, itemIdIdx));
       const costoRaw = getCell(row, costoIdx);
-      const costo = parseCosto(costoRaw);
+      const costoParseado = parseCosto(costoRaw);
+      const costoValido = tieneValorDeCosto(costoRaw) && Number.isFinite(Number(costoParseado));
 
       if (!sku && !itemId) return;
 
@@ -112,10 +118,14 @@ export default async function handler(req, res) {
         fila: index + 2,
         sku,
         item_id: itemId,
-        costo,
+        costo: costoValido ? Number(costoParseado) : null,
+        costo_raw: costoRaw,
       });
 
-      if (!costo) {
+      // IMPORTANTE:
+      // costo 0 es válido. Solo se considera sin costo si la celda está vacía
+      // o si el valor no se puede convertir a número.
+      if (!costoValido) {
         productos_sin_costo.push({
           fila: index + 2,
           sku,
@@ -125,8 +135,8 @@ export default async function handler(req, res) {
         return;
       }
 
-      addCosto(costos, sku, costo);
-      addCosto(costos, itemId, costo);
+      addCosto(costos, sku, Number(costoParseado));
+      addCosto(costos, itemId, Number(costoParseado));
     });
 
     res.status(200).json({
@@ -135,6 +145,7 @@ export default async function handler(req, res) {
       total_filas_leidas: filas_leidas.length,
       productos_sin_costo,
       actualizado: new Date().toISOString(),
+      nota: 'Costo 0 se considera válido para productos bonificados.',
     });
   } catch (err) {
     res.status(500).json({
