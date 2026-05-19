@@ -6,7 +6,8 @@ export default async function handler(req, res) {
   const token = await getValidToken(req, res);
   if (!token) return res.status(401).json({ error: 'No autenticado', redirect: '/api/login' });
 
-  const { desde, hasta, offset = 0, limit = 50 } = req.query;
+ const { desde, hasta, offset = 0 } = req.query;
+const limit = 50;
 
   const dateFrom = desde ? `${desde}T00:00:00.000-03:00` : (() => {
     const d = new Date(); d.setDate(d.getDate() - 30); return d.toISOString();
