@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ML Gestión</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;font-size:14px;background:#f5f5f5;color:#1a1a1a}
+.shell{display:grid;grid-template-columns:200px 1fr;min-height:100vh}
+.sidebar{background:#fff;border-right:1px solid #e5e5e5;padding:1rem 0;display:flex;flex-direction:column}
+.logo{padding:0 1rem 1rem;border-bottom:1px solid #e5e5e5;margin-bottom:.5rem}
+.logo-name{font-size:15px;font-weight:600}
+.logo-tag{font-size:11px;color:#888;margin-top:2px}
+.nl{font-size:11px;color:#aaa;padding:.8rem 1rem .3rem;letter-spacing:.04em;text-transform:uppercase}
+.ni{display:flex;align-items:center;gap:8px;padding:8px 1rem;font-size:13px;cursor:pointer;color:#666;border-left:2px solid transparent}
+.ni:hover{color:#1a1a1a;background:#f5f5f5}
+.ni.on{color:#1a1a1a;font-weight:600;border-left:2px solid #1a1a1a;background:#f5f5f5}
+.conn{margin:auto 1rem 1rem;padding:.5rem .75rem;border-radius:8px;font-size:11px;display:flex;align-items:center;gap:6px}
+.conn.ok{background:#eaf3de;color:#27500a;border:1px solid #c0dd97}
+.conn.no{background:#faeeda;color:#633806;border:1px solid #fac775;cursor:pointer}
+.main{padding:1.5rem;overflow-y:auto}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:8px}
+.page-title{font-size:18px;font-weight:600}
+.date-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.date-inp{padding:5px 9px;font-size:12px;border:1px solid #ddd;border-radius:6px;background:#fff}
+.qpill{display:inline-flex;align-items:center;padding:5px 11px;border:1px solid #ddd;border-radius:20px;font-size:12px;color:#666;cursor:pointer;background:#fff}
+.qpill:hover,.qpill.on{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.sep{color:#ccc;font-size:12px}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:1.25rem}
+.mc{background:#fff;border-radius:8px;padding:.85rem 1rem;border:1px solid #e5e5e5}
+.mc-lbl{font-size:11px;color:#888;margin-bottom:4px}
+.mc-val{font-size:20px;font-weight:600}
+.mc-sub{font-size:11px;color:#888;margin-top:3px}
+.green{color:#27500a}.red{color:#a32d2d}.blue{color:#0c447c}.amber{color:#633806}
+.two-col{display:grid;grid-template-columns:1.6fr 1fr;gap:10px;margin-bottom:1.25rem}
+.card{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:1rem}
+.ct{font-size:13px;font-weight:600;margin-bottom:.85rem}
+.br{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.bl{font-size:12px;color:#888;width:130px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bt{flex:1;height:7px;background:#f0f0f0;border-radius:4px;overflow:hidden}
+.bf{height:100%;border-radius:4px}
+.bv{font-size:12px;width:64px;text-align:right;flex-shrink:0}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:7px 8px;color:#888;font-weight:400;border-bottom:1px solid #e5e5e5;white-space:nowrap}
+td{padding:7px 8px;border-bottom:1px solid #f0f0f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+.badge{display:inline-block;font-size:11px;padding:2px 7px;border-radius:20px;font-weight:600}
+.bg{background:#eaf3de;color:#27500a}.br2{background:#fcebeb;color:#a32d2d}.ba{background:#faeeda;color:#633806}
+.view{display:none}.view.on{display:block}
+.roas-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:1rem}
+.rc{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:.9rem}
+.rv{font-size:24px;font-weight:700;margin:.25rem 0}
+.sem{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;padding:.35rem .7rem;border-radius:6px;margin:.4rem 0}
+.sg{background:#eaf3de;color:#27500a}.sa{background:#faeeda;color:#633806}.sr{background:#fcebeb;color:#a32d2d}
+.dot{width:8px;height:8px;border-radius:50%}
+.dg{background:#639922}.da{background:#ba7517}.dr{background:#e24b4a}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid #ddd;border-top-color:#888;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:2rem;color:#aaa;font-size:13px}
+.alert{padding:.65rem .9rem;border-radius:8px;font-size:13px;margin-bottom:1rem}
+.alert-warn{background:#faeeda;color:#633806;border:1px solid #fac775}
+.alert-info{background:#e6f1fb;color:#0c447c;border:1px solid #b5d4f4}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="sidebar">
+    <div class="logo">
+      <div class="logo-name">🛒 ML Gestión</div>
+      <div class="logo-tag">Panel de control</div>
+    </div>
+    <div class="nl">Principal</div>
+    <div class="ni on" onclick="nav(this,'dash')">📊 Dashboard</div>
+    <div class="ni" onclick="nav(this,'ventas')">🛍️ Ventas</div>
+    <div class="ni" onclick="nav(this,'roas')">📣 Mercado Ads</div>
+    <div class="ni" onclick="nav(this,'envios')">🚚 Envíos</div>
+    <div class="nl">Configuración</div>
+    <div class="ni" onclick="nav(this,'localidades')">📍 Localidades</div>
+    <div id="conn-badge" class="conn no" onclick="conectar()">
+      ⚠️ ML no conectado
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- CONNECT SCREEN -->
+    <div class="view on" id="view-connecting" style="max-width:480px;margin:3rem auto;text-align:center">
+      <div style="font-size:48px;margin-bottom:1rem">🔌</div>
+      <h2 style="font-size:18px;font-weight:600;margin-bottom:.5rem">Conectá tu cuenta de Mercado Libre</h2>
+      <p style="font-size:13px;color:#888;margin-bottom:1.5rem;line-height:1.6">Para ver tus ventas reales, comisiones y datos de Mercado Ads necesitás autorizar el acceso.</p>
+      <button onclick="conectar()" style="padding:.65rem 1.5rem;font-size:14px;font-weight:600;background:#1a1a1a;color:#fff;border:none;border-radius:8px;cursor:pointer">
+        Conectar con Mercado Libre →
+      </button>
+      <p style="font-size:11px;color:#aaa;margin-top:1rem">Solo lectura · Nunca se publican ni modifican datos</p>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div class="view" id="view-dash">
+      <div class="topbar">
+        <div class="page-title">Dashboard</div>
+        <div class="date-row">
+          <div class="qpill on" onclick="setQ(this,7)">7d</div>
+          <div class="qpill" onclick="setQ(this,15)">15d</div>
+          <div class="qpill" onclick="setQ(this,30)">30d</div>
+          <span class="sep">|</span>
+          <input type="date" id="d-from" class="date-inp">
+          <span class="sep">→</span>
+          <input type="date" id="d-to" class="date-inp">
+          <div class="qpill" onclick="loadAll()" style="background:#1a1a1a;color:#fff;border-color:#1a1a1a">Aplicar</div>
+          <button onclick="loadAll()" style="background:none;border:none;cursor:pointer;font-size:16px;color:#888" title="Actualizar">↻</button>
+        </div>
+      </div>
+      <div id="dash-loading" class="empty"><span class="spinner"></span> Cargando ventas...</div>
+      <div id="dash-content" style="display:none">
+        <div class="metrics" id="met"></div>
+        <div class="two-col">
+          <div class="card"><div class="ct">Margen real por producto</div><div id="prod-bars"></div></div>
+          <div class="card"><div class="ct">Estructura del precio</div><div id="cost-bars"></div></div>
+        </div>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.85rem">
+            <div class="ct" style="margin:0">Últimas ventas</div>
+            <div class="qpill" onclick="nav(document.querySelectorAll('.ni')[1],'ventas')">Ver todas</div>
+          </div>
+          <table><thead><tr><th style="width:28%">Producto</th><th style="width:16%">Localidad</th><th style="width:12%">Precio</th><th style="width:12%">Comisión</th><th style="width:12%">Envío</th><th style="width:12%">Ganancia</th><th style="width:10%">Margen</th></tr></thead><tbody id="t-dash"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- VENTAS -->
+    <div class="view" id="view-ventas">
+      <div class="topbar">
+        <div class="page-title">Ventas</div>
+        <div class="date-row">
+          <div class="qpill on" onclick="setQ(this,7)">7d</div>
+          <div class="qpill" onclick="setQ(this,30)">30d</div>
+          <span class="sep">|</span>
+          <input type="date" id="vd-from" class="date-inp">
+          <span class="sep">→</span>
+          <input type="date" id="vd-to" class="date-inp">
+          <div class="qpill" onclick="loadAll()" style="background:#1a1a1a;color:#fff;border-color:#1a1a1a">Aplicar</div>
+        </div>
+      </div>
+      <div class="metrics" id="v-met"></div>
+      <div class="card">
+        <div id="ventas-loading" class="empty"><span class="spinner"></span> Cargando...</div>
+        <table id="ventas-table" style="display:none">
+          <thead><tr><th>#</th><th style="width:14%">Fecha</th><th style="width:24%">Producto</th><th style="width:14%">Localidad</th><th>Precio</th><th>Comisión ML</th><th>Envío</th><th>Costo</th><th>Margen</th></tr></thead>
+          <tbody id="t-ventas"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ROAS -->
+    <div class="view" id="view-roas">
+      <div class="topbar">
+        <div class="page-title">Mercado Ads — ROAS</div>
+        <div class="date-row">
+          <div class="qpill on" onclick="setQ(this,7)">7d</div>
+          <div class="qpill" onclick="setQ(this,30)">30d</div>
+        </div>
+      </div>
+      <div class="metrics" id="roas-met"></div>
+      <div id="roas-loading" class="empty"><span class="spinner"></span> Cargando Mercado Ads...</div>
+      <div id="roas-content" style="display:none">
+        <div class="roas-grid" id="roas-cards"></div>
+        <div style="padding:.65rem .85rem;background:#f5f5f5;border-radius:8px;font-size:12px;color:#888;line-height:1.7">
+          <strong style="color:#1a1a1a">Semáforo ROAS:</strong>
+          &gt;4x → <span class="badge bg">verde</span> escalar
+          · 2–4x → <span class="badge ba">amarillo</span> revisar
+          · &lt;2x → <span class="badge br2">rojo</span> pausar
+        </div>
+      </div>
+    </div>
+
+    <!-- ENVIOS -->
+    <div class="view" id="view-envios">
+      <div class="topbar"><div class="page-title">Envíos por zona</div></div>
+      <div class="metrics" id="env-met"></div>
+      <div class="card"><div class="ct">Gasto por partido</div><div id="env-bars"></div></div>
+    </div>
+
+    <!-- LOCALIDADES -->
+    <div class="view" id="view-localidades">
+      <div class="topbar"><div class="page-title">Localidades y tarifas</div></div>
+      <div class="alert alert-info">Las tarifas que cargues se descuentan del margen en cada venta según la localidad del comprador.</div>
+      <div class="card">
+        <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap">
+          <input type="text" id="inp-partido" placeholder="Partido" style="flex:1;min-width:90px;padding:6px 10px;font-size:13px;border:1px solid #ddd;border-radius:6px">
+          <input type="text" id="inp-loc" placeholder="Localidad" style="flex:1.2;min-width:110px;padding:6px 10px;font-size:13px;border:1px solid #ddd;border-radius:6px">
+          <input type="number" id="inp-tarifa" placeholder="Tarifa $" style="width:90px;padding:6px 10px;font-size:13px;border:1px solid #ddd;border-radius:6px">
+          <button onclick="addLoc()" style="padding:6px 14px;font-size:13px;font-weight:600;background:#1a1a1a;color:#fff;border:none;border-radius:6px;cursor:pointer">Agregar</button>
+        </div>
+        <table><thead><tr><th>Partido</th><th>Localidad</th><th>Tarifa</th><th></th></tr></thead><tbody id="t-loc"></tbody></table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const fmt = n => '$' + Math.round(n).toLocaleString('es-AR');
+const fmtPct = n => n.toFixed(1) + '%';
+const toISO = d => d.toISOString().slice(0,10);
+const daysAgo = n => { const d = new Date(); d.setDate(d.getDate()-n); return d; };
+
+let STATE = { connected: false, ventas: [], ads: null, dias: 7 };
+let LOCALIDADES = JSON.parse(localStorage.getItem('ml_localidades') || '[]');
+let COSTOS = JSON.parse(localStorage.getItem('ml_costos') || '{}');
+
+function nav(el, view) {
+  document.querySelectorAll('.ni').forEach(n => n.classList.remove('on'));
+  if (el) el.classList.add('on');
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('on'));
+  document.getElementById('view-' + view).classList.add('on');
+}
+
+function setQ(el, dias) {
+  document.querySelectorAll('.qpill').forEach(p => p.classList.remove('on'));
+  el.classList.add('on');
+  STATE.dias = dias;
+  const from = toISO(daysAgo(dias));
+  const to = toISO(new Date());
+  ['d-from','vd-from'].forEach(id => { const el = document.getElementById(id); if(el) el.value = from; });
+  ['d-to','vd-to'].forEach(id => { const el = document.getElementById(id); if(el) el.value = to; });
+  loadAll();
+}
+
+function conectar() {
+  window.location.href = '/api/login';
+}
+
+function getEnvioCosto(localidad, partido) {
+  const loc = LOCALIDADES.find(l => l.localidad.toLowerCase() === (localidad||'').toLowerCase());
+  if (loc) return loc.tarifa;
+  const part = LOCALIDADES.find(l => l.partido.toLowerCase() === (partido||'').toLowerCase());
+  return part ? part.tarifa : 0;
+}
+
+function getCostoProducto(itemId) {
+  return COSTOS[itemId] || 0;
+}
+
+async function checkAuth() {
+  try {
+    const r = await fetch('/api/me');
+    const d = await r.json();
+    STATE.connected = d.connected;
+    const badge = document.getElementById('conn-badge');
+    if (d.connected) {
+      badge.className = 'conn ok';
+      badge.textContent = '✓ ML conectado';
+      badge.onclick = null;
+      document.getElementById('view-connecting').classList.remove('on');
+      nav(document.querySelectorAll('.ni')[0], 'dash');
+      loadAll();
+    } else {
+      document.getElementById('view-connecting').classList.add('on');
+    }
+  } catch(e) {
+    console.error('Auth check failed', e);
+  }
+}
+
+async function loadVentas() {
+  const desde = document.getElementById('d-from')?.value || toISO(daysAgo(STATE.dias));
+  const hasta = document.getElementById('d-to')?.value || toISO(new Date());
+
+  document.getElementById('dash-loading').style.display = 'block';
+  document.getElementById('dash-content').style.display = 'none';
+  document.getElementById('ventas-loading').style.display = 'block';
+  document.getElementById('ventas-table').style.display = 'none';
+
+  try {
+    const r = await fetch(`/api/ventas?desde=${desde}&hasta=${hasta}&limit=100`);
+    const d = await r.json();
+    if (d.error) throw new Error(d.message || d.error);
+
+    STATE.ventas = d.orders.map(o => ({
+      ...o,
+      costo: getCostoProducto(o.item_id),
+      envio_costo: getEnvioCosto(o.localidad, o.partido),
+      ganancia: o.precio_total - getCostoProducto(o.item_id) - o.ml_fee - getEnvioCosto(o.localidad, o.partido),
+      margen: o.precio_total > 0 ? ((o.precio_total - getCostoProducto(o.item_id) - o.ml_fee - getEnvioCosto(o.localidad, o.partido)) / o.precio_total * 100) : 0,
+    }));
+
+    renderDash();
+    renderVentas();
+    renderEnvios();
+  } catch(e) {
+    document.getElementById('dash-loading').textContent = 'Error: ' + e.message;
+  }
+}
+
+async function loadAds() {
+  const desde = document.getElementById('d-from')?.value || toISO(daysAgo(STATE.dias));
+  const hasta = document.getElementById('d-to')?.value || toISO(new Date());
+  document.getElementById('roas-loading').style.display = 'block';
+  document.getElementById('roas-content').style.display = 'none';
+  try {
+    const r = await fetch(`/api/ads?desde=${desde}&hasta=${hasta}`);
+    STATE.ads = await r.json();
+    renderRoas();
+  } catch(e) {
+    document.getElementById('roas-loading').textContent = 'Error cargando Ads: ' + e.message;
+  }
+}
+
+function loadAll() { loadVentas(); loadAds(); }
+
+function renderDash() {
+  const v = STATE.ventas;
+  const tot = v.reduce((s,x)=>s+x.precio_total,0);
+  const totGan = v.reduce((s,x)=>s+x.ganancia,0);
+  const totEnv = v.reduce((s,x)=>s+x.envio_costo,0);
+  const totFee = v.reduce((s,x)=>s+x.ml_fee,0);
+  const margen = tot ? totGan/tot*100 : 0;
+
+  document.getElementById('met').innerHTML = [
+    {lbl:'Facturación',val:fmt(tot),sub:v.length+' ventas',cls:''},
+    {lbl:'Ganancia neta',val:fmt(totGan),sub:fmtPct(margen)+' margen',cls:margen>0?'green':'red'},
+    {lbl:'Gasto envíos',val:fmt(totEnv),sub:tot?fmtPct(totEnv/tot*100)+' del total':'',cls:'amber'},
+    {lbl:'Comisiones ML',val:fmt(totFee),sub:tot?fmtPct(totFee/tot*100)+' del total':'',cls:'blue'},
+  ].map(m=>`<div class="mc"><div class="mc-lbl">${m.lbl}</div><div class="mc-val ${m.cls}">${m.val}</div><div class="mc-sub">${m.sub}</div></div>`).join('');
+
+  const byProd = {};
+  v.forEach(x=>{ if(!byProd[x.producto]) byProd[x.producto]={gan:0,precio:0}; byProd[x.producto].gan+=x.ganancia; byProd[x.producto].precio+=x.precio_total; });
+  const prods = Object.entries(byProd).sort((a,b)=>b[1].gan-a[1].gan).slice(0,8);
+  const maxG = Math.max(...prods.map(p=>Math.abs(p[1].gan)),1);
+  document.getElementById('prod-bars').innerHTML = prods.map(([name,d])=>{
+    const m = d.precio ? d.gan/d.precio*100 : 0;
+    const w = Math.max(4,Math.round(Math.abs(d.gan)/maxG*100));
+    const col = m>=15?'#1D9E75':m>=5?'#BA7517':'#E24B4A';
+    const cls = m>=15?'bg':m>=5?'ba':'br2';
+    return `<div class="br"><div class="bl">${name}</div><div class="bt"><div class="bf" style="width:${w}%;background:${col}"></div></div><div class="bv"><span class="badge ${cls}">${fmtPct(m)}</span></div></div>`;
+  }).join('') || '<div class="empty">Sin datos</div>';
+
+  if(tot>0){
+    const totCosto = v.reduce((s,x)=>s+x.costo,0);
+    const segs=[{lbl:'Costo producto',val:totCosto,col:'#1D9E75'},{lbl:'Comisión ML',val:totFee,col:'#378ADD'},{lbl:'Envíos',val:totEnv,col:'#EF9F27'},{lbl:'Ganancia',val:totGan,col:'#534AB7'}];
+    document.getElementById('cost-bars').innerHTML = segs.map(s=>{
+      const w = Math.max(3,Math.round(s.val/tot*100));
+      return `<div class="br"><div class="bl" style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:${s.col};display:inline-block"></span>${s.lbl}</div><div class="bt"><div class="bf" style="width:${w}%;background:${s.col}"></div></div><div class="bv" style="width:48px;font-size:11px">${fmtPct(s.val/tot*100)}</div></div>`;
+    }).join('');
+  }
+
+  document.getElementById('t-dash').innerHTML = v.slice(0,6).map(x=>{
+    const cls = x.margen>=15?'bg':x.margen>=5?'ba':'br2';
+    return `<tr><td>${x.producto}</td><td>${x.localidad}</td><td>${fmt(x.precio_total)}</td><td style="color:#185FA5">${fmt(x.ml_fee)}</td><td style="color:#854F0B">${fmt(x.envio_costo)}</td><td>${fmt(x.ganancia)}</td><td><span class="badge ${cls}">${fmtPct(x.margen)}</span></td></tr>`;
+  }).join('') || '<tr><td colspan="7" class="empty">Sin ventas en el período</td></tr>';
+
+  document.getElementById('dash-loading').style.display = 'none';
+  document.getElementById('dash-content').style.display = 'block';
+}
+
+function renderVentas() {
+  const v = STATE.ventas;
+  const tot = v.reduce((s,x)=>s+x.precio_total,0);
+  const totGan = v.reduce((s,x)=>s+x.ganancia,0);
+  const margen = tot?totGan/tot*100:0;
+  document.getElementById('v-met').innerHTML = [
+    {lbl:'Ventas',val:v.length,sub:'en el período',cls:''},
+    {lbl:'Facturado',val:fmt(tot),sub:'',cls:''},
+    {lbl:'Ganancia neta',val:fmt(totGan),sub:fmtPct(margen),cls:margen>0?'green':'red'},
+    {lbl:'Envíos',val:fmt(v.reduce((s,x)=>s+x.envio_costo,0)),sub:'deducido del margen',cls:'amber'},
+  ].map(m=>`<div class="mc"><div class="mc-lbl">${m.lbl}</div><div class="mc-val ${m.cls}">${m.val}</div><div class="mc-sub">${m.sub}</div></div>`).join('');
+
+  document.getElementById('t-ventas').innerHTML = v.map((x,i)=>{
+    const cls = x.margen>=15?'bg':x.margen>=5?'ba':'br2';
+    return `<tr><td>${i+1}</td><td>${x.fecha}</td><td title="${x.producto}">${x.producto.substring(0,28)}</td><td>${x.localidad}</td><td>${fmt(x.precio_total)}</td><td style="color:#185FA5">${fmt(x.ml_fee)}</td><td style="color:#854F0B">${fmt(x.envio_costo)}</td><td style="color:#888">${x.costo?fmt(x.costo):'—'}</td><td><span class="badge ${cls}">${fmtPct(x.margen)}</span></td></tr>`;
+  }).join('') || '<tr><td colspan="9" class="empty">Sin ventas</td></tr>';
+  document.getElementById('ventas-loading').style.display = 'none';
+  document.getElementById('ventas-table').style.display = 'table';
+}
+
+function renderRoas() {
+  const ads = STATE.ads;
+  if (!ads || ads.error) { document.getElementById('roas-loading').textContent = ads?.message || 'Sin datos de Mercado Ads'; return; }
+  document.getElementById('roas-met').innerHTML = [
+    {lbl:'ROAS global',val:ads.roas_global.toFixed(2)+'x',sub:'ingresos / gasto',cls:ads.roas_global>=4?'green':ads.roas_global>=2?'amber':'red'},
+    {lbl:'Gasto en ads',val:fmt(ads.gasto_total),sub:'período',cls:''},
+    {lbl:'Ingresos por ads',val:fmt(ads.ingresos_total),sub:'atribuidos',cls:'green'},
+    {lbl:'Retorno neto',val:fmt(ads.ingresos_total-ads.gasto_total),sub:'ingresos − gasto',cls:(ads.ingresos_total-ads.gasto_total)>0?'green':'red'},
+  ].map(m=>`<div class="mc"><div class="mc-lbl">${m.lbl}</div><div class="mc-val ${m.cls}">${m.val}</div><div class="mc-sub">${m.sub}</div></div>`).join('');
+
+  document.getElementById('roas-cards').innerHTML = ads.items.map(item=>{
+    const r = item.roas;
+    const semCls = r>=4?'sg':r>=2?'sa':'sr';
+    const dotCls = r>=4?'dg':r>=2?'da':'dr';
+    const label = r>=4?'Escalar campaña':r>=2?'Revisar creativos':'Pausar campaña';
+    return `<div class="rc"><div style="font-size:13px;font-weight:600;margin-bottom:.4rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.titulo}</div><div class="rv">${r.toFixed(2)}x</div><div style="font-size:11px;color:#888;margin-bottom:.5rem">ROAS</div><div class="sem ${semCls}"><div class="dot ${dotCls}"></div>${label}</div><div style="display:flex;justify-content:space-between;font-size:11px;color:#888;margin-top:.5rem;padding-top:.5rem;border-top:1px solid #f0f0f0"><span>Gasto ${fmt(item.gasto)}</span><span>Ingresos ${fmt(item.ingresos)}</span></div></div>`;
+  }).join('') || '<div class="empty">Sin campañas activas en el período</div>';
+
+  document.getElementById('roas-loading').style.display = 'none';
+  document.getElementById('roas-content').style.display = 'block';
+}
+
+function renderEnvios() {
+  const v = STATE.ventas;
+  const byZone = {};
+  v.forEach(x=>{ if(!byZone[x.partido]) byZone[x.partido]={total:0,n:0}; byZone[x.partido].total+=x.envio_costo; byZone[x.partido].n++; });
+  const zones = Object.entries(byZone).sort((a,b)=>b[1].total-a[1].total);
+  const maxZ = Math.max(...zones.map(z=>z[1].total),1);
+  const totEnv = v.reduce((s,x)=>s+x.envio_costo,0);
+  const avgEnv = v.length ? totEnv/v.length : 0;
+  document.getElementById('env-met').innerHTML = [
+    {lbl:'Total envíos',val:fmt(totEnv),sub:'en el período',cls:'amber'},
+    {lbl:'Promedio por venta',val:fmt(avgEnv),sub:'',cls:''},
+    {lbl:'Zona más cara',val:zones[0]?zones[0][0]:'—',sub:zones[0]?fmt(zones[0][1].total):'',cls:'red'},
+    {lbl:'Zona más barata',val:zones.length?zones[zones.length-1][0]:'—',sub:zones.length?fmt(zones[zones.length-1][1].total):'',cls:'green'},
+  ].map(m=>`<div class="mc"><div class="mc-lbl">${m.lbl}</div><div class="mc-val ${m.cls}" style="font-size:${m.val.length>8?'15px':'20px'}">${m.val}</div><div class="mc-sub">${m.sub}</div></div>`).join('');
+  document.getElementById('env-bars').innerHTML = zones.map(([z,d])=>{
+    const w = Math.max(4,Math.round(d.total/maxZ*100));
+    return `<div class="br"><div class="bl">${z}</div><div class="bt"><div class="bf" style="width:${w}%;background:#EF9F27"></div></div><div class="bv">${fmt(d.total)}</div></div>`;
+  }).join('') || '<div class="empty">Sin datos de envíos</div>';
+}
+
+function addLoc() {
+  const partido = document.getElementById('inp-partido').value.trim();
+  const localidad = document.getElementById('inp-loc').value.trim();
+  const tarifa = parseFloat(document.getElementById('inp-tarifa').value);
+  if (!partido || !localidad || isNaN(tarifa)) return alert('Completá todos los campos');
+  LOCALIDADES.push({ partido, localidad, tarifa });
+  localStorage.setItem('ml_localidades', JSON.stringify(LOCALIDADES));
+  renderLoc();
+  document.getElementById('inp-loc').value = '';
+  document.getElementById('inp-tarifa').value = '';
+}
+
+function removeLoc(i) {
+  LOCALIDADES.splice(i,1);
+  localStorage.setItem('ml_localidades', JSON.stringify(LOCALIDADES));
+  renderLoc();
+}
+
+function renderLoc() {
+  const grouped = {};
+  LOCALIDADES.forEach((l,i)=>{ if(!grouped[l.partido]) grouped[l.partido]=[]; grouped[l.partido].push({...l,i}); });
+  document.getElementById('t-loc').innerHTML = Object.entries(grouped).map(([p,locs])=>
+    `<tr style="background:#f5f5f5"><td colspan="4" style="padding:5px 8px;font-size:11px;font-weight:600;color:#888">${p}</td></tr>`+
+    locs.map(l=>`<tr><td></td><td>${l.localidad}</td><td>${fmt(l.tarifa)}</td><td><button onclick="removeLoc(${l.i})" style="background:none;border:none;cursor:pointer;font-size:12px;color:#a32d2d">Eliminar</button></td></tr>`).join('')
+  ).join('') || '<tr><td colspan="4" class="empty">Sin localidades cargadas</td></tr>';
+}
+
+const today = toISO(new Date());
+const week = toISO(daysAgo(7));
+['d-from','vd-from'].forEach(id => { const el = document.getElementById(id); if(el) el.value = week; });
+['d-to','vd-to'].forEach(id => { const el = document.getElementById(id); if(el) el.value = today; });
+
+renderLoc();
+checkAuth();
+
+if (window.location.search.includes('connected=1')) {
+  history.replaceState({}, '', '/');
+}
+</script>
+</body>
+</html>
