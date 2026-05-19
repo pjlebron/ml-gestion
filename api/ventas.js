@@ -28,31 +28,40 @@ export default async function handler(req, res) {
       const item = order.order_items?.[0] || {};
       const shipping = order.shipping || {};
 
-      let ml_fee = 0;
-      let envio_ml_costo = 0;
+      let cargo_venta = 0;
+      let descuentos = 0;
+      let impuestos = 0;
+      let cobro_neto = 0;
       let es_flex = false;
       let localidad = '—';
       let partido = '—';
 
-      // Comisiones desde billing
+      // Billing: cargo por venta, descuentos, impuestos
       try {
         const billingRes = await fetch(
           `https://api.mercadolibre.com/orders/${order.id}/billing_info`,
           { headers: { Authorization: `Bearer ${token.access_token}` } }
         );
-        const billingData = await billingRes.json();
-        if (billingData && !billingData.error) {
-          const feeDetail = (billingData.sale_fees || []).find(f => f.type === 'ml_fee');
-          const shippingFee = (billingData.sale_fees || []).find(f => f.type === 'shipping_fee');
-          if (feeDetail) ml_fee = Math.abs(feeDetail.amount || 0);
-          if (shippingFee) envio_ml_costo = Math.abs(shippingFee.amount || 0);
+        const b = await billingRes.json();
+        if (b && !b.error) {
+          (b.sale_fees || []).forEach(f => {
+            const amt = f.amount || 0;
+            if (f.type === 'ml_fee' || f.type === 'shipping_fee' || f.type === 'financing_fee') {
+              cargo_venta += Math.abs(amt);
+            } else if (f.type === 'discount' || f.type === 'bonus' || amt > 0) {
+              descuentos += Math.abs(amt);
+            } else if (f.type === 'tax' || f.type === 'iva') {
+              impuestos += Math.abs(amt);
+            }
+          });
+          cobro_neto = b.net_amount || (order.total_amount - cargo_venta + descuentos - impuestos);
         }
       } catch(e) {}
 
-      // Si billing no trajo comisión, calcularla del total
-      if (ml_fee === 0 && order.total_amount > 0) {
-        const feeFromOrder = order.order_items?.reduce((s, i) => s + (i.sale_fee || 0), 0) || 0;
-        ml_fee = Math.abs(feeFromOrder);
+      // Fallback: calcular desde order_items si billing no trajo datos
+      if (cargo_venta === 0) {
+        cargo_venta = order.order_items?.reduce((s, i) => s + Math.abs(i.sale_fee || 0), 0) || 0;
+        cobro_neto = order.total_amount - cargo_venta - impuestos + descuentos;
       }
 
       // Localidad y tipo de envío
@@ -68,9 +77,6 @@ export default async function handler(req, res) {
           es_flex = shipData.logistic_type === 'self_service' ||
                     (shipData.mode === 'me2' && shipData.sub_mode === 'flex') ||
                     (shipData.tags || []).includes('self_service');
-          if (!envio_ml_costo && shipData.shipping_option?.cost) {
-            envio_ml_costo = shipData.shipping_option.cost;
-          }
         } catch(e) {}
       }
 
@@ -82,8 +88,10 @@ export default async function handler(req, res) {
         cantidad: item.quantity || 1,
         precio_unitario: item.unit_price || 0,
         precio_total: order.total_amount || 0,
-        ml_fee,
-        envio_ml_costo,
+        cargo_venta,
+        descuentos,
+        impuestos,
+        cobro_neto,
         es_flex,
         envio_id: shipping.id || null,
         localidad,
