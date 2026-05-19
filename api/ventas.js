@@ -34,19 +34,28 @@ export default async function handler(req, res) {
       let localidad = '—';
       let partido = '—';
 
+      // Comisiones desde billing
       try {
-        const paymentsRes = await fetch(
-          `https://api.mercadolibre.com/orders/${order.id}/payments`,
+        const billingRes = await fetch(
+          `https://api.mercadolibre.com/orders/${order.id}/billing_info`,
           { headers: { Authorization: `Bearer ${token.access_token}` } }
         );
-        const paymentsData = await paymentsRes.json();
-        const payment = (paymentsData || [])[0];
-        if (payment) {
-          ml_fee = Math.abs(payment.marketplace_fee || 0);
-          envio_ml_costo = Math.abs(payment.shipping_cost || 0);
+        const billingData = await billingRes.json();
+        if (billingData && !billingData.error) {
+          const feeDetail = (billingData.sale_fees || []).find(f => f.type === 'ml_fee');
+          const shippingFee = (billingData.sale_fees || []).find(f => f.type === 'shipping_fee');
+          if (feeDetail) ml_fee = Math.abs(feeDetail.amount || 0);
+          if (shippingFee) envio_ml_costo = Math.abs(shippingFee.amount || 0);
         }
       } catch(e) {}
 
+      // Si billing no trajo comisión, calcularla del total
+      if (ml_fee === 0 && order.total_amount > 0) {
+        const feeFromOrder = order.order_items?.reduce((s, i) => s + (i.sale_fee || 0), 0) || 0;
+        ml_fee = Math.abs(feeFromOrder);
+      }
+
+      // Localidad y tipo de envío
       if (shipping.id) {
         try {
           const shipRes = await fetch(
@@ -59,6 +68,9 @@ export default async function handler(req, res) {
           es_flex = shipData.logistic_type === 'self_service' ||
                     (shipData.mode === 'me2' && shipData.sub_mode === 'flex') ||
                     (shipData.tags || []).includes('self_service');
+          if (!envio_ml_costo && shipData.shipping_option?.cost) {
+            envio_ml_costo = shipData.shipping_option.cost;
+          }
         } catch(e) {}
       }
 
