@@ -3,6 +3,11 @@ import { getValidToken } from './_token.js';
 const ML_API = 'https://api.mercadolibre.com';
 const MP_API = 'https://api.mercadopago.com';
 
+const DEFAULT_DATE_FROM = '2026-01-01';
+const PAGE_LIMIT = 50;
+const MAX_PAGES = 20;
+const MAX_ORDERS = PAGE_LIMIT * MAX_PAGES;
+
 function toNumber(value) {
   const parsed = Number(value || 0);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -211,118 +216,163 @@ function getShipmentCost(shipData) {
   );
 }
 
+function buildDateFrom(desde) {
+  const date = desde || DEFAULT_DATE_FROM;
+  return `${date}T00:00:00.000-03:00`;
+}
+
+function buildDateTo(hasta) {
+  if (hasta) return `${hasta}T23:59:59.000-03:00`;
+  return new Date().toISOString();
+}
+
+async function buscarOrdenesPaginadas(token, dateFrom, dateTo) {
+  let offset = 0;
+  let total = 0;
+  let allResults = [];
+  let page = 0;
+
+  while (page < MAX_PAGES) {
+    const searchUrl = `${ML_API}/orders/search?seller=${token.user_id}&order.status=paid&order.date_created.from=${encodeURIComponent(dateFrom)}&order.date_created.to=${encodeURIComponent(dateTo)}&offset=${offset}&limit=${PAGE_LIMIT}&sort=date_desc`;
+    const searchData = await fetchJson(searchUrl, token);
+
+    const results = searchData.results || [];
+    total = searchData.paging?.total || total;
+
+    allResults = allResults.concat(results);
+
+    if (!results.length) break;
+    if (allResults.length >= total) break;
+    if (allResults.length >= MAX_ORDERS) break;
+
+    offset += PAGE_LIMIT;
+    page += 1;
+  }
+
+  return {
+    total,
+    returned: allResults.length,
+    truncated: total > allResults.length,
+    max_orders: MAX_ORDERS,
+    results: allResults,
+  };
+}
+
+async function normalizarOrden(order, token) {
+  const firstItem = order.order_items?.[0] || {};
+  const shipping = order.shipping || {};
+
+  const orderItems = sumarOrderItems(order);
+  const payments = sumarPayments(order);
+
+  const billingInfoPromise = fetchJsonSafe(`${ML_API}/orders/${order.id}/billing_info`, token);
+  const shipmentPromise = shipping.id ? fetchJsonSafe(`${ML_API}/shipments/${shipping.id}`, token) : Promise.resolve(null);
+  const mpPromises = payments.payment_ids.map(paymentId => fetchJsonSafe(`${MP_API}/v1/payments/${paymentId}`, token));
+
+  const [billingInfo, shipData, ...mpPayments] = await Promise.all([
+    billingInfoPromise,
+    shipmentPromise,
+    ...mpPromises,
+  ]);
+
+  const billing = clasificarBillingFees(billingInfo);
+  const mp = resumirMercadoPago(mpPayments);
+
+  const precioTotal = toNumber(order.total_amount) || orderItems.precio_items || payments.transaction_amount;
+
+  const cargoVenta = billing.cargo_venta || payments.marketplace_fee || orderItems.sale_fee || mp.mp_fee_details_total || 0;
+  const cargoEnvioMl = billing.cargo_envio_ml || getShipmentCost(shipData) || 0;
+  const cargoFinanciacion = billing.cargo_financiacion || 0;
+  const descuentos = billing.descuentos || payments.coupon_amount || 0;
+  const bonificaciones = billing.bonificaciones || 0;
+  const impuestos = billing.impuestos || payments.taxes_amount || mp.mp_taxes_total || 0;
+  const retenciones = billing.retenciones || 0;
+  const otrosGastos = billing.otros_gastos || 0;
+
+  const cobroNetoCalculado = precioTotal
+    - cargoVenta
+    - cargoEnvioMl
+    - cargoFinanciacion
+    - descuentos
+    - impuestos
+    - retenciones
+    - otrosGastos
+    + bonificaciones;
+
+  const cobroNeto = toNumber(billingInfo?.net_amount) || mp.mp_net_received_amount || cobroNetoCalculado;
+
+  const localidad = shipData?.receiver_address?.city?.name || '—';
+  const partido = shipData?.receiver_address?.state?.name || '—';
+  const esFlex = detectarFlex(shipData);
+  const sku = getSkuFromOrderItem(firstItem);
+
+  return {
+    id: order.id,
+    fecha: order.date_created?.slice(0, 10),
+    producto: firstItem.item?.title || '—',
+    item_id: firstItem.item?.id || null,
+    item_id_ml: firstItem.item?.id || null,
+    sku,
+    cantidad: firstItem.quantity || orderItems.cantidad || 1,
+    precio_unitario: toNumber(firstItem.unit_price),
+    precio_total: precioTotal,
+    precio_lista: orderItems.precio_lista,
+
+    cargo_venta: cargoVenta,
+    ml_fee: cargoVenta,
+    cargo_envio_ml: cargoEnvioMl,
+    cargo_financiacion: cargoFinanciacion,
+    descuentos,
+    bonificaciones,
+    impuestos,
+    retenciones,
+    otros_gastos: otrosGastos,
+    cobro_neto: cobroNeto,
+    cobro_neto_calculado: cobroNetoCalculado,
+
+    mp_fee_details_total: mp.mp_fee_details_total,
+    mp_net_received_amount: mp.mp_net_received_amount,
+    mp_shipping_amount: mp.mp_shipping_amount,
+
+    es_flex: esFlex,
+    envio_id: shipping.id || null,
+    localidad,
+    partido,
+    estado: order.status,
+    comprador: order.buyer?.nickname || '—',
+    payment_ids: payments.payment_ids,
+    detalle_fees: billing.detalle_fees,
+  };
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
 
   const token = await getValidToken(req, res);
   if (!token) return res.status(401).json({ error: 'No autenticado', redirect: '/api/login' });
 
-  const { desde, hasta, offset = 0 } = req.query;
-  const limit = 50;
+  const { desde, hasta } = req.query;
 
-  const dateFrom = desde ? `${desde}T00:00:00.000-03:00` : (() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 30);
-    return d.toISOString();
-  })();
-
-  const dateTo = hasta ? `${hasta}T23:59:59.000-03:00` : new Date().toISOString();
+  const dateFrom = buildDateFrom(desde);
+  const dateTo = buildDateTo(hasta);
 
   try {
-    const searchUrl = `${ML_API}/orders/search?seller=${token.user_id}&order.status=paid&order.date_created.from=${encodeURIComponent(dateFrom)}&order.date_created.to=${encodeURIComponent(dateTo)}&offset=${offset}&limit=${limit}&sort=date_desc`;
-    const searchData = await fetchJson(searchUrl, token);
+    const searchData = await buscarOrdenesPaginadas(token, dateFrom, dateTo);
 
-    const orders = await Promise.all((searchData.results || []).map(async order => {
-      const firstItem = order.order_items?.[0] || {};
-      const shipping = order.shipping || {};
-
-      const orderItems = sumarOrderItems(order);
-      const payments = sumarPayments(order);
-
-      const billingInfoPromise = fetchJsonSafe(`${ML_API}/orders/${order.id}/billing_info`, token);
-      const shipmentPromise = shipping.id ? fetchJsonSafe(`${ML_API}/shipments/${shipping.id}`, token) : Promise.resolve(null);
-      const mpPromises = payments.payment_ids.map(paymentId => fetchJsonSafe(`${MP_API}/v1/payments/${paymentId}`, token));
-
-      const [billingInfo, shipData, ...mpPayments] = await Promise.all([
-        billingInfoPromise,
-        shipmentPromise,
-        ...mpPromises,
-      ]);
-
-      const billing = clasificarBillingFees(billingInfo);
-      const mp = resumirMercadoPago(mpPayments);
-
-      const precioTotal = toNumber(order.total_amount) || orderItems.precio_items || payments.transaction_amount;
-
-      const cargoVenta = billing.cargo_venta || payments.marketplace_fee || orderItems.sale_fee || mp.mp_fee_details_total || 0;
-      const cargoEnvioMl = billing.cargo_envio_ml || getShipmentCost(shipData) || 0;
-      const cargoFinanciacion = billing.cargo_financiacion || 0;
-      const descuentos = billing.descuentos || payments.coupon_amount || 0;
-      const bonificaciones = billing.bonificaciones || 0;
-      const impuestos = billing.impuestos || payments.taxes_amount || mp.mp_taxes_total || 0;
-      const retenciones = billing.retenciones || 0;
-      const otrosGastos = billing.otros_gastos || 0;
-
-      const cobroNetoCalculado = precioTotal
-        - cargoVenta
-        - cargoEnvioMl
-        - cargoFinanciacion
-        - descuentos
-        - impuestos
-        - retenciones
-        - otrosGastos
-        + bonificaciones;
-
-      const cobroNeto = toNumber(billingInfo?.net_amount) || mp.mp_net_received_amount || cobroNetoCalculado;
-
-      const localidad = shipData?.receiver_address?.city?.name || '—';
-      const partido = shipData?.receiver_address?.state?.name || '—';
-      const esFlex = detectarFlex(shipData);
-      const sku = getSkuFromOrderItem(firstItem);
-
-      return {
-        id: order.id,
-        fecha: order.date_created?.slice(0, 10),
-        producto: firstItem.item?.title || '—',
-        item_id: firstItem.item?.id || null,
-        item_id_ml: firstItem.item?.id || null,
-        sku,
-        cantidad: firstItem.quantity || orderItems.cantidad || 1,
-        precio_unitario: toNumber(firstItem.unit_price),
-        precio_total: precioTotal,
-        precio_lista: orderItems.precio_lista,
-
-        cargo_venta: cargoVenta,
-        ml_fee: cargoVenta,
-        cargo_envio_ml: cargoEnvioMl,
-        cargo_financiacion: cargoFinanciacion,
-        descuentos,
-        bonificaciones,
-        impuestos,
-        retenciones,
-        otros_gastos: otrosGastos,
-        cobro_neto: cobroNeto,
-        cobro_neto_calculado: cobroNetoCalculado,
-
-        mp_fee_details_total: mp.mp_fee_details_total,
-        mp_net_received_amount: mp.mp_net_received_amount,
-        mp_shipping_amount: mp.mp_shipping_amount,
-
-        es_flex: esFlex,
-        envio_id: shipping.id || null,
-        localidad,
-        partido,
-        estado: order.status,
-        comprador: order.buyer?.nickname || '—',
-        payment_ids: payments.payment_ids,
-        detalle_fees: billing.detalle_fees,
-      };
-    }));
+    const orders = await Promise.all(
+      searchData.results.map(order => normalizarOrden(order, token))
+    );
 
     res.status(200).json({
-      total: searchData.paging?.total || 0,
-      offset: searchData.paging?.offset || 0,
-      limit: searchData.paging?.limit || limit,
+      desde: dateFrom,
+      hasta: dateTo,
+      total: searchData.total,
+      returned: searchData.returned,
+      truncated: searchData.truncated,
+      max_orders: searchData.max_orders,
       orders,
     });
   } catch (err) {
