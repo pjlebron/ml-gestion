@@ -46,7 +46,7 @@ th{text-align:left;padding:7px 8px;color:#888;font-weight:400;border-bottom:1px 
 td{padding:7px 8px;border-bottom:1px solid #f0f0f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 tr:last-child td{border-bottom:none}
 .badge{display:inline-block;font-size:11px;padding:2px 7px;border-radius:20px;font-weight:600}
-.bg{background:#eaf3de;color:#27500a}.br2{background:#fcebeb;color:#a32d2d}.ba{background:#faeeda;color:#633806}
+.bg{background:#eaf3de;color:#27500a}.br2{background:#fcebeb;color:#a32d2d}.ba{background:#faeeda;color:#633806}.bb{background:#e6f1fb;color:#0c447c}
 .view{display:none}.view.on{display:block}
 .roas-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:1rem}
 .rc{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:.9rem}
@@ -91,25 +91,18 @@ tr:last-child td{border-bottom:none}
     <div class="ni" onclick="nav(this,'envios')">🚚 Envíos</div>
     <div class="nl">Configuración</div>
     <div class="ni" onclick="nav(this,'localidades')">📍 Localidades</div>
-    <div id="conn-badge" class="conn no" onclick="conectar()">
-      ⚠️ ML no conectado
-    </div>
+    <div id="conn-badge" class="conn no" onclick="conectar()">⚠️ ML no conectado</div>
   </div>
 
   <div class="main">
-
-    <!-- CONNECT SCREEN -->
     <div class="view on" id="view-connecting" style="max-width:480px;margin:3rem auto;text-align:center">
       <div style="font-size:48px;margin-bottom:1rem">🔌</div>
       <h2 style="font-size:18px;font-weight:600;margin-bottom:.5rem">Conectá tu cuenta de Mercado Libre</h2>
       <p style="font-size:13px;color:#888;margin-bottom:1.5rem;line-height:1.6">Para ver tus ventas reales, comisiones y datos de Mercado Ads necesitás autorizar el acceso.</p>
-      <button onclick="conectar()" style="padding:.65rem 1.5rem;font-size:14px;font-weight:600;background:#1a1a1a;color:#fff;border:none;border-radius:8px;cursor:pointer">
-        Conectar con Mercado Libre →
-      </button>
+      <button onclick="conectar()" style="padding:.65rem 1.5rem;font-size:14px;font-weight:600;background:#1a1a1a;color:#fff;border:none;border-radius:8px;cursor:pointer">Conectar con Mercado Libre →</button>
       <p style="font-size:11px;color:#aaa;margin-top:1rem">Solo lectura · Nunca se publican ni modifican datos</p>
     </div>
 
-    <!-- DASHBOARD -->
     <div class="view" id="view-dash">
       <div class="topbar">
         <div class="page-title">Dashboard</div>
@@ -160,7 +153,7 @@ tr:last-child td{border-bottom:none}
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.85rem;gap:8px;flex-wrap:wrap">
             <div>
               <div class="ct" style="margin:0">Ventas sin costo asignado</div>
-              <div class="small-muted">Estos productos no encontraron coincidencia en la planilla de costos. Usá el SKU detectado o el Item ID para corregir la planilla.</div>
+              <div class="small-muted">Acá solo aparecen ventas sin coincidencia en la planilla. Los productos con COSTO $0 bonificado no aparecen como error.</div>
             </div>
             <div class="badge br2" id="missing-count">0 pendientes</div>
           </div>
@@ -169,7 +162,6 @@ tr:last-child td{border-bottom:none}
       </div>
     </div>
 
-    <!-- VENTAS -->
     <div class="view" id="view-ventas">
       <div class="topbar">
         <div class="page-title">Ventas</div>
@@ -207,7 +199,6 @@ tr:last-child td{border-bottom:none}
       </div>
     </div>
 
-    <!-- ROAS -->
     <div class="view" id="view-roas">
       <div class="topbar">
         <div class="page-title">Mercado Ads — ROAS</div>
@@ -220,23 +211,16 @@ tr:last-child td{border-bottom:none}
       <div id="roas-loading" class="empty"><span class="spinner"></span> Cargando Mercado Ads...</div>
       <div id="roas-content" style="display:none">
         <div class="roas-grid" id="roas-cards"></div>
-        <div style="padding:.65rem .85rem;background:#f5f5f5;border-radius:8px;font-size:12px;color:#888;line-height:1.7">
-          <strong style="color:#1a1a1a">Semáforo ROAS:</strong>
-          &gt;4x → <span class="badge bg">verde</span> escalar
-          · 2–4x → <span class="badge ba">amarillo</span> revisar
-          · &lt;2x → <span class="badge br2">rojo</span> pausar
-        </div>
+        <div style="padding:.65rem .85rem;background:#f5f5f5;border-radius:8px;font-size:12px;color:#888;line-height:1.7"><strong style="color:#1a1a1a">Semáforo ROAS:</strong> &gt;4x → <span class="badge bg">verde</span> escalar · 2–4x → <span class="badge ba">amarillo</span> revisar · &lt;2x → <span class="badge br2">rojo</span> pausar</div>
       </div>
     </div>
 
-    <!-- ENVIOS -->
     <div class="view" id="view-envios">
       <div class="topbar"><div class="page-title">Envíos por zona</div></div>
       <div class="metrics" id="env-met"></div>
       <div class="card"><div class="ct">Gasto por partido</div><div id="env-bars"></div></div>
     </div>
 
-    <!-- LOCALIDADES -->
     <div class="view" id="view-localidades">
       <div class="topbar"><div class="page-title">Localidades y tarifas</div></div>
       <div class="alert alert-info">Estas tarifas corresponden a tu mensajería/manual por localidad. Se descuentan siempre de la ganancia, además de los descuentos que ya haga Mercado Libre.</div>
@@ -250,7 +234,6 @@ tr:last-child td{border-bottom:none}
         <table><thead><tr><th>Partido</th><th>Localidad</th><th>Tarifa</th><th></th></tr></thead><tbody id="t-loc"></tbody></table>
       </div>
     </div>
-
   </div>
 </div>
 
@@ -259,19 +242,17 @@ const fmt = n => '$' + Math.round(num(n)).toLocaleString('es-AR');
 const fmtPct = n => num(n).toFixed(1) + '%';
 const toISO = d => d.toISOString().slice(0,10);
 const daysAgo = n => { const d = new Date(); d.setDate(d.getDate()-n); return d; };
-function num(value) { const parsed = Number(value || 0); return Number.isFinite(parsed) ? parsed : 0; }
+function num(value) { const parsed = Number(value ?? 0); return Number.isFinite(parsed) ? parsed : 0; }
 
 let STATE = { connected: false, ventas: [], ads: null, dias: 7 };
 let LOCALIDADES = JSON.parse(localStorage.getItem('ml_localidades') || '[]');
 let COSTOS = {};
 
-function normalizarCodigo(value) {
-  return String(value || '').trim().toLowerCase();
-}
+function normalizarCodigo(value) { return String(value ?? '').trim().toLowerCase(); }
 
 async function loadCostos() {
   try {
-    const r = await fetch('/api/costos');
+    const r = await fetch('/api/costos?cb=' + Date.now(), { cache: 'no-store' });
     const d = await r.json();
     if (d.error) throw new Error(d.detail || d.error);
 
@@ -279,10 +260,11 @@ async function loadCostos() {
     COSTOS = {};
 
     Object.entries(costosCrudos).forEach(([codigo, costo]) => {
-      const keyOriginal = String(codigo || '').trim();
+      const keyOriginal = String(codigo ?? '').trim();
       const keyNormalizada = normalizarCodigo(codigo);
       const valor = num(costo);
 
+      // IMPORTANTE: costo 0 es válido porque puede ser producto bonificado.
       if (keyOriginal) COSTOS[keyOriginal] = valor;
       if (keyNormalizada) COSTOS[keyNormalizada] = valor;
     });
@@ -312,37 +294,34 @@ function setQ(el, dias) {
   loadAll();
 }
 
-function conectar() {
-  window.location.href = '/api/login';
-}
+function conectar() { window.location.href = '/api/login'; }
 
 function getEnvioCosto(localidad, partido) {
   const locTxt = normalizarCodigo(localidad);
   const partTxt = normalizarCodigo(partido);
-
   const loc = LOCALIDADES.find(l => normalizarCodigo(l.localidad) === locTxt);
   if (loc) return num(loc.tarifa);
-
   const part = LOCALIDADES.find(l => normalizarCodigo(l.partido) === partTxt);
   return part ? num(part.tarifa) : 0;
 }
 
 function getCostoProducto(venta) {
-  const posiblesCodigos = [
-    venta?.sku,
-    venta?.item_id,
-    venta?.item_id_ml,
-  ];
+  const posiblesCodigos = [venta?.sku, venta?.item_id, venta?.item_id_ml];
 
   for (const codigo of posiblesCodigos) {
-    const keyOriginal = String(codigo || '').trim();
+    const keyOriginal = String(codigo ?? '').trim();
     const keyNormalizada = normalizarCodigo(codigo);
 
-    if (keyOriginal && COSTOS[keyOriginal]) return num(COSTOS[keyOriginal]);
-    if (keyNormalizada && COSTOS[keyNormalizada]) return num(COSTOS[keyNormalizada]);
+    if (keyOriginal && Object.prototype.hasOwnProperty.call(COSTOS, keyOriginal)) {
+      return { costo: num(COSTOS[keyOriginal]), tieneCosto: true };
+    }
+
+    if (keyNormalizada && Object.prototype.hasOwnProperty.call(COSTOS, keyNormalizada)) {
+      return { costo: num(COSTOS[keyNormalizada]), tieneCosto: true };
+    }
   }
 
-  return 0;
+  return { costo: 0, tieneCosto: false };
 }
 
 function getMargenClass(margen, sinCosto = false) {
@@ -366,9 +345,7 @@ async function checkAuth() {
     } else {
       document.getElementById('view-connecting').classList.add('on');
     }
-  } catch(e) {
-    console.error('Auth check failed', e);
-  }
+  } catch(e) { console.error('Auth check failed', e); }
 }
 
 async function loadVentas() {
@@ -381,7 +358,8 @@ async function loadVentas() {
   document.getElementById('ventas-table').style.display = 'none';
 
   try {
-    const r = await fetch(`/api/ventas?desde=${desde}&hasta=${hasta}&limit=100`);
+    await loadCostos();
+    const r = await fetch(`/api/ventas?desde=${desde}&hasta=${hasta}&limit=100&cb=${Date.now()}`, { cache: 'no-store' });
     const d = await r.json();
     if (d.error) throw new Error(d.message || d.detail || d.error);
 
@@ -395,54 +373,20 @@ async function loadVentas() {
       const impuestos = num(o.impuestos);
       const retenciones = num(o.retenciones);
       const otrosGastos = num(o.otros_gastos);
-      const costo = getCostoProducto(o);
-
+      const costoInfo = getCostoProducto(o);
+      const costo = costoInfo.costo;
+      const sinCosto = !costoInfo.tieneCosto;
+      const bonificado = costoInfo.tieneCosto && costo === 0;
       const mensajeria = getEnvioCosto(o.localidad, o.partido);
 
-      const cobroNetoMl = num(o.cobro_neto) || (
-        precioTotal
-        - cargoVenta
-        - cargoEnvioMl
-        - cargoFinanciacion
-        - descuentos
-        - impuestos
-        - retenciones
-        - otrosGastos
-        + bonificaciones
-      );
-
+      const cobroNetoMl = num(o.cobro_neto) || (precioTotal - cargoVenta - cargoEnvioMl - cargoFinanciacion - descuentos - impuestos - retenciones - otrosGastos + bonificaciones);
       const ganancia = cobroNetoMl - costo - mensajeria;
       const margen = precioTotal > 0 ? (ganancia / precioTotal * 100) : 0;
-      const sinCosto = costo === 0;
 
-      return {
-        ...o,
-        precio_total: precioTotal,
-        cargo_venta: cargoVenta,
-        ml_fee: cargoVenta,
-        cargo_envio_ml: cargoEnvioMl,
-        cargo_financiacion: cargoFinanciacion,
-        descuentos,
-        bonificaciones,
-        impuestos,
-        retenciones,
-        otros_gastos: otrosGastos,
-        cobro_neto: cobroNetoMl,
-        costo,
-        envio_costo: cargoEnvioMl + mensajeria,
-        envio_ml: cargoEnvioMl,
-        mensajeria,
-        envio_flex_manual: mensajeria,
-        ganancia,
-        margen,
-        sin_costo: sinCosto,
-      };
+      return { ...o, precio_total: precioTotal, cargo_venta: cargoVenta, ml_fee: cargoVenta, cargo_envio_ml: cargoEnvioMl, cargo_financiacion: cargoFinanciacion, descuentos, bonificaciones, impuestos, retenciones, otros_gastos: otrosGastos, cobro_neto: cobroNetoMl, costo, tiene_costo: costoInfo.tieneCosto, bonificado, envio_costo: cargoEnvioMl + mensajeria, envio_ml: cargoEnvioMl, mensajeria, envio_flex_manual: mensajeria, ganancia, margen, sin_costo: sinCosto };
     });
 
-    renderDash();
-    renderVentas();
-    renderEnvios();
-    renderMissingCosts();
+    renderDash(); renderVentas(); renderEnvios(); renderMissingCosts();
   } catch(e) {
     document.getElementById('dash-loading').textContent = 'Error: ' + e.message;
     document.getElementById('ventas-loading').textContent = 'Error: ' + e.message;
@@ -458,9 +402,7 @@ async function loadAds() {
     const r = await fetch(`/api/ads?desde=${desde}&hasta=${hasta}`);
     STATE.ads = await r.json();
     renderRoas();
-  } catch(e) {
-    document.getElementById('roas-loading').textContent = 'Error cargando Ads: ' + e.message;
-  }
+  } catch(e) { document.getElementById('roas-loading').textContent = 'Error cargando Ads: ' + e.message; }
 }
 
 function loadAll() { loadVentas(); loadAds(); }
@@ -469,19 +411,20 @@ function renderDash() {
   const v = STATE.ventas;
   const tot = v.reduce((s,x)=>s+x.precio_total,0);
   const totGan = v.reduce((s,x)=>s+x.ganancia,0);
-  const totEnv = v.reduce((s,x)=>s+x.envio_costo,0);
   const totEnvMl = v.reduce((s,x)=>s+num(x.cargo_envio_ml),0);
   const totMensajeria = v.reduce((s,x)=>s+num(x.mensajeria),0);
   const totFee = v.reduce((s,x)=>s+x.ml_fee,0);
   const totImp = v.reduce((s,x)=>s+num(x.impuestos),0);
   const totDesc = v.reduce((s,x)=>s+num(x.descuentos),0);
   const sinCosto = v.filter(x=>x.sin_costo).length;
+  const bonificados = v.filter(x=>x.bonificado).length;
   const margen = tot ? totGan/tot*100 : 0;
 
   document.getElementById('met').innerHTML = [
     {lbl:'Facturación',val:fmt(tot),sub:v.length+' ventas',cls:''},
     {lbl:'Ganancia neta',val:fmt(totGan),sub:fmtPct(margen)+' margen',cls:margen>0?'green':'red'},
     {lbl:'Sin costo',val:sinCosto,sub:'ventas a revisar',cls:sinCosto>0?'red':'green'},
+    {lbl:'Bonificados',val:bonificados,sub:'costo $0 válido',cls:'blue'},
     {lbl:'Comisiones ML',val:fmt(totFee),sub:tot?fmtPct(totFee/tot*100)+' del total':'',cls:'blue'},
     {lbl:'Envíos ML',val:fmt(totEnvMl),sub:tot?fmtPct(totEnvMl/tot*100)+' del total':'',cls:'amber'},
     {lbl:'Mensajería',val:fmt(totMensajeria),sub:'costo manual/localidad',cls:'amber'},
@@ -490,217 +433,50 @@ function renderDash() {
   ].map(m=>`<div class="mc"><div class="mc-lbl">${m.lbl}</div><div class="mc-val ${m.cls}">${m.val}</div><div class="mc-sub">${m.sub}</div></div>`).join('');
 
   const byProd = {};
-  v.forEach(x=>{
-    if(!byProd[x.producto]) byProd[x.producto]={gan:0,precio:0,sinCosto:false};
-    byProd[x.producto].gan += x.ganancia;
-    byProd[x.producto].precio += x.precio_total;
-    byProd[x.producto].sinCosto = byProd[x.producto].sinCosto || x.sin_costo;
-  });
-
+  v.forEach(x=>{ if(!byProd[x.producto]) byProd[x.producto]={gan:0,precio:0,sinCosto:false,bonificado:false}; byProd[x.producto].gan+=x.ganancia; byProd[x.producto].precio+=x.precio_total; byProd[x.producto].sinCosto ||= x.sin_costo; byProd[x.producto].bonificado ||= x.bonificado; });
   const prods = Object.entries(byProd).sort((a,b)=>b[1].gan-a[1].gan).slice(0,8);
   const maxG = Math.max(...prods.map(p=>Math.abs(p[1].gan)),1);
-  document.getElementById('prod-bars').innerHTML = prods.map(([name,d])=>{
-    const m = d.precio ? d.gan/d.precio*100 : 0;
-    const w = Math.max(4,Math.round(Math.abs(d.gan)/maxG*100));
-    const col = d.sinCosto ? '#E24B4A' : m>=15 ? '#1D9E75' : m>=5 ? '#BA7517' : '#E24B4A';
-    const cls = getMargenClass(m, d.sinCosto);
-    const label = d.sinCosto ? 'SIN COSTO' : fmtPct(m);
-    return `<div class="br"><div class="bl">${name}</div><div class="bt"><div class="bf" style="width:${w}%;background:${col}"></div></div><div class="bv"><span class="badge ${cls}">${label}</span></div></div>`;
-  }).join('') || '<div class="empty">Sin datos</div>';
+  document.getElementById('prod-bars').innerHTML = prods.map(([name,d])=>{ const m=d.precio?d.gan/d.precio*100:0; const w=Math.max(4,Math.round(Math.abs(d.gan)/maxG*100)); const col=d.sinCosto?'#E24B4A':m>=15?'#1D9E75':m>=5?'#BA7517':'#E24B4A'; const cls=getMargenClass(m,d.sinCosto); const label=d.sinCosto?'SIN COSTO':d.bonificado?'BONIF. '+fmtPct(m):fmtPct(m); return `<div class="br"><div class="bl">${name}</div><div class="bt"><div class="bf" style="width:${w}%;background:${col}"></div></div><div class="bv"><span class="badge ${d.bonificado&&!d.sinCosto?'bb':cls}">${label}</span></div></div>`; }).join('') || '<div class="empty">Sin datos</div>';
 
   if(tot>0){
     const totCosto = v.reduce((s,x)=>s+x.costo,0);
-    const segs=[
-      {lbl:'Costo producto',val:totCosto,col:'#1D9E75'},
-      {lbl:'Comisión ML',val:totFee,col:'#378ADD'},
-      {lbl:'Envíos ML',val:totEnvMl,col:'#EF9F27'},
-      {lbl:'Mensajería',val:totMensajeria,col:'#BA7517'},
-      {lbl:'Impuestos',val:totImp,col:'#E24B4A'},
-      {lbl:'Ganancia',val:totGan,col:'#534AB7'}
-    ];
-    document.getElementById('cost-bars').innerHTML = segs.map(s=>{
-      const w = Math.max(3,Math.round((s.val/tot)*100));
-      return `<div class="br"><div class="bl" style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:${s.col};display:inline-block"></span>${s.lbl}</div><div class="bt"><div class="bf" style="width:${w}%;background:${s.col}"></div></div><div class="bv" style="width:48px;font-size:11px">${fmtPct(s.val/tot*100)}</div></div>`;
-    }).join('');
-  } else {
-    document.getElementById('cost-bars').innerHTML = '<div class="empty">Sin datos</div>';
-  }
+    const segs=[{lbl:'Costo producto',val:totCosto,col:'#1D9E75'},{lbl:'Comisión ML',val:totFee,col:'#378ADD'},{lbl:'Envíos ML',val:totEnvMl,col:'#EF9F27'},{lbl:'Mensajería',val:totMensajeria,col:'#BA7517'},{lbl:'Impuestos',val:totImp,col:'#E24B4A'},{lbl:'Ganancia',val:totGan,col:'#534AB7'}];
+    document.getElementById('cost-bars').innerHTML = segs.map(s=>{ const w=Math.max(3,Math.round((s.val/tot)*100)); return `<div class="br"><div class="bl" style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:${s.col};display:inline-block"></span>${s.lbl}</div><div class="bt"><div class="bf" style="width:${w}%;background:${s.col}"></div></div><div class="bv" style="width:48px;font-size:11px">${fmtPct(s.val/tot*100)}</div></div>`; }).join('');
+  } else document.getElementById('cost-bars').innerHTML = '<div class="empty">Sin datos</div>';
 
-  document.getElementById('t-dash').innerHTML = v.slice(0,6).map(x=>{
-    const cls = getMargenClass(x.margen, x.sin_costo);
-    const rowClass = x.sin_costo ? ' class="row-warn"' : '';
-    const marginTxt = x.sin_costo ? 'SIN COSTO' : fmtPct(x.margen);
-    const costoTxt = x.sin_costo ? 'SIN COSTO' : fmt(x.costo);
-    return `<tr${rowClass}><td>${x.producto}</td><td>${x.localidad}</td><td>${fmt(x.precio_total)}</td><td style="color:#185FA5">${fmt(x.ml_fee)}</td><td style="color:#854F0B">${fmt(x.cargo_envio_ml)}</td><td style="color:#854F0B">${fmt(x.mensajeria)}</td><td style="color:#a32d2d">${fmt(x.impuestos)}</td><td class="${x.sin_costo?'cost-warn':''}">${costoTxt}</td><td>${fmt(x.ganancia)}</td><td><span class="badge ${cls}">${marginTxt}</span></td></tr>`;
-  }).join('') || '<tr><td colspan="10" class="empty">Sin ventas en el período</td></tr>';
+  document.getElementById('t-dash').innerHTML = v.slice(0,6).map(x=>{ const cls=getMargenClass(x.margen,x.sin_costo); const rowClass=x.sin_costo?' class="row-warn"':''; const marginTxt=x.sin_costo?'SIN COSTO':fmtPct(x.margen); const costoTxt=x.sin_costo?'SIN COSTO':x.bonificado?'$0 BONIF.':fmt(x.costo); return `<tr${rowClass}><td>${x.producto}</td><td>${x.localidad}</td><td>${fmt(x.precio_total)}</td><td style="color:#185FA5">${fmt(x.ml_fee)}</td><td style="color:#854F0B">${fmt(x.cargo_envio_ml)}</td><td style="color:#854F0B">${fmt(x.mensajeria)}</td><td style="color:#a32d2d">${fmt(x.impuestos)}</td><td class="${x.sin_costo?'cost-warn':''}">${costoTxt}</td><td>${fmt(x.ganancia)}</td><td><span class="badge ${x.bonificado&&!x.sin_costo?'bb':cls}">${marginTxt}</span></td></tr>`; }).join('') || '<tr><td colspan="10" class="empty">Sin ventas en el período</td></tr>';
 
-  document.getElementById('dash-loading').style.display = 'none';
-  document.getElementById('dash-content').style.display = 'block';
+  document.getElementById('dash-loading').style.display='none'; document.getElementById('dash-content').style.display='block';
 }
 
 function renderMissingCosts() {
   const faltantes = STATE.ventas.filter(x => x.sin_costo);
   const badge = document.getElementById('missing-count');
   const box = document.getElementById('missing-costs');
-
   if (!badge || !box) return;
-
   badge.textContent = `${faltantes.length} pendientes`;
-
-  if (!faltantes.length) {
-    box.innerHTML = '<div class="empty">No hay ventas sin costo. Una rareza agradable, casi sospechosa.</div>';
-    return;
-  }
-
-  box.innerHTML = `
-    <table>
-      <thead>
-        <tr>
-          <th>Producto</th>
-          <th>SKU detectado</th>
-          <th>Item ID</th>
-          <th>Precio</th>
-          <th>Cobro neto ML</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${faltantes.map(x => `
-          <tr class="row-warn">
-            <td title="${x.producto}">${String(x.producto || '—').substring(0,44)}</td>
-            <td class="cost-warn">${x.sku || '—'}</td>
-            <td>${x.item_id || x.item_id_ml || '—'}</td>
-            <td>${fmt(x.precio_total)}</td>
-            <td>${fmt(x.cobro_neto)}</td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>
-  `;
+  if (!faltantes.length) { box.innerHTML = '<div class="empty">No hay ventas sin costo. Los productos bonificados con COSTO $0 se toman como válidos.</div>'; return; }
+  box.innerHTML = `<table><thead><tr><th>Producto</th><th>SKU detectado</th><th>Item ID</th><th>Precio</th><th>Cobro neto ML</th></tr></thead><tbody>${faltantes.map(x=>`<tr class="row-warn"><td title="${x.producto}">${String(x.producto||'—').substring(0,44)}</td><td class="cost-warn">${x.sku||'—'}</td><td>${x.item_id||x.item_id_ml||'—'}</td><td>${fmt(x.precio_total)}</td><td>${fmt(x.cobro_neto)}</td></tr>`).join('')}</tbody></table>`;
 }
 
 function renderVentas() {
-  const v = STATE.ventas;
-  const tot = v.reduce((s,x)=>s+x.precio_total,0);
-  const totGan = v.reduce((s,x)=>s+x.ganancia,0);
-  const margen = tot?totGan/tot*100:0;
-  const sinCosto = v.filter(x=>x.sin_costo).length;
-
-  document.getElementById('v-met').innerHTML = [
-    {lbl:'Ventas',val:v.length,sub:'en el período',cls:''},
-    {lbl:'Facturado',val:fmt(tot),sub:'',cls:''},
-    {lbl:'Ganancia neta',val:fmt(totGan),sub:fmtPct(margen),cls:margen>0?'green':'red'},
-    {lbl:'Sin costo',val:sinCosto,sub:'productos a corregir',cls:sinCosto>0?'red':'green'},
-    {lbl:'Mensajería',val:fmt(v.reduce((s,x)=>s+x.mensajeria,0)),sub:'descontada de ganancia',cls:'amber'},
-  ].map(m=>`<div class="mc"><div class="mc-lbl">${m.lbl}</div><div class="mc-val ${m.cls}">${m.val}</div><div class="mc-sub">${m.sub}</div></div>`).join('');
-
-  document.getElementById('t-ventas').innerHTML = v.map((x,i)=>{
-    const cls = getMargenClass(x.margen, x.sin_costo);
-    const rowClass = x.sin_costo ? ' class="row-warn"' : '';
-    const costoTxt = x.sin_costo ? 'SIN COSTO' : fmt(x.costo);
-    const margenTxt = x.sin_costo ? 'SIN COSTO' : fmtPct(x.margen);
-    return `<tr${rowClass}><td>${i+1}</td><td>${x.fecha}</td><td title="${x.producto}">${String(x.producto || '—').substring(0,28)}</td><td class="${x.sin_costo?'cost-warn':''}">${x.sku || '—'}</td><td>${x.localidad}</td><td>${fmt(x.precio_total)}</td><td>${fmt(x.cobro_neto)}</td><td>${fmt(x.mensajeria)}</td><td class="${x.sin_costo?'cost-warn':''}">${costoTxt}</td><td>${fmt(x.ganancia)}</td><td><span class="badge ${cls}">${margenTxt}</span></td></tr>`;
-  }).join('') || '<tr><td colspan="11" class="empty">Sin ventas</td></tr>';
-
-  document.getElementById('ventas-loading').style.display = 'none';
-  document.getElementById('ventas-table').style.display = 'table';
+  const v=STATE.ventas; const tot=v.reduce((s,x)=>s+x.precio_total,0); const totGan=v.reduce((s,x)=>s+x.ganancia,0); const margen=tot?totGan/tot*100:0; const sinCosto=v.filter(x=>x.sin_costo).length; const bonificados=v.filter(x=>x.bonificado).length;
+  document.getElementById('v-met').innerHTML = [{lbl:'Ventas',val:v.length,sub:'en el período',cls:''},{lbl:'Facturado',val:fmt(tot),sub:'',cls:''},{lbl:'Ganancia neta',val:fmt(totGan),sub:fmtPct(margen),cls:margen>0?'green':'red'},{lbl:'Sin costo',val:sinCosto,sub:'productos a corregir',cls:sinCosto>0?'red':'green'},{lbl:'Bonificados',val:bonificados,sub:'costo $0 válido',cls:'blue'},{lbl:'Mensajería',val:fmt(v.reduce((s,x)=>s+x.mensajeria,0)),sub:'descontada de ganancia',cls:'amber'}].map(m=>`<div class="mc"><div class="mc-lbl">${m.lbl}</div><div class="mc-val ${m.cls}">${m.val}</div><div class="mc-sub">${m.sub}</div></div>`).join('');
+  document.getElementById('t-ventas').innerHTML = v.map((x,i)=>{ const cls=getMargenClass(x.margen,x.sin_costo); const rowClass=x.sin_costo?' class="row-warn"':''; const costoTxt=x.sin_costo?'SIN COSTO':x.bonificado?'$0 BONIF.':fmt(x.costo); const margenTxt=x.sin_costo?'SIN COSTO':fmtPct(x.margen); return `<tr${rowClass}><td>${i+1}</td><td>${x.fecha}</td><td title="${x.producto}">${String(x.producto||'—').substring(0,28)}</td><td class="${x.sin_costo?'cost-warn':''}">${x.sku||'—'}</td><td>${x.localidad}</td><td>${fmt(x.precio_total)}</td><td>${fmt(x.cobro_neto)}</td><td>${fmt(x.mensajeria)}</td><td class="${x.sin_costo?'cost-warn':''}">${costoTxt}</td><td>${fmt(x.ganancia)}</td><td><span class="badge ${x.bonificado&&!x.sin_costo?'bb':cls}">${margenTxt}</span></td></tr>`; }).join('') || '<tr><td colspan="11" class="empty">Sin ventas</td></tr>';
+  document.getElementById('ventas-loading').style.display='none'; document.getElementById('ventas-table').style.display='table';
 }
 
-function renderRoas() {
-  const ads = STATE.ads;
-  if (!ads || ads.error) {
-    document.getElementById('roas-loading').textContent = ads?.message || 'Sin datos de Mercado Ads';
-    return;
-  }
+function renderRoas(){ const ads=STATE.ads; if(!ads||ads.error){document.getElementById('roas-loading').textContent=ads?.message||'Sin datos de Mercado Ads';return;} document.getElementById('roas-met').innerHTML=[{lbl:'ROAS global',val:num(ads.roas_global).toFixed(2)+'x',sub:'ingresos / gasto',cls:ads.roas_global>=4?'green':ads.roas_global>=2?'amber':'red'},{lbl:'Gasto en ads',val:fmt(ads.gasto_total),sub:'período',cls:''},{lbl:'Ingresos por ads',val:fmt(ads.ingresos_total),sub:'atribuidos',cls:'green'},{lbl:'Retorno neto',val:fmt(num(ads.ingresos_total)-num(ads.gasto_total)),sub:'ingresos − gasto',cls:(num(ads.ingresos_total)-num(ads.gasto_total))>0?'green':'red'}].map(m=>`<div class="mc"><div class="mc-lbl">${m.lbl}</div><div class="mc-val ${m.cls}">${m.val}</div><div class="mc-sub">${m.sub}</div></div>`).join(''); document.getElementById('roas-cards').innerHTML=(ads.items||[]).map(item=>{const r=num(item.roas);const semCls=r>=4?'sg':r>=2?'sa':'sr';const dotCls=r>=4?'dg':r>=2?'da':'dr';const label=r>=4?'Escalar campaña':r>=2?'Revisar creativos':'Pausar campaña';return `<div class="rc"><div style="font-size:13px;font-weight:600;margin-bottom:.4rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.titulo}</div><div class="rv">${r.toFixed(2)}x</div><div style="font-size:11px;color:#888;margin-bottom:.5rem">ROAS</div><div class="sem ${semCls}"><div class="dot ${dotCls}"></div>${label}</div><div style="display:flex;justify-content:space-between;font-size:11px;color:#888;margin-top:.5rem;padding-top:.5rem;border-top:1px solid #f0f0f0"><span>Gasto ${fmt(item.gasto)}</span><span>Ingresos ${fmt(item.ingresos)}</span></div></div>`;}).join('')||'<div class="empty">Sin campañas activas en el período</div>'; document.getElementById('roas-loading').style.display='none'; document.getElementById('roas-content').style.display='block'; }
 
-  document.getElementById('roas-met').innerHTML = [
-    {lbl:'ROAS global',val:num(ads.roas_global).toFixed(2)+'x',sub:'ingresos / gasto',cls:ads.roas_global>=4?'green':ads.roas_global>=2?'amber':'red'},
-    {lbl:'Gasto en ads',val:fmt(ads.gasto_total),sub:'período',cls:''},
-    {lbl:'Ingresos por ads',val:fmt(ads.ingresos_total),sub:'atribuidos',cls:'green'},
-    {lbl:'Retorno neto',val:fmt(num(ads.ingresos_total)-num(ads.gasto_total)),sub:'ingresos − gasto',cls:(num(ads.ingresos_total)-num(ads.gasto_total))>0?'green':'red'},
-  ].map(m=>`<div class="mc"><div class="mc-lbl">${m.lbl}</div><div class="mc-val ${m.cls}">${m.val}</div><div class="mc-sub">${m.sub}</div></div>`).join('');
+function renderEnvios(){ const v=STATE.ventas; const byZone={}; v.forEach(x=>{const zona=x.partido||'—'; if(!byZone[zona])byZone[zona]={total:0,n:0}; byZone[zona].total+=x.mensajeria; byZone[zona].n++;}); const zones=Object.entries(byZone).sort((a,b)=>b[1].total-a[1].total); const maxZ=Math.max(...zones.map(z=>z[1].total),1); const totEnv=v.reduce((s,x)=>s+x.mensajeria,0); const avgEnv=v.length?totEnv/v.length:0; document.getElementById('env-met').innerHTML=[{lbl:'Total mensajería',val:fmt(totEnv),sub:'en el período',cls:'amber'},{lbl:'Promedio por venta',val:fmt(avgEnv),sub:'',cls:''},{lbl:'Zona más cara',val:zones[0]?zones[0][0]:'—',sub:zones[0]?fmt(zones[0][1].total):'',cls:'red'},{lbl:'Zona más barata',val:zones.length?zones[zones.length-1][0]:'—',sub:zones.length?fmt(zones[zones.length-1][1].total):'',cls:'green'}].map(m=>`<div class="mc"><div class="mc-lbl">${m.lbl}</div><div class="mc-val ${m.cls}" style="font-size:${String(m.val).length>8?'15px':'20px'}">${m.val}</div><div class="mc-sub">${m.sub}</div></div>`).join(''); document.getElementById('env-bars').innerHTML=zones.map(([z,d])=>{const w=Math.max(4,Math.round(d.total/maxZ*100));return `<div class="br"><div class="bl">${z}</div><div class="bt"><div class="bf" style="width:${w}%;background:#EF9F27"></div></div><div class="bv">${fmt(d.total)}</div></div>`;}).join('')||'<div class="empty">Sin datos de mensajería</div>'; }
 
-  document.getElementById('roas-cards').innerHTML = (ads.items || []).map(item=>{
-    const r = num(item.roas);
-    const semCls = r>=4?'sg':r>=2?'sa':'sr';
-    const dotCls = r>=4?'dg':r>=2?'da':'dr';
-    const label = r>=4?'Escalar campaña':r>=2?'Revisar creativos':'Pausar campaña';
-    return `<div class="rc"><div style="font-size:13px;font-weight:600;margin-bottom:.4rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.titulo}</div><div class="rv">${r.toFixed(2)}x</div><div style="font-size:11px;color:#888;margin-bottom:.5rem">ROAS</div><div class="sem ${semCls}"><div class="dot ${dotCls}"></div>${label}</div><div style="display:flex;justify-content:space-between;font-size:11px;color:#888;margin-top:.5rem;padding-top:.5rem;border-top:1px solid #f0f0f0"><span>Gasto ${fmt(item.gasto)}</span><span>Ingresos ${fmt(item.ingresos)}</span></div></div>`;
-  }).join('') || '<div class="empty">Sin campañas activas en el período</div>';
+function addLoc(){ const partido=document.getElementById('inp-partido').value.trim(); const localidad=document.getElementById('inp-loc').value.trim(); const tarifa=parseFloat(document.getElementById('inp-tarifa').value); if(!partido||!localidad||isNaN(tarifa))return alert('Completá todos los campos'); LOCALIDADES.push({partido,localidad,tarifa}); localStorage.setItem('ml_localidades',JSON.stringify(LOCALIDADES)); renderLoc(); document.getElementById('inp-loc').value=''; document.getElementById('inp-tarifa').value=''; }
+function removeLoc(i){ LOCALIDADES.splice(i,1); localStorage.setItem('ml_localidades',JSON.stringify(LOCALIDADES)); renderLoc(); }
+function renderLoc(){ const grouped={}; LOCALIDADES.forEach((l,i)=>{if(!grouped[l.partido])grouped[l.partido]=[];grouped[l.partido].push({...l,i});}); document.getElementById('t-loc').innerHTML=Object.entries(grouped).map(([p,locs])=>`<tr style="background:#f5f5f5"><td colspan="4" style="padding:5px 8px;font-size:11px;font-weight:600;color:#888">${p}</td></tr>`+locs.map(l=>`<tr><td></td><td>${l.localidad}</td><td>${fmt(l.tarifa)}</td><td><button onclick="removeLoc(${l.i})" style="background:none;border:none;cursor:pointer;font-size:12px;color:#a32d2d">Eliminar</button></td></tr>`).join('')).join('')||'<tr><td colspan="4" class="empty">Sin localidades cargadas</td></tr>'; }
 
-  document.getElementById('roas-loading').style.display = 'none';
-  document.getElementById('roas-content').style.display = 'block';
-}
-
-function renderEnvios() {
-  const v = STATE.ventas;
-  const byZone = {};
-  v.forEach(x=>{
-    const zona = x.partido || '—';
-    if(!byZone[zona]) byZone[zona]={total:0,n:0};
-    byZone[zona].total += x.mensajeria;
-    byZone[zona].n++;
-  });
-
-  const zones = Object.entries(byZone).sort((a,b)=>b[1].total-a[1].total);
-  const maxZ = Math.max(...zones.map(z=>z[1].total),1);
-  const totEnv = v.reduce((s,x)=>s+x.mensajeria,0);
-  const avgEnv = v.length ? totEnv/v.length : 0;
-
-  document.getElementById('env-met').innerHTML = [
-    {lbl:'Total mensajería',val:fmt(totEnv),sub:'en el período',cls:'amber'},
-    {lbl:'Promedio por venta',val:fmt(avgEnv),sub:'',cls:''},
-    {lbl:'Zona más cara',val:zones[0]?zones[0][0]:'—',sub:zones[0]?fmt(zones[0][1].total):'',cls:'red'},
-    {lbl:'Zona más barata',val:zones.length?zones[zones.length-1][0]:'—',sub:zones.length?fmt(zones[zones.length-1][1].total):'',cls:'green'},
-  ].map(m=>`<div class="mc"><div class="mc-lbl">${m.lbl}</div><div class="mc-val ${m.cls}" style="font-size:${String(m.val).length>8?'15px':'20px'}">${m.val}</div><div class="mc-sub">${m.sub}</div></div>`).join('');
-
-  document.getElementById('env-bars').innerHTML = zones.map(([z,d])=>{
-    const w = Math.max(4,Math.round(d.total/maxZ*100));
-    return `<div class="br"><div class="bl">${z}</div><div class="bt"><div class="bf" style="width:${w}%;background:#EF9F27"></div></div><div class="bv">${fmt(d.total)}</div></div>`;
-  }).join('') || '<div class="empty">Sin datos de mensajería</div>';
-}
-
-function addLoc() {
-  const partido = document.getElementById('inp-partido').value.trim();
-  const localidad = document.getElementById('inp-loc').value.trim();
-  const tarifa = parseFloat(document.getElementById('inp-tarifa').value);
-  if (!partido || !localidad || isNaN(tarifa)) return alert('Completá todos los campos');
-  LOCALIDADES.push({ partido, localidad, tarifa });
-  localStorage.setItem('ml_localidades', JSON.stringify(LOCALIDADES));
-  renderLoc();
-  document.getElementById('inp-loc').value = '';
-  document.getElementById('inp-tarifa').value = '';
-}
-
-function removeLoc(i) {
-  LOCALIDADES.splice(i,1);
-  localStorage.setItem('ml_localidades', JSON.stringify(LOCALIDADES));
-  renderLoc();
-}
-
-function renderLoc() {
-  const grouped = {};
-  LOCALIDADES.forEach((l,i)=>{
-    if(!grouped[l.partido]) grouped[l.partido]=[];
-    grouped[l.partido].push({...l,i});
-  });
-
-  document.getElementById('t-loc').innerHTML = Object.entries(grouped).map(([p,locs])=>
-    `<tr style="background:#f5f5f5"><td colspan="4" style="padding:5px 8px;font-size:11px;font-weight:600;color:#888">${p}</td></tr>`+
-    locs.map(l=>`<tr><td></td><td>${l.localidad}</td><td>${fmt(l.tarifa)}</td><td><button onclick="removeLoc(${l.i})" style="background:none;border:none;cursor:pointer;font-size:12px;color:#a32d2d">Eliminar</button></td></tr>`).join('')
-  ).join('') || '<tr><td colspan="4" class="empty">Sin localidades cargadas</td></tr>';
-}
-
-const today = toISO(new Date());
-const week = toISO(daysAgo(7));
-['d-from','vd-from'].forEach(id => { const el = document.getElementById(id); if(el) el.value = week; });
-['d-to','vd-to'].forEach(id => { const el = document.getElementById(id); if(el) el.value = today; });
-
-renderLoc();
-loadCostos().then(() => checkAuth());
-
-if (window.location.search.includes('connected=1')) {
-  history.replaceState({}, '', '/');
-}
+const today=toISO(new Date()); const week=toISO(daysAgo(7)); ['d-from','vd-from'].forEach(id=>{const el=document.getElementById(id); if(el)el.value=week;}); ['d-to','vd-to'].forEach(id=>{const el=document.getElementById(id); if(el)el.value=today;});
+renderLoc(); loadCostos().then(()=>checkAuth());
+if(window.location.search.includes('connected=1')) history.replaceState({}, '', '/');
 </script>
 </body>
 </html>
