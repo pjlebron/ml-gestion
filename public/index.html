@@ -145,6 +145,7 @@ tr:last-child td{border-bottom:none}
                 <th>Precio</th>
                 <th>Comisión</th>
                 <th>Envío ML</th>
+                <th>Mensajería</th>
                 <th>Imp.</th>
                 <th>Costo</th>
                 <th>Ganancia</th>
@@ -195,6 +196,7 @@ tr:last-child td{border-bottom:none}
               <th>Localidad</th>
               <th>Precio</th>
               <th>Cobro neto ML</th>
+              <th>Mensajería</th>
               <th>Costo</th>
               <th>Ganancia</th>
               <th>Margen</th>
@@ -237,7 +239,7 @@ tr:last-child td{border-bottom:none}
     <!-- LOCALIDADES -->
     <div class="view" id="view-localidades">
       <div class="topbar"><div class="page-title">Localidades y tarifas</div></div>
-      <div class="alert alert-info">Estas tarifas se usan solo cuando Mercado Libre no informa costo de envío descontado. Si ML ya trae envío, no se descuenta dos veces.</div>
+      <div class="alert alert-info">Estas tarifas corresponden a tu mensajería/manual por localidad. Se descuentan siempre de la ganancia, además de los descuentos que ya haga Mercado Libre.</div>
       <div class="card">
         <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap">
           <input type="text" id="inp-partido" placeholder="Partido" style="flex:1;min-width:90px;padding:6px 10px;font-size:13px;border:1px solid #ddd;border-radius:6px">
@@ -395,8 +397,7 @@ async function loadVentas() {
       const otrosGastos = num(o.otros_gastos);
       const costo = getCostoProducto(o);
 
-      const envioManual = getEnvioCosto(o.localidad, o.partido);
-      const envioFlexManual = cargoEnvioMl > 0 ? 0 : envioManual;
+      const mensajeria = getEnvioCosto(o.localidad, o.partido);
 
       const cobroNetoMl = num(o.cobro_neto) || (
         precioTotal
@@ -410,7 +411,7 @@ async function loadVentas() {
         + bonificaciones
       );
 
-      const ganancia = cobroNetoMl - costo - envioFlexManual;
+      const ganancia = cobroNetoMl - costo - mensajeria;
       const margen = precioTotal > 0 ? (ganancia / precioTotal * 100) : 0;
       const sinCosto = costo === 0;
 
@@ -428,9 +429,10 @@ async function loadVentas() {
         otros_gastos: otrosGastos,
         cobro_neto: cobroNetoMl,
         costo,
-        envio_costo: cargoEnvioMl + envioFlexManual,
+        envio_costo: cargoEnvioMl + mensajeria,
         envio_ml: cargoEnvioMl,
-        envio_flex_manual: envioFlexManual,
+        mensajeria,
+        envio_flex_manual: mensajeria,
         ganancia,
         margen,
         sin_costo: sinCosto,
@@ -469,7 +471,7 @@ function renderDash() {
   const totGan = v.reduce((s,x)=>s+x.ganancia,0);
   const totEnv = v.reduce((s,x)=>s+x.envio_costo,0);
   const totEnvMl = v.reduce((s,x)=>s+num(x.cargo_envio_ml),0);
-  const totEnvManual = v.reduce((s,x)=>s+num(x.envio_flex_manual),0);
+  const totMensajeria = v.reduce((s,x)=>s+num(x.mensajeria),0);
   const totFee = v.reduce((s,x)=>s+x.ml_fee,0);
   const totImp = v.reduce((s,x)=>s+num(x.impuestos),0);
   const totDesc = v.reduce((s,x)=>s+num(x.descuentos),0);
@@ -482,9 +484,9 @@ function renderDash() {
     {lbl:'Sin costo',val:sinCosto,sub:'ventas a revisar',cls:sinCosto>0?'red':'green'},
     {lbl:'Comisiones ML',val:fmt(totFee),sub:tot?fmtPct(totFee/tot*100)+' del total':'',cls:'blue'},
     {lbl:'Envíos ML',val:fmt(totEnvMl),sub:tot?fmtPct(totEnvMl/tot*100)+' del total':'',cls:'amber'},
+    {lbl:'Mensajería',val:fmt(totMensajeria),sub:'costo manual/localidad',cls:'amber'},
     {lbl:'Impuestos',val:fmt(totImp),sub:tot?fmtPct(totImp/tot*100)+' del total':'',cls:'red'},
     {lbl:'Descuentos',val:fmt(totDesc),sub:tot?fmtPct(totDesc/tot*100)+' del total':'',cls:'amber'},
-    {lbl:'Flex manual',val:fmt(totEnvManual),sub:'tarifas cargadas',cls:'amber'},
   ].map(m=>`<div class="mc"><div class="mc-lbl">${m.lbl}</div><div class="mc-val ${m.cls}">${m.val}</div><div class="mc-sub">${m.sub}</div></div>`).join('');
 
   const byProd = {};
@@ -511,7 +513,8 @@ function renderDash() {
     const segs=[
       {lbl:'Costo producto',val:totCosto,col:'#1D9E75'},
       {lbl:'Comisión ML',val:totFee,col:'#378ADD'},
-      {lbl:'Envíos ML/manual',val:totEnv,col:'#EF9F27'},
+      {lbl:'Envíos ML',val:totEnvMl,col:'#EF9F27'},
+      {lbl:'Mensajería',val:totMensajeria,col:'#BA7517'},
       {lbl:'Impuestos',val:totImp,col:'#E24B4A'},
       {lbl:'Ganancia',val:totGan,col:'#534AB7'}
     ];
@@ -528,8 +531,8 @@ function renderDash() {
     const rowClass = x.sin_costo ? ' class="row-warn"' : '';
     const marginTxt = x.sin_costo ? 'SIN COSTO' : fmtPct(x.margen);
     const costoTxt = x.sin_costo ? 'SIN COSTO' : fmt(x.costo);
-    return `<tr${rowClass}><td>${x.producto}</td><td>${x.localidad}</td><td>${fmt(x.precio_total)}</td><td style="color:#185FA5">${fmt(x.ml_fee)}</td><td style="color:#854F0B">${fmt(x.cargo_envio_ml)}</td><td style="color:#a32d2d">${fmt(x.impuestos)}</td><td class="${x.sin_costo?'cost-warn':''}">${costoTxt}</td><td>${fmt(x.ganancia)}</td><td><span class="badge ${cls}">${marginTxt}</span></td></tr>`;
-  }).join('') || '<tr><td colspan="9" class="empty">Sin ventas en el período</td></tr>';
+    return `<tr${rowClass}><td>${x.producto}</td><td>${x.localidad}</td><td>${fmt(x.precio_total)}</td><td style="color:#185FA5">${fmt(x.ml_fee)}</td><td style="color:#854F0B">${fmt(x.cargo_envio_ml)}</td><td style="color:#854F0B">${fmt(x.mensajeria)}</td><td style="color:#a32d2d">${fmt(x.impuestos)}</td><td class="${x.sin_costo?'cost-warn':''}">${costoTxt}</td><td>${fmt(x.ganancia)}</td><td><span class="badge ${cls}">${marginTxt}</span></td></tr>`;
+  }).join('') || '<tr><td colspan="10" class="empty">Sin ventas en el período</td></tr>';
 
   document.getElementById('dash-loading').style.display = 'none';
   document.getElementById('dash-content').style.display = 'block';
@@ -587,7 +590,7 @@ function renderVentas() {
     {lbl:'Facturado',val:fmt(tot),sub:'',cls:''},
     {lbl:'Ganancia neta',val:fmt(totGan),sub:fmtPct(margen),cls:margen>0?'green':'red'},
     {lbl:'Sin costo',val:sinCosto,sub:'productos a corregir',cls:sinCosto>0?'red':'green'},
-    {lbl:'Envíos',val:fmt(v.reduce((s,x)=>s+x.envio_costo,0)),sub:'deducido del margen',cls:'amber'},
+    {lbl:'Mensajería',val:fmt(v.reduce((s,x)=>s+x.mensajeria,0)),sub:'descontada de ganancia',cls:'amber'},
   ].map(m=>`<div class="mc"><div class="mc-lbl">${m.lbl}</div><div class="mc-val ${m.cls}">${m.val}</div><div class="mc-sub">${m.sub}</div></div>`).join('');
 
   document.getElementById('t-ventas').innerHTML = v.map((x,i)=>{
@@ -595,8 +598,8 @@ function renderVentas() {
     const rowClass = x.sin_costo ? ' class="row-warn"' : '';
     const costoTxt = x.sin_costo ? 'SIN COSTO' : fmt(x.costo);
     const margenTxt = x.sin_costo ? 'SIN COSTO' : fmtPct(x.margen);
-    return `<tr${rowClass}><td>${i+1}</td><td>${x.fecha}</td><td title="${x.producto}">${String(x.producto || '—').substring(0,28)}</td><td class="${x.sin_costo?'cost-warn':''}">${x.sku || '—'}</td><td>${x.localidad}</td><td>${fmt(x.precio_total)}</td><td>${fmt(x.cobro_neto)}</td><td class="${x.sin_costo?'cost-warn':''}">${costoTxt}</td><td>${fmt(x.ganancia)}</td><td><span class="badge ${cls}">${margenTxt}</span></td></tr>`;
-  }).join('') || '<tr><td colspan="10" class="empty">Sin ventas</td></tr>';
+    return `<tr${rowClass}><td>${i+1}</td><td>${x.fecha}</td><td title="${x.producto}">${String(x.producto || '—').substring(0,28)}</td><td class="${x.sin_costo?'cost-warn':''}">${x.sku || '—'}</td><td>${x.localidad}</td><td>${fmt(x.precio_total)}</td><td>${fmt(x.cobro_neto)}</td><td>${fmt(x.mensajeria)}</td><td class="${x.sin_costo?'cost-warn':''}">${costoTxt}</td><td>${fmt(x.ganancia)}</td><td><span class="badge ${cls}">${margenTxt}</span></td></tr>`;
+  }).join('') || '<tr><td colspan="11" class="empty">Sin ventas</td></tr>';
 
   document.getElementById('ventas-loading').style.display = 'none';
   document.getElementById('ventas-table').style.display = 'table';
@@ -634,17 +637,17 @@ function renderEnvios() {
   v.forEach(x=>{
     const zona = x.partido || '—';
     if(!byZone[zona]) byZone[zona]={total:0,n:0};
-    byZone[zona].total += x.envio_costo;
+    byZone[zona].total += x.mensajeria;
     byZone[zona].n++;
   });
 
   const zones = Object.entries(byZone).sort((a,b)=>b[1].total-a[1].total);
   const maxZ = Math.max(...zones.map(z=>z[1].total),1);
-  const totEnv = v.reduce((s,x)=>s+x.envio_costo,0);
+  const totEnv = v.reduce((s,x)=>s+x.mensajeria,0);
   const avgEnv = v.length ? totEnv/v.length : 0;
 
   document.getElementById('env-met').innerHTML = [
-    {lbl:'Total envíos',val:fmt(totEnv),sub:'en el período',cls:'amber'},
+    {lbl:'Total mensajería',val:fmt(totEnv),sub:'en el período',cls:'amber'},
     {lbl:'Promedio por venta',val:fmt(avgEnv),sub:'',cls:''},
     {lbl:'Zona más cara',val:zones[0]?zones[0][0]:'—',sub:zones[0]?fmt(zones[0][1].total):'',cls:'red'},
     {lbl:'Zona más barata',val:zones.length?zones[zones.length-1][0]:'—',sub:zones.length?fmt(zones[zones.length-1][1].total):'',cls:'green'},
@@ -653,7 +656,7 @@ function renderEnvios() {
   document.getElementById('env-bars').innerHTML = zones.map(([z,d])=>{
     const w = Math.max(4,Math.round(d.total/maxZ*100));
     return `<div class="br"><div class="bl">${z}</div><div class="bt"><div class="bf" style="width:${w}%;background:#EF9F27"></div></div><div class="bv">${fmt(d.total)}</div></div>`;
-  }).join('') || '<div class="empty">Sin datos de envíos</div>';
+  }).join('') || '<div class="empty">Sin datos de mensajería</div>';
 }
 
 function addLoc() {
