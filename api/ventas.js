@@ -313,19 +313,15 @@ function getFirstNumber(...values) {
 }
 
 function getShipmentCost(shipData, shipmentCosts) {
-  // IMPORTANTE: no leer sender_id / seller_id / user_id como costo.
-  // El commit anterior tomaba 713167918 como envío ML. Sí, espectacular desastre contable.
+  // Costo real a cargo del vendedor. No usar gross_amount ni list_cost acá:
+  // esos son valores brutos/de lista, no el costo que descuenta ML al vendedor.
   const exactCandidates = [
-    shipmentCosts?.cost,
-    shipmentCosts?.gross_amount,
     shipmentCosts?.sender?.cost,
     shipmentCosts?.sender?.amount,
     shipmentCosts?.seller?.cost,
     shipmentCosts?.seller?.amount,
     Array.isArray(shipmentCosts?.senders) ? shipmentCosts.senders[0]?.cost : null,
     Array.isArray(shipmentCosts?.senders) ? shipmentCosts.senders[0]?.amount : null,
-    Array.isArray(shipmentCosts?.receiver) ? shipmentCosts.receiver[0]?.cost : null,
-    Array.isArray(shipmentCosts?.receiver) ? shipmentCosts.receiver[0]?.amount : null,
     shipData?.base_cost,
     shipData?.cost,
     shipData?.shipping_option?.cost,
@@ -479,6 +475,17 @@ function calcularCobroNeto({
 
   const billingNetAmount = toNumber(billingInfo?.net_amount);
 
+  // Si tenemos detalle de ML con envío, bonificación o impuestos, la fórmula reproduce mejor
+  // el panel de Mercado Libre que el net_received_amount de Mercado Pago.
+  if (creditosMl || cargoEnvioMl || impuestos || retenciones || cargoFinanciacion || otrosGastos) {
+    return {
+      cobroNeto: cobroNetoCalculado,
+      cobroNetoCalculado,
+      creditosMl,
+      fuente: 'calculado_detalle_ml',
+    };
+  }
+
   if (billingNetAmount) {
     return {
       cobroNeto: billingNetAmount,
@@ -490,10 +497,10 @@ function calcularCobroNeto({
 
   if (mp.mp_net_received_amount) {
     return {
-      cobroNeto: mp.mp_net_received_amount + creditosMl,
+      cobroNeto: mp.mp_net_received_amount,
       cobroNetoCalculado,
       creditosMl,
-      fuente: creditosMl ? 'mercadopago_net_mas_creditos_ml' : 'mercadopago_net',
+      fuente: 'mercadopago_net',
     };
   }
 
