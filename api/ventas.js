@@ -14,7 +14,7 @@ const MAX_PAGES_PER_ACCOUNT = 20;
 const MAX_ORDERS_PER_ACCOUNT = PAGE_LIMIT * MAX_PAGES_PER_ACCOUNT;
 
 function toNumber(value) {
-  const parsed = Number(value || 0);
+  const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
@@ -135,6 +135,16 @@ function sumarPayments(order) {
   });
 }
 
+function getCreditAmount(fee = {}) {
+  const rawAmount = toNumber(fee.amount);
+  const amount = Math.abs(rawAmount);
+
+  // En ML, los descuentos/bonificaciones pueden venir como crédito al vendedor.
+  // Si algún caso llega con signo negativo, lo respetamos como débito.
+  if (rawAmount < 0) return -amount;
+  return amount;
+}
+
 function clasificarBillingFees(billingInfo) {
   const result = {
     cargo_venta: 0,
@@ -154,6 +164,7 @@ function clasificarBillingFees(billingInfo) {
     const type = String(fee.type || '').toLowerCase();
     const detail = String(fee.detail || fee.name || fee.description || '').toLowerCase();
     const amount = absNumber(fee.amount);
+    const creditAmount = getCreditAmount(fee);
 
     if (!amount) return;
 
@@ -161,6 +172,7 @@ function clasificarBillingFees(billingInfo) {
       type: fee.type || '',
       detail: fee.detail || fee.name || fee.description || '',
       amount,
+      raw_amount: toNumber(fee.amount),
     });
 
     if (type.includes('shipping') || detail.includes('envío') || detail.includes('envio') || detail.includes('shipping')) {
@@ -173,23 +185,32 @@ function clasificarBillingFees(billingInfo) {
       return;
     }
 
-    if (type.includes('tax') || type.includes('iva') || detail.includes('iva') || detail.includes('impuesto')) {
+    if (
+      type.includes('tax') ||
+      type.includes('iva') ||
+      type.includes('gross_income') ||
+      type.includes('iibb') ||
+      detail.includes('iva') ||
+      detail.includes('impuesto') ||
+      detail.includes('ingresos brutos') ||
+      detail.includes('iibb')
+    ) {
       result.impuestos += amount;
       return;
     }
 
-    if (type.includes('retention') || detail.includes('retenci') || detail.includes('percepci')) {
+    if (type.includes('retention') || type.includes('withholding') || detail.includes('retenci') || detail.includes('percepci')) {
       result.retenciones += amount;
       return;
     }
 
     if (type.includes('discount') || detail.includes('descuento')) {
-      result.descuentos += amount;
+      result.descuentos += creditAmount;
       return;
     }
 
-    if (type.includes('bonus') || detail.includes('bonific')) {
-      result.bonificaciones += amount;
+    if (type.includes('bonus') || type.includes('bonification') || detail.includes('bonific')) {
+      result.bonificaciones += creditAmount;
       return;
     }
 
@@ -297,6 +318,60 @@ async function buscarOrdenesPaginadas(token, dateFrom, dateTo) {
   };
 }
 
+function calcularCobroNeto({
+  billingInfo,
+  mp,
+  precioTotal,
+  cargoVenta,
+  cargoEnvioMl,
+  cargoFinanciacion,
+  descuentos,
+  bonificaciones,
+  impuestos,
+  retenciones,
+  otrosGastos,
+}) {
+  const creditosMl = toNumber(descuentos) + toNumber(bonificaciones);
+
+  const cobroNetoCalculado = precioTotal
+    - cargoVenta
+    - cargoEnvioMl
+    - cargoFinanciacion
+    + creditosMl
+    - impuestos
+    - retenciones
+    - otrosGastos;
+
+  const billingNetAmount = toNumber(billingInfo?.net_amount);
+
+  if (billingNetAmount) {
+    return {
+      cobroNeto: billingNetAmount,
+      cobroNetoCalculado,
+      creditosMl,
+      fuente: 'billing_info_net_amount',
+    };
+  }
+
+  if (mp.mp_net_received_amount) {
+    // Mercado Pago suele traer net_received_amount sin sumar los créditos/bonificaciones que ML muestra
+    // como "Descuentos y bonificaciones" en el detalle de la venta. Por eso se suman acá.
+    return {
+      cobroNeto: mp.mp_net_received_amount + creditosMl,
+      cobroNetoCalculado,
+      creditosMl,
+      fuente: creditosMl ? 'mercadopago_net_mas_creditos_ml' : 'mercadopago_net',
+    };
+  }
+
+  return {
+    cobroNeto: cobroNetoCalculado,
+    cobroNetoCalculado,
+    creditosMl,
+    fuente: 'calculado',
+  };
+}
+
 async function normalizarOrden(order, token, account) {
   const items = normalizeOrderItems(order);
   const firstItem = order.order_items?.[0] || {};
@@ -330,17 +405,19 @@ async function normalizarOrden(order, token, account) {
   const retenciones = billing.retenciones || 0;
   const otrosGastos = billing.otros_gastos || 0;
 
-  const cobroNetoCalculado = precioTotal
-    - cargoVenta
-    - cargoEnvioMl
-    - cargoFinanciacion
-    - descuentos
-    - impuestos
-    - retenciones
-    - otrosGastos
-    + bonificaciones;
-
-  const cobroNeto = toNumber(billingInfo?.net_amount) || mp.mp_net_received_amount || cobroNetoCalculado;
+  const cobro = calcularCobroNeto({
+    billingInfo,
+    mp,
+    precioTotal,
+    cargoVenta,
+    cargoEnvioMl,
+    cargoFinanciacion,
+    descuentos,
+    bonificaciones,
+    impuestos,
+    retenciones,
+    otrosGastos,
+  });
 
   const localidad = shipData?.receiver_address?.city?.name || '—';
   const partido = shipData?.receiver_address?.state?.name || '—';
@@ -377,11 +454,13 @@ async function normalizarOrden(order, token, account) {
     cargo_financiacion: cargoFinanciacion,
     descuentos,
     bonificaciones,
+    creditos_ml: cobro.creditosMl,
     impuestos,
     retenciones,
     otros_gastos: otrosGastos,
-    cobro_neto: cobroNeto,
-    cobro_neto_calculado: cobroNetoCalculado,
+    cobro_neto: cobro.cobroNeto,
+    cobro_neto_calculado: cobro.cobroNetoCalculado,
+    cobro_neto_fuente: cobro.fuente,
 
     mp_fee_details_total: mp.mp_fee_details_total,
     mp_net_received_amount: mp.mp_net_received_amount,
