@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>War Room financiero - ML Gestión</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f5;color:#1a1a1a;font-size:14px}
+.wrap{max-width:1500px;margin:0 auto;padding:24px}.header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px;flex-wrap:wrap}.title{font-size:23px;font-weight:900;letter-spacing:-.03em}.subtitle{font-size:13px;color:#777;margin-top:4px;line-height:1.45;max-width:900px}.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.card{background:#fff;border:1px solid #e5e5e5;border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:0 1px 2px rgba(0,0,0,.02)}.dark{background:#111;color:#fff;border-color:#111}.dark .subtitle,.dark .muted{color:#bbb}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}.grid.filters{grid-template-columns:1fr 1fr 1fr 1fr auto;align-items:end}.two{display:grid;grid-template-columns:1.1fr .9fr;gap:14px}
+label{display:block;font-size:11px;color:#777;margin-bottom:5px}input,select{width:100%;border:1px solid #ddd;border-radius:9px;padding:8px 10px;font-size:13px;background:#fff}input:focus,select:focus{outline:none;border-color:#111;box-shadow:0 0 0 3px rgba(0,0,0,.06)}button,.btn{border:none;border-radius:9px;background:#111;color:#fff;padding:8px 12px;font-size:12px;font-weight:850;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}button:hover,.btn:hover{opacity:.88}.btn.secondary{background:#fff;color:#111;border:1px solid #ddd}.btn.small{padding:5px 8px;font-size:11px;border-radius:7px}
+.metric{background:#fff;border:1px solid #e5e5e5;border-radius:12px;padding:13px}.metric .l{font-size:11px;color:#777;margin-bottom:4px}.metric .v{font-size:22px;font-weight:900;letter-spacing:-.02em}.metric .s{font-size:11px;color:#888;margin-top:2px}.dark .metric{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.14)}.dark .metric .l,.dark .metric .s{color:#c8c8c8}.dark .metric .v{color:#fff}
+.green{color:#20703a}.red{color:#a32d2d}.amber{color:#8a5400}.blue{color:#0c447c}.purple{color:#44228a}.badge{display:inline-flex;align-items:center;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:850;white-space:nowrap}.ok{background:#eaf3de;color:#27500a}.bad{background:#fcebeb;color:#a32d2d}.warn{background:#faeeda;color:#633806}.neutral{background:#f2f2f2;color:#666}.info{background:#e6f1fb;color:#0c447c}.purple-bg{background:#efe8ff;color:#44228a}
+.table-wrap{overflow:auto;border-radius:12px;border:1px solid #eee;background:#fff}table{width:100%;border-collapse:collapse;font-size:12px}th{text-align:left;color:#777;font-weight:650;background:#fafafa;border-bottom:1px solid #eee;padding:8px;white-space:nowrap}td{border-bottom:1px solid #f0f0f0;padding:8px;white-space:nowrap;vertical-align:top}tr:last-child td{border-bottom:none}.num{text-align:right}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:11px}.muted{color:#888;font-size:12px}.empty{text-align:center;padding:28px;color:#aaa}.section-title{font-size:15px;font-weight:900;margin-bottom:10px}.buyer{display:inline-block;background:#f7f7f7;border:1px solid #eee;border-radius:7px;padding:2px 6px;max-width:155px;overflow:hidden;text-overflow:ellipsis}.product{max-width:290px;overflow:hidden;text-overflow:ellipsis}.bars{display:grid;gap:9px}.bar-row{display:grid;grid-template-columns:150px 1fr 95px;gap:8px;align-items:center}.bar-label{font-size:12px;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bar-track{height:9px;background:#f1f1f1;border-radius:999px;overflow:hidden}.bar-fill{height:100%;background:#111;border-radius:999px}.bar-value{text-align:right;font-size:12px;font-weight:800}.row-due{background:#fffaf0}.row-late{background:#fff3f3}.row-ready{background:#f8fff6}.hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;align-items:center}.hero-title{font-size:20px;font-weight:900;margin-bottom:6px}.hero-copy{font-size:13px;line-height:1.55;color:#ddd}.pill-row{display:flex;gap:6px;flex-wrap:wrap}.pill{border:1px solid #ddd;background:#fff;color:#555;border-radius:999px;padding:6px 10px;font-size:12px;cursor:pointer}.pill.on{background:#111;color:#fff;border-color:#111}.alert{padding:11px 12px;border-radius:12px;font-size:12px;line-height:1.45;background:#fff8ea;border:1px solid #f3d8a8;color:#633806;margin-bottom:14px}.right-note{font-size:12px;line-height:1.5;background:#fafafa;border:1px solid #eee;border-radius:12px;padding:12px}.spinner{display:inline-block;width:14px;height:14px;border:2px solid #ddd;border-top-color:#111;border-radius:50%;animation:spin .7s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:950px){.wrap{padding:14px}.grid.filters,.two,.hero-grid{grid-template-columns:1fr}.bar-row{grid-template-columns:100px 1fr 80px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div>
+      <div class="title">💰 War Room financiero</div>
+      <div class="subtitle">Caja proyectada, liquidaciones pendientes y dinero estimado a liberar desde Mercado Pago. No es “vendí mucho, soy rico”, que es la fantasía fundacional de medio e-commerce.</div>
+    </div>
+    <div class="actions">
+      <a class="btn secondary" href="/">← Dashboard</a>
+      <a class="btn secondary" href="/auditoria.html">🧪 Auditoría</a>
+      <button onclick="loadFinanzas()">Actualizar</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="grid filters">
+      <div><label>Cuenta</label><select id="f-account"><option value="all">Todas</option><option value="lebron">Lebron Store</option><option value="fragantify">Fragantify</option></select></div>
+      <div><label>Desde venta</label><input type="date" id="f-desde"></div>
+      <div><label>Hasta venta</label><input type="date" id="f-hasta"></div>
+      <div><label>Buscar</label><input type="text" id="f-search" placeholder="comprador, producto, payment..." oninput="renderLiquidaciones()"></div>
+      <div><label>&nbsp;</label><button style="width:100%" onclick="loadFinanzas()">Aplicar</button></div>
+    </div>
+  </div>
+
+  <div id="loading" class="card empty"><span class="spinner"></span> Cargando War Room financiero...</div>
+  <div id="content" style="display:none">
+    <div class="card dark">
+      <div class="hero-grid">
+        <div>
+          <div class="hero-title">Caja, cobros y oxígeno operativo</div>
+          <div class="hero-copy" id="hero-copy">Calculando liquidaciones pendientes y próximas entradas de Mercado Pago.</div>
+        </div>
+        <div class="grid" id="hero-metrics"></div>
+      </div>
+    </div>
+
+    <div class="metrics grid" id="metrics"></div>
+
+    <div class="alert" id="alerta"></div>
+
+    <div class="two">
+      <div class="card">
+        <div class="section-title">Calendario de liquidaciones</div>
+        <div class="bars" id="bucket-bars"></div>
+      </div>
+      <div class="card">
+        <div class="section-title">Resumen por cuenta</div>
+        <div class="table-wrap"><table><thead><tr><th>Cuenta</th><th class="num">Ventas</th><th class="num">Cobro neto</th><th class="num">Pendiente</th><th class="num">Liberado estim.</th></tr></thead><tbody id="account-body"></tbody></table></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+        <div>
+          <div class="section-title" style="margin:0">Liquidaciones Mercado Pago</div>
+          <div class="muted">Ordenado por fecha de liberación. Si una fecha ya pasó, se marca como liberado estimado, no como conciliado bancario. No le demos poderes místicos al API.</div>
+        </div>
+        <span class="badge neutral" id="liq-count">0 registros</span>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Estado</th><th>Cuenta</th><th>Fecha venta</th><th>Fecha libera</th><th>Días</th><th>Comprador</th><th>Producto</th><th>Payment</th><th class="num">Precio</th><th class="num">Cobro neto MP</th><th class="num">Comisiones</th><th class="num">Impuestos</th></tr></thead><tbody id="liq-body"></tbody></table></div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Lectura ejecutiva</div>
+      <div class="right-note" id="lectura"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const STATE = { data:null, liquidaciones:[] };
+const num = v => { const n = Number(v ?? 0); return Number.isFinite(n) ? n : 0; };
+const fmt = n => '$' + Math.round(num(n)).toLocaleString('es-AR');
+const esc = v => String(v ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const norm = v => String(v ?? '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ');
+const today = () => new Date().toISOString().slice(0,10);
+const daysAgo = d => { const x = new Date(); x.setDate(x.getDate()-d); return x.toISOString().slice(0,10); };
+
+function init(){
+  document.getElementById('f-desde').value = '2026-01-01';
+  document.getElementById('f-hasta').value = today();
+  loadFinanzas();
+}
+
+async function loadFinanzas(){
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('loading').innerHTML = '<span class="spinner"></span> Cargando War Room financiero...';
+  document.getElementById('content').style.display = 'none';
+  try{
+    const account = document.getElementById('f-account').value;
+    const desde = document.getElementById('f-desde').value;
+    const hasta = document.getElementById('f-hasta').value;
+    const r = await fetch(`/api/finanzas?account=${encodeURIComponent(account)}&desde=${desde}&hasta=${hasta}&cb=${Date.now()}`, {cache:'no-store'});
+    const d = await r.json();
+    if(d.error) throw new Error(d.detail || d.message || d.error);
+    STATE.data = d;
+    STATE.liquidaciones = d.liquidaciones || [];
+    renderAll();
+  }catch(e){
+    document.getElementById('loading').innerHTML = 'Error cargando finanzas: ' + esc(e.message);
+  }
+}
+
+function renderAll(){
+  renderMetrics();
+  renderBuckets();
+  renderAccounts();
+  renderLiquidaciones();
+  renderExecutiveRead();
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('content').style.display = 'block';
+}
+
+function renderMetrics(){
+  const r = STATE.data?.resumen || {};
+  const pendiente = num(r.pendiente_liquidar);
+  const total = num(r.cobro_neto_mp_total);
+  const pctPendiente = total ? pendiente / total * 100 : 0;
+  document.getElementById('hero-copy').textContent = `Tenés ${fmt(pendiente)} pendientes de liquidar sobre ${fmt(total)} de cobro neto MP en el período. Pendiente: ${pctPendiente.toFixed(1)}%.`;
+  document.getElementById('hero-metrics').innerHTML = [
+    {l:'Pendiente',v:fmt(r.pendiente_liquidar),s:'todavía no liberado'},
+    {l:'Próx. 7 días',v:fmt(r.libera_7_dias),s:'entrada estimada'},
+  ].map(m => `<div class="metric"><div class="l">${m.l}</div><div class="v">${m.v}</div><div class="s">${m.s}</div></div>`).join('');
+
+  document.getElementById('metrics').innerHTML = [
+    {l:'Cobro neto MP',v:fmt(r.cobro_neto_mp_total),s:`${r.ventas || 0} pagos`,cls:'blue'},
+    {l:'Liquidado estimado',v:fmt(r.liquidado_estimado),s:'fecha ya vencida/hoy',cls:'green'},
+    {l:'Pendiente liquidar',v:fmt(r.pendiente_liquidar),s:'caja futura',cls:'amber'},
+    {l:'Libera hoy',v:fmt(r.libera_hoy),s:'mirar Mercado Pago',cls:'green'},
+    {l:'Próx. 7 días',v:fmt(r.libera_7_dias),s:'incluye hoy',cls:'blue'},
+    {l:'Próx. 30 días',v:fmt(r.libera_30_dias),s:'flujo corto',cls:'purple'},
+    {l:'Comisiones MP/ML',v:fmt(r.comisiones_mp_total),s:'según charges_details',cls:'red'},
+    {l:'Impuestos/ret.',v:fmt(r.impuestos_mp_total),s:'según charges_details',cls:'red'},
+  ].map(m => `<div class="metric"><div class="l">${m.l}</div><div class="v ${m.cls}">${m.v}</div><div class="s">${m.s}</div></div>`).join('');
+
+  const alerta = document.getElementById('alerta');
+  alerta.innerHTML = `<b>Nota operativa:</b> esto proyecta caja por <b>fecha de liberación de Mercado Pago</b>. No descuenta proveedores ni reposición todavía. Ese es el próximo ladrillo, si no queremos construir el Empire State con telgopor.`;
+}
+
+function renderBuckets(){
+  const buckets = STATE.data?.buckets || [];
+  const max = Math.max(1, ...buckets.map(b => num(b.monto)));
+  document.getElementById('bucket-bars').innerHTML = buckets.map(b => {
+    const w = Math.max(3, Math.round(num(b.monto) / max * 100));
+    const cls = b.key === 'hoy' || b.key === 'vencido' ? '#20703a' : b.key === 'sin_fecha' ? '#a32d2d' : '#111';
+    return `<div class="bar-row"><div class="bar-label">${esc(b.label)}</div><div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${cls}"></div></div><div class="bar-value">${fmt(b.monto)}</div></div>`;
+  }).join('') || '<div class="empty">Sin liquidaciones.</div>';
+}
+
+function renderAccounts(){
+  const cuentas = STATE.data?.cuentas || [];
+  document.getElementById('account-body').innerHTML = cuentas.map(c => `
+    <tr>
+      <td><span class="badge ${c.key === 'fragantify' ? 'info' : 'neutral'}">${esc(c.cuenta)}</span></td>
+      <td class="num">${c.ventas}</td>
+      <td class="num"><b>${fmt(c.cobro_neto_mp)}</b></td>
+      <td class="num amber"><b>${fmt(c.pendiente)}</b></td>
+      <td class="num green">${fmt(c.liberado)}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="5" class="empty">Sin cuentas.</td></tr>';
+}
+
+function statusBadge(row){
+  if(row.bucket === 'sin_fecha') return '<span class="badge bad">SIN FECHA</span>';
+  if(row.liberado_estimado) return '<span class="badge ok">LIBERADO EST.</span>';
+  if(row.bucket === 'hoy') return '<span class="badge ok">HOY</span>';
+  if(row.bucket === 'manana') return '<span class="badge info">MAÑANA</span>';
+  if(row.bucket === 'proximos_7') return '<span class="badge info">7 DÍAS</span>';
+  if(row.bucket === 'proximos_15') return '<span class="badge purple-bg">15 DÍAS</span>';
+  if(row.bucket === 'proximos_30') return '<span class="badge purple-bg">30 DÍAS</span>';
+  return '<span class="badge neutral">FUTURO</span>';
+}
+
+function rowClass(row){
+  if(row.bucket === 'sin_fecha') return 'row-late';
+  if(row.liberado_estimado) return 'row-ready';
+  if(['hoy','manana','proximos_7'].includes(row.bucket)) return 'row-due';
+  return '';
+}
+
+function renderLiquidaciones(){
+  const q = norm(document.getElementById('f-search').value);
+  let rows = STATE.liquidaciones || [];
+  if(q){
+    rows = rows.filter(row => [row.comprador,row.producto,row.sku,row.payment_id,row.order_id,row.pack_id,row.cuenta].some(v => norm(v).includes(q)));
+  }
+  document.getElementById('liq-count').textContent = `${rows.length} registros`;
+  document.getElementById('liq-body').innerHTML = rows.map(row => `
+    <tr class="${rowClass(row)}">
+      <td>${statusBadge(row)}</td>
+      <td><span class="badge ${row.cuenta_key === 'fragantify' ? 'info' : 'neutral'}">${esc(row.cuenta)}</span></td>
+      <td>${esc(row.fecha_venta || '—')}</td>
+      <td><b>${esc(row.fecha_liberacion || '—')}</b></td>
+      <td class="num">${row.dias_para_liberar === null ? '—' : row.dias_para_liberar}</td>
+      <td><span class="buyer" title="${esc(row.comprador)}">${esc(row.comprador)}</span></td>
+      <td class="product" title="${esc(row.producto)}">${esc(row.producto)}</td>
+      <td class="mono">${esc(row.payment_id || '—')}</td>
+      <td class="num">${fmt(row.precio_productos)}</td>
+      <td class="num"><b>${fmt(row.cobro_neto_mp)}</b></td>
+      <td class="num red">${fmt(row.comisiones_mp)}</td>
+      <td class="num red">${fmt(row.impuestos_mp)}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="12" class="empty">Sin liquidaciones.</td></tr>';
+}
+
+function renderExecutiveRead(){
+  const r = STATE.data?.resumen || {};
+  const buckets = STATE.data?.buckets || [];
+  const sinFecha = buckets.find(b => b.key === 'sin_fecha')?.cantidad || 0;
+  const pendiente = num(r.pendiente_liquidar);
+  const prox7 = num(r.libera_7_dias);
+  const prox30 = num(r.libera_30_dias);
+  const lines = [];
+  lines.push(`• Caja pendiente de Mercado Pago: <b>${fmt(pendiente)}</b>.`);
+  lines.push(`• Entrada estimada próximos 7 días: <b>${fmt(prox7)}</b>.`);
+  lines.push(`• Entrada estimada próximos 30 días: <b>${fmt(prox30)}</b>.`);
+  if(sinFecha) lines.push(`• Hay <b>${sinFecha}</b> pagos sin fecha de liberación. Esos son los gremlins financieros: revisarlos antes de tomar decisiones.`);
+  if(pendiente > prox7 * 2 && pendiente > 0) lines.push('• Gran parte de la caja está más lejos que 7 días: conviene no sobrecomprar stock sólo mirando ventas devengadas. La ansiedad no es flujo de caja.');
+  if(prox7 > 0) lines.push('• Con próximos 7 días a la vista, ya podés planificar pagos cortos, reposición chica o colchón operativo. Primero caja, después entusiasmo.');
+  document.getElementById('lectura').innerHTML = lines.join('<br>');
+}
+
+init();
+</script>
+</body>
+</html>
