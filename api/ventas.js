@@ -313,45 +313,67 @@ function getFirstNumber(...values) {
 }
 
 function getShipmentCost(shipData, shipmentCosts) {
-  if (shipmentCosts) {
-    const costFields = flattenNumericFields(shipmentCosts)
-      .filter(field => field.value > 0)
-      .filter(field => pathHasAny(field.path, ['sender', 'seller', 'cost']))
-      .filter(field => !pathHasAny(field.path, ['discount', 'bonus', 'bonification', 'compensation', 'subsidy', 'promoted', 'list_cost', 'gross']));
+  // IMPORTANTE: no leer sender_id / seller_id / user_id como costo.
+  // El commit anterior tomaba 713167918 como envío ML. Sí, espectacular desastre contable.
+  const exactCandidates = [
+    shipmentCosts?.cost,
+    shipmentCosts?.gross_amount,
+    shipmentCosts?.sender?.cost,
+    shipmentCosts?.sender?.amount,
+    shipmentCosts?.seller?.cost,
+    shipmentCosts?.seller?.amount,
+    Array.isArray(shipmentCosts?.senders) ? shipmentCosts.senders[0]?.cost : null,
+    Array.isArray(shipmentCosts?.senders) ? shipmentCosts.senders[0]?.amount : null,
+    Array.isArray(shipmentCosts?.receiver) ? shipmentCosts.receiver[0]?.cost : null,
+    Array.isArray(shipmentCosts?.receiver) ? shipmentCosts.receiver[0]?.amount : null,
+    shipData?.base_cost,
+    shipData?.cost,
+    shipData?.shipping_option?.cost,
+    shipData?.shipping_option?.base_cost,
+    shipData?.cost_components?.seller_cost,
+    shipData?.shipping_option?.cost_components?.seller_cost,
+  ];
 
-    const bestCost = costFields.sort((a, b) => a.value - b.value)[0]?.value;
-    if (bestCost !== undefined) return absNumber(bestCost);
-  }
+  const positives = exactCandidates
+    .map(value => absNumber(value))
+    .filter(value => value > 0 && value < 1000000);
 
-  return absNumber(
-    getFirstNumber(
-      shipData?.base_cost,
-      shipData?.cost,
-      shipData?.shipping_option?.cost,
-      shipData?.shipping_option?.base_cost,
-      shipData?.cost_components?.seller_cost,
-      shipData?.shipping_option?.cost_components?.seller_cost,
-      0
-    )
-  );
+  if (positives.length) return Math.min(...positives);
+
+  return 0;
 }
 
 function getShipmentListCost(shipData, shipmentCosts) {
-  const fields = flattenNumericFields({ shipData, shipmentCosts })
-    .filter(field => field.value > 0)
-    .filter(field => pathHasAny(field.path, ['list_cost', 'gross_amount', 'gross_cost', 'shipping_cost_before_discount']));
+  const exactCandidates = [
+    shipmentCosts?.list_cost,
+    shipmentCosts?.gross_amount,
+    shipmentCosts?.shipping_cost_before_discount,
+    shipmentCosts?.shipping_option?.list_cost,
+    shipmentCosts?.cost_components?.list_cost,
+    shipmentCosts?.shipping_option?.cost_components?.list_cost,
+    shipData?.shipping_option?.list_cost,
+    shipData?.list_cost,
+    shipData?.cost_components?.list_cost,
+    shipData?.shipping_option?.cost_components?.list_cost,
+  ];
 
-  return absNumber(Math.max(0, ...fields.map(field => field.value)));
+  const positives = exactCandidates
+    .map(value => absNumber(value))
+    .filter(value => value > 0 && value < 1000000);
+
+  if (positives.length) return Math.max(...positives);
+
+  return 0;
 }
 
 function getShipmentBonusFromCosts(shipmentCosts) {
   if (!shipmentCosts) return { total: 0, detail: [] };
 
   const creditWords = ['discount', 'bonification', 'bonus', 'compensation', 'subsidy', 'subsidized', 'promoted', 'promotion', 'loyal', 'gap'];
-  const ignoredWords = ['id', 'date', 'time', 'zip', 'quantity', 'rate', 'ratio', 'order_id', 'shipment_id'];
+  const ignoredWords = ['id', 'date', 'time', 'zip', 'quantity', 'rate', 'ratio', 'order_id', 'shipment_id', 'sender_id', 'seller_id', 'user_id', 'receiver_id'];
 
   const candidates = flattenNumericFields(shipmentCosts)
-    .filter(field => field.value > 0)
+    .filter(field => field.value > 0 && field.value < 1000000)
     .filter(field => pathHasAny(field.path, creditWords))
     .filter(field => !pathHasAny(field.path, ignoredWords));
 
@@ -363,10 +385,6 @@ function getShipmentBonusFromCosts(shipmentCosts) {
   });
 
   const detail = Array.from(byPath.entries()).map(([key, amount]) => ({ key, amount }));
-
-  // En /shipments/{id}/costs suele venir un único promoted_amount/discount.
-  // Si vinieran varios descuentos explícitos distintos, los sumamos; si hay duplicados raros,
-  // el debug los va a mostrar en detalle.
   const total = detail.reduce((sum, item) => sum + absNumber(item.amount), 0);
 
   return { total, detail };
