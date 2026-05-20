@@ -10,28 +10,32 @@ body{font-family:system-ui,sans-serif;font-size:14px;background:#f5f5f5;color:#1
 .shell{display:grid;grid-template-columns:200px 1fr;min-height:100vh}
 .sidebar{background:#fff;border-right:1px solid #e5e5e5;padding:1rem 0;display:flex;flex-direction:column}
 .logo{padding:0 1rem 1rem;border-bottom:1px solid #e5e5e5;margin-bottom:.5rem}
-.logo-name{font-size:15px;font-weight:700}.logo-tag{font-size:11px;color:#888;margin-top:2px}
+.logo-name{font-size:15px;font-weight:800}.logo-tag{font-size:11px;color:#888;margin-top:2px}
 .nl{font-size:11px;color:#aaa;padding:.8rem 1rem .3rem;letter-spacing:.04em;text-transform:uppercase}
-.ni{display:flex;align-items:center;gap:8px;padding:8px 1rem;font-size:13px;cursor:pointer;color:#666;border-left:2px solid transparent}
-.ni:hover{color:#1a1a1a;background:#f5f5f5}.ni.on{color:#1a1a1a;font-weight:700;border-left:2px solid #1a1a1a;background:#f5f5f5}
+.ni{display:flex;align-items:center;gap:8px;padding:8px 1rem;font-size:13px;cursor:pointer;color:#666;border-left:2px solid transparent;text-decoration:none}
+.ni:hover{color:#1a1a1a;background:#f5f5f5}.ni.on{color:#1a1a1a;font-weight:800;border-left:2px solid #1a1a1a;background:#f5f5f5}
 .conn{margin:auto 1rem 1rem;padding:.5rem .75rem;border-radius:8px;font-size:11px;display:flex;align-items:center;gap:6px}
 .conn.ok{background:#eaf3de;color:#27500a;border:1px solid #c0dd97}.conn.warn{background:#faeeda;color:#633806;border:1px solid #fac775}.conn.no{background:#fcebeb;color:#a32d2d;border:1px solid #f3b5b5;cursor:pointer}
-.main{padding:1.5rem;overflow-y:auto}.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:8px}.page-title{font-size:18px;font-weight:700}
+.main{padding:1.5rem;overflow-y:auto}.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:8px}.page-title{font-size:18px;font-weight:800}
 .date-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.date-inp{padding:5px 9px;font-size:12px;border:1px solid #ddd;border-radius:6px;background:#fff}
 .qpill{display:inline-flex;align-items:center;padding:5px 11px;border:1px solid #ddd;border-radius:20px;font-size:12px;color:#666;cursor:pointer;background:#fff;user-select:none}
 .qpill:hover,.qpill.on{background:#1a1a1a;color:#fff;border-color:#1a1a1a}.sep{color:#ccc;font-size:12px}
-.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:1.25rem}.mc{background:#fff;border-radius:8px;padding:.85rem 1rem;border:1px solid #e5e5e5}.mc-lbl{font-size:11px;color:#888;margin-bottom:4px}.mc-val{font-size:20px;font-weight:700}.mc-sub{font-size:11px;color:#888;margin-top:3px}
-.green{color:#27500a}.red{color:#a32d2d}.blue{color:#0c447c}.amber{color:#633806}.two-col{display:grid;grid-template-columns:1.6fr 1fr;gap:10px;margin-bottom:1.25rem}
-.card{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:1rem}.ct{font-size:13px;font-weight:700;margin-bottom:.85rem}.br{display:flex;align-items:center;gap:8px;margin-bottom:8px}.bl{font-size:12px;color:#888;width:130px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bt{flex:1;height:7px;background:#f0f0f0;border-radius:4px;overflow:hidden}.bf{height:100%;border-radius:4px}.bv{font-size:12px;width:72px;text-align:right;flex-shrink:0}
-table{width:100%;border-collapse:collapse;font-size:12px}th{text-align:left;padding:7px 8px;color:#888;font-weight:400;border-bottom:1px solid #e5e5e5;white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid #f0f0f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}tr:last-child td{border-bottom:none}
-.badge{display:inline-block;font-size:11px;padding:2px 7px;border-radius:20px;font-weight:700;white-space:nowrap}.bg{background:#eaf3de;color:#27500a}.br2{background:#fcebeb;color:#a32d2d}.ba{background:#faeeda;color:#633806}.bb{background:#e6f1fb;color:#0c447c}.bn{background:#f2f2f2;color:#666}.bp{background:#efe8ff;color:#44228a}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:1.25rem}.mc{background:#fff;border-radius:8px;padding:.85rem 1rem;border:1px solid #e5e5e5}.mc-lbl{font-size:11px;color:#888;margin-bottom:4px}.mc-val{font-size:20px;font-weight:800}.mc-sub{font-size:11px;color:#888;margin-top:3px}
+.green{color:#27500a}.red{color:#a32d2d}.blue{color:#0c447c}.amber{color:#633806}.purple{color:#44228a}
+.two-col{display:grid;grid-template-columns:1.6fr 1fr;gap:10px;margin-bottom:1.25rem}
+.card{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:1rem}.ct{font-size:13px;font-weight:800;margin-bottom:.85rem}
+.br{display:flex;align-items:center;gap:8px;margin-bottom:8px}.bl{font-size:12px;color:#888;width:130px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bt{flex:1;height:7px;background:#f0f0f0;border-radius:4px;overflow:hidden}.bf{height:100%;border-radius:4px}.bv{font-size:12px;width:72px;text-align:right;flex-shrink:0}
+table{width:100%;border-collapse:collapse;font-size:12px}th{text-align:left;padding:7px 8px;color:#888;font-weight:500;border-bottom:1px solid #e5e5e5;white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid #f0f0f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}tr:last-child td{border-bottom:none}
+.badge{display:inline-block;font-size:11px;padding:2px 7px;border-radius:20px;font-weight:800;white-space:nowrap}.bg{background:#eaf3de;color:#27500a}.br2{background:#fcebeb;color:#a32d2d}.ba{background:#faeeda;color:#633806}.bb{background:#e6f1fb;color:#0c447c}.bn{background:#f2f2f2;color:#666}.bp{background:#efe8ff;color:#44228a}
 .view{display:none}.view.on{display:block}.spinner{display:inline-block;width:14px;height:14px;border:2px solid #ddd;border-top-color:#888;border-radius:50%;animation:spin .7s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
 .empty{text-align:center;padding:2rem;color:#aaa;font-size:13px}.alert{padding:.65rem .9rem;border-radius:8px;font-size:13px;margin-bottom:1rem}.alert-info{background:#e6f1fb;color:#0c447c;border:1px solid #b5d4f4}
-.row-warn{background:#fff1f1}.row-flex-warn{background:#fff8ea}.cost-warn{color:#a32d2d!important;font-weight:700}.flex-warn{color:#633806!important;font-weight:700}.small-muted{font-size:11px;color:#888;margin-top:3px;line-height:1.4}
+.row-warn{background:#fff1f1}.row-flex-warn{background:#fff8ea}.cost-warn{color:#a32d2d!important;font-weight:800}.flex-warn{color:#633806!important;font-weight:800}.small-muted{font-size:11px;color:#888;margin-top:3px;line-height:1.4}
 .buyer-alias{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:11px;color:#333;background:#f7f7f7;border:1px solid #eee;border-radius:6px;padding:2px 6px;display:inline-block;max-width:145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle}.pack-mini{font-size:10px;color:#888;display:block;margin-top:2px}
 .account-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:1.25rem}.account-card{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:1rem}.account-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:.8rem}.account-name{font-size:14px;font-weight:800}.account-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:.6rem}.account-stat{background:#f7f7f7;border-radius:8px;padding:.55rem .65rem}.account-stat span{display:block;font-size:10px;color:#888;margin-bottom:2px}.account-stat b{font-size:13px}.account-actions{margin-top:.7rem;display:flex;gap:6px;flex-wrap:wrap}.linkbtn{font-size:11px;padding:4px 8px;border-radius:7px;border:1px solid #ddd;background:#fff;color:#333;text-decoration:none;display:inline-block}.linkbtn:hover{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
 .assistant-hero{background:#111;color:#fff;border-radius:14px;padding:1.15rem 1.25rem;margin-bottom:1rem;display:grid;grid-template-columns:1.4fr .8fr;gap:14px;align-items:center}.assistant-hero.full{background:linear-gradient(135deg,#121212,#30234c)}.assistant-title{font-size:18px;font-weight:800;margin-bottom:.35rem}.assistant-copy{font-size:13px;line-height:1.5;color:#ddd}.assistant-kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.assistant-kpi{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:.65rem .75rem}.assistant-kpi span{display:block;font-size:10px;color:#bbb;margin-bottom:2px}.assistant-kpi b{font-size:17px;color:#fff}
-.campaign-grid,.product-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}.campaign-card,.product-card{background:#fff;border:1px solid #e5e5e5;border-radius:12px;padding:1rem}.product-title,.campaign-title{font-size:13px;font-weight:800;line-height:1.3;margin-bottom:.45rem}.product-meta{font-size:11px;color:#888;display:flex;gap:5px;flex-wrap:wrap;margin-bottom:.5rem}.product-stats,.campaign-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin:.5rem 0}.product-stat,.campaign-stat{background:#f7f7f7;border-radius:8px;padding:.48rem}.product-stat span,.campaign-stat span{display:block;font-size:10px;color:#888;margin-bottom:2px}.product-stat b,.campaign-stat b{font-size:12px}.reason{font-size:11px;color:#666;line-height:1.4;background:#fafafa;border-radius:8px;padding:.55rem;margin-top:.5rem}.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem}.tab-btn{padding:6px 10px;border:1px solid #ddd;background:#fff;border-radius:20px;font-size:12px;cursor:pointer;color:#555}.tab-btn.on{background:#1a1a1a;color:#fff;border-color:#1a1a1a}.rec-section,.full-section{display:none}.rec-section.on,.full-section.on{display:block}.full-card{display:grid;grid-template-columns:72px 1fr;gap:10px}.full-thumb{width:72px;height:72px;border-radius:10px;border:1px solid #eee;background:#fafafa;object-fit:cover;align-self:start}.full-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:.5rem}.full-alerts{font-size:11px;color:#633806;background:#fff8ea;border:1px solid #f3d8a8;border-radius:8px;padding:.45rem .55rem;margin-top:.5rem;line-height:1.35}.full-table-wrap{overflow:auto}
+.campaign-grid,.product-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}.campaign-card,.product-card{background:#fff;border:1px solid #e5e5e5;border-radius:12px;padding:1rem}.product-title,.campaign-title{font-size:13px;font-weight:800;line-height:1.3;margin-bottom:.45rem}.product-meta{font-size:11px;color:#888;display:flex;gap:5px;flex-wrap:wrap;margin-bottom:.5rem}.product-stats,.campaign-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin:.5rem 0}.product-stat,.campaign-stat{background:#f7f7f7;border-radius:8px;padding:.48rem}.product-stat span,.campaign-stat span{display:block;font-size:10px;color:#888;margin-bottom:2px}.product-stat b,.campaign-stat b{font-size:12px}.reason{font-size:11px;color:#666;line-height:1.4;background:#fafafa;border-radius:8px;padding:.55rem;margin-top:.5rem}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem}.tab-btn{padding:6px 10px;border:1px solid #ddd;background:#fff;border-radius:20px;font-size:12px;cursor:pointer;color:#555}.tab-btn.on{background:#1a1a1a;color:#fff;border-color:#1a1a1a}.rec-section,.full-section{display:none}.rec-section.on,.full-section.on{display:block}
+.full-card{display:grid;grid-template-columns:72px 1fr;gap:10px}.full-thumb{width:72px;height:72px;border-radius:10px;border:1px solid #eee;background:#fafafa;object-fit:cover;align-self:start}.full-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:.5rem}.full-alerts{font-size:11px;color:#633806;background:#fff8ea;border:1px solid #f3d8a8;border-radius:8px;padding:.45rem .55rem;margin-top:.5rem;line-height:1.35}.full-table-wrap{overflow:auto}
 @media(max-width:820px){.shell{grid-template-columns:1fr}.sidebar{position:sticky;top:0;z-index:10;border-right:none;border-bottom:1px solid #e5e5e5;display:block;padding:.75rem}.logo{border-bottom:none;margin-bottom:.5rem;padding:0}.nl{display:none}.ni{display:inline-flex;border-left:none;border-radius:8px;padding:7px 9px;margin:2px}.ni.on{border-left:none}.conn{margin:.5rem 0 0;display:inline-flex}.main{padding:1rem}.two-col,.assistant-hero{grid-template-columns:1fr}.full-card{grid-template-columns:1fr}.full-thumb{width:100%;height:140px}}
 </style>
 </head>
@@ -46,41 +50,162 @@ table{width:100%;border-collapse:collapse;font-size:12px}th{text-align:left;padd
     <div class="ni" onclick="nav(this,'full')">📦 Full</div>
     <div class="ni" onclick="nav(this,'envios')">🚚 Envíos</div>
     <div class="nl">Configuración</div>
-    <div class="ni" onclick="nav(this,'localidades')">📍 Localidades</div>
+    <a class="ni" href="/localidades.html">📍 Localidades</a>
     <div id="conn-badge" class="conn no" onclick="conectar('lebron')">⚠️ ML no conectado</div>
   </div>
+
   <div class="main">
     <div class="view on" id="view-connecting" style="max-width:520px;margin:3rem auto;text-align:center">
-      <div style="font-size:48px;margin-bottom:1rem">🔌</div><h2 style="font-size:18px;font-weight:700;margin-bottom:.5rem">Conectá tus cuentas de Mercado Libre</h2>
+      <div style="font-size:48px;margin-bottom:1rem">🔌</div>
+      <h2 style="font-size:18px;font-weight:800;margin-bottom:.5rem">Conectá tus cuentas de Mercado Libre</h2>
       <p style="font-size:13px;color:#888;margin-bottom:1.5rem;line-height:1.6">Para ver ventas reales, comisiones y rentabilidad por cuenta necesitás conectar Lebron Store y Fragantify.</p>
-      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button onclick="conectar('lebron')" style="padding:.65rem 1.2rem;font-size:14px;font-weight:700;background:#1a1a1a;color:#fff;border:none;border-radius:8px;cursor:pointer">Conectar Lebron Store</button><button onclick="conectar('fragantify')" style="padding:.65rem 1.2rem;font-size:14px;font-weight:700;background:#1a1a1a;color:#fff;border:none;border-radius:8px;cursor:pointer">Conectar Fragantify</button></div>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+        <button onclick="conectar('lebron')" style="padding:.65rem 1.2rem;font-size:14px;font-weight:800;background:#1a1a1a;color:#fff;border:none;border-radius:8px;cursor:pointer">Conectar Lebron Store</button>
+        <button onclick="conectar('fragantify')" style="padding:.65rem 1.2rem;font-size:14px;font-weight:800;background:#1a1a1a;color:#fff;border:none;border-radius:8px;cursor:pointer">Conectar Fragantify</button>
+      </div>
       <p style="font-size:11px;color:#aaa;margin-top:1rem">Los tokens se guardan en Supabase, no dependen del navegador.</p>
     </div>
 
     <div class="view" id="view-dash">
       <div class="topbar"><div class="page-title">Dashboard</div><div class="date-row" id="dash-filters"></div></div>
       <div id="account-status" class="account-grid"></div>
+      <div id="rentabilidad-status"></div>
       <div id="dash-loading" class="empty"><span class="spinner"></span> Cargando ventas...</div>
       <div id="dash-content" style="display:none">
-        <div class="metrics" id="met"></div><div class="account-grid" id="account-profit"></div>
-        <div class="two-col"><div class="card"><div class="ct">Margen real por producto</div><div id="prod-bars"></div></div><div class="card"><div class="ct">Estructura del precio</div><div id="cost-bars"></div></div></div>
-        <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.85rem"><div class="ct" style="margin:0">Últimas ventas</div><div class="qpill" onclick="nav(document.querySelectorAll('.ni')[1],'ventas')">Ver todas</div></div><table><thead><tr><th>Cuenta</th><th>Comprador</th><th style="width:22%">Producto</th><th>Localidad</th><th>Precio</th><th>Comisión</th><th>Envío ML</th><th>Mensajería</th><th>Imp.</th><th>Costo</th><th>Ganancia</th><th>Margen</th></tr></thead><tbody id="t-dash"></tbody></table></div>
-        <div class="card" style="margin-top:1rem"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.85rem;gap:8px;flex-wrap:wrap"><div><div class="ct" style="margin:0">Ventas sin costo asignado</div><div class="small-muted">Acá sólo aparecen ventas sin coincidencia en la planilla. Los productos con COSTO $0 bonificado no aparecen como error.</div></div><div class="badge br2" id="missing-count">0 pendientes</div></div><div id="missing-costs"></div></div>
-        <div class="card" style="margin-top:1rem"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.85rem;gap:8px;flex-wrap:wrap"><div><div class="ct" style="margin:0">Ventas Flex sin costo de mensajería</div><div class="small-muted">Estas ventas son Flex y no encontraron tarifa cargada por localidad/partido. Si no las corregís, la ganancia queda inflada.</div></div><div class="badge ba" id="flex-missing-count">0 pendientes</div></div><div id="flex-missing-costs"></div></div>
+        <div class="metrics" id="met"></div>
+        <div class="account-grid" id="account-profit"></div>
+
+        <div class="two-col">
+          <div class="card"><div class="ct">Margen real por producto</div><div id="prod-bars"></div></div>
+          <div class="card"><div class="ct">Estructura del precio</div><div id="cost-bars"></div></div>
+        </div>
+
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.85rem">
+            <div class="ct" style="margin:0">Últimas ventas</div>
+            <div class="qpill" onclick="nav(document.querySelectorAll('.ni')[1],'ventas')">Ver todas</div>
+          </div>
+          <table>
+            <thead>
+              <tr><th>Cuenta</th><th>Comprador</th><th style="width:22%">Producto</th><th>Localidad</th><th>Precio</th><th>Comisión</th><th>Envío ML</th><th>Mensajería</th><th>Imp.</th><th>Costo</th><th>Ganancia</th><th>Margen</th></tr>
+            </thead>
+            <tbody id="t-dash"></tbody>
+          </table>
+        </div>
+
+        <div class="card" style="margin-top:1rem">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.85rem;gap:8px;flex-wrap:wrap">
+            <div><div class="ct" style="margin:0">Ventas sin costo asignado</div><div class="small-muted">Acá sólo aparecen ventas sin coincidencia en la planilla. Los productos con COSTO $0 bonificado no aparecen como error.</div></div>
+            <div class="badge br2" id="missing-count">0 pendientes</div>
+          </div>
+          <div id="missing-costs"></div>
+        </div>
+
+        <div class="card" style="margin-top:1rem">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.85rem;gap:8px;flex-wrap:wrap">
+            <div><div class="ct" style="margin:0">Ventas Flex sin costo de mensajería</div><div class="small-muted">Estas ventas son Flex y no encontraron tarifa cargada por localidad/partido en Supabase.</div></div>
+            <div class="badge ba" id="flex-missing-count">0 pendientes</div>
+          </div>
+          <div id="flex-missing-costs"></div>
+        </div>
       </div>
     </div>
 
     <div class="view" id="view-ventas">
       <div class="topbar"><div class="page-title">Ventas</div><div class="date-row" id="ventas-filters"></div></div>
-      <div class="metrics" id="v-met"></div><div class="card"><div id="ventas-loading" class="empty"><span class="spinner"></span> Cargando...</div><table id="ventas-table" style="display:none"><thead><tr><th>#</th><th>Cuenta</th><th>Fecha</th><th>Comprador</th><th style="width:20%">Producto</th><th>SKU</th><th>Pedido</th><th>Localidad</th><th>Flex</th><th>Precio</th><th>Cobro neto ML</th><th>Mensajería</th><th>Costo</th><th>Ganancia</th><th>Margen</th></tr></thead><tbody id="t-ventas"></tbody></table></div>
+      <div class="metrics" id="v-met"></div>
+      <div class="card">
+        <div id="ventas-loading" class="empty"><span class="spinner"></span> Cargando...</div>
+        <table id="ventas-table" style="display:none">
+          <thead>
+            <tr><th>#</th><th>Cuenta</th><th>Fecha</th><th>Comprador</th><th style="width:20%">Producto</th><th>SKU</th><th>Pedido</th><th>Localidad</th><th>Flex</th><th>Precio</th><th>Cobro neto ML</th><th>Mensajería</th><th>Costo</th><th>Ganancia</th><th>Margen</th></tr>
+          </thead>
+          <tbody id="t-ventas"></tbody>
+        </table>
+      </div>
     </div>
 
-    <div class="view" id="view-roas"><div class="topbar"><div class="page-title">Asistente Mercado Ads</div><div class="date-row" id="ads-filters"></div></div><div id="roas-loading" class="empty"><span class="spinner"></span> Analizando ventas, costos y Ads...</div><div id="roas-content" style="display:none"><div class="assistant-hero"><div><div class="assistant-title">🤖 Recomendador de campañas</div><div class="assistant-copy" id="ads-ai-summary">Cruzando ventas, costos y rendimiento histórico para recomendar qué anunciar.</div><div class="small-muted" id="ads-ai-note" style="color:#bbb;margin-top:.5rem"></div></div><div class="assistant-kpis" id="ads-ai-kpis"></div></div><div class="metrics" id="roas-met"></div><div class="card" style="margin-bottom:1rem"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:.85rem"><div><div class="ct" style="margin:0">Campañas recomendadas</div><div class="small-muted">Propuesta automática. Primero recomendación, después automatización.</div></div><span class="badge bb" id="campaign-count">0 campañas</span></div><div class="campaign-grid" id="campaign-cards"></div></div><div class="tabs"><button class="tab-btn on" onclick="showRecTab(this,'escalar')">Escalar</button><button class="tab-btn" onclick="showRecTab(this,'testear')">Testear</button><button class="tab-btn" onclick="showRecTab(this,'revisar')">Revisar</button><button class="tab-btn" onclick="showRecTab(this,'bloqueados')">No anunciar</button></div><div class="rec-section on" id="rec-escalar"><div class="product-list" id="productos-escalar"></div></div><div class="rec-section" id="rec-testear"><div class="product-list" id="productos-testear"></div></div><div class="rec-section" id="rec-revisar"><div class="product-list" id="productos-revisar"></div></div><div class="rec-section" id="rec-bloqueados"><div class="product-list" id="productos-bloqueados"></div></div></div></div>
+    <div class="view" id="view-roas">
+      <div class="topbar"><div class="page-title">Asistente Mercado Ads</div><div class="date-row" id="ads-filters"></div></div>
+      <div id="roas-loading" class="empty"><span class="spinner"></span> Analizando ventas, costos y Ads...</div>
+      <div id="roas-content" style="display:none">
+        <div class="assistant-hero">
+          <div>
+            <div class="assistant-title">🤖 Recomendador de campañas</div>
+            <div class="assistant-copy" id="ads-ai-summary">Cruzando ventas, costos y rendimiento histórico para recomendar qué anunciar.</div>
+            <div class="small-muted" id="ads-ai-note" style="color:#bbb;margin-top:.5rem"></div>
+          </div>
+          <div class="assistant-kpis" id="ads-ai-kpis"></div>
+        </div>
+        <div class="metrics" id="roas-met"></div>
+        <div class="card" style="margin-bottom:1rem">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:.85rem">
+            <div><div class="ct" style="margin:0">Campañas recomendadas</div><div class="small-muted">Propuesta automática. Primero recomendación, después automatización.</div></div>
+            <span class="badge bb" id="campaign-count">0 campañas</span>
+          </div>
+          <div class="campaign-grid" id="campaign-cards"></div>
+        </div>
 
-    <div class="view" id="view-full"><div class="topbar"><div class="page-title">Asistente Full</div><div class="date-row" id="full-filters"></div></div><div id="full-loading" class="empty"><span class="spinner"></span> Analizando Full, stock y publicaciones...</div><div id="full-content" style="display:none"><div class="assistant-hero full"><div><div class="assistant-title">📦 Recomendador Full</div><div class="assistant-copy" id="full-ai-summary">Analizando qué enviar, testear, reponer o revisar antes de mover stock.</div><div class="small-muted" id="full-ai-note" style="color:#bbb;margin-top:.5rem"></div></div><div class="assistant-kpis" id="full-ai-kpis"></div></div><div class="metrics" id="full-met"></div><div class="card" style="margin-bottom:1rem"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:.85rem"><div><div class="ct" style="margin:0">Plan operativo Full</div><div class="small-muted">El sistema separa oportunidad comercial, estado de publicación y stock real de fulfillment.</div></div><span class="badge bp" id="full-units-count">0 unidades sugeridas</span></div><div class="full-table-wrap"><table><thead><tr><th>Grupo</th><th>Productos</th><th>Unidades sugeridas</th><th>Objetivo</th></tr></thead><tbody id="full-plan-table"></tbody></table></div></div><div class="tabs"><button class="tab-btn on" onclick="showFullTab(this,'testear')">Testear Full</button><button class="tab-btn" onclick="showFullTab(this,'reponer')">Reponer Full</button><button class="tab-btn" onclick="showFullTab(this,'revisar')">Revisar publicación</button><button class="tab-btn" onclick="showFullTab(this,'enviar')">Enviar ahora</button><button class="tab-btn" onclick="showFullTab(this,'ya')">Ya está en Full</button><button class="tab-btn" onclick="showFullTab(this,'no')">No enviar</button><button class="tab-btn" onclick="showFullTab(this,'faltan')">Falta datos</button></div><div class="full-section on" id="full-testear"><div class="product-list" id="full-productos-testear"></div></div><div class="full-section" id="full-reponer"><div class="product-list" id="full-productos-reponer"></div></div><div class="full-section" id="full-revisar"><div class="product-list" id="full-productos-revisar"></div></div><div class="full-section" id="full-enviar"><div class="product-list" id="full-productos-enviar"></div></div><div class="full-section" id="full-ya"><div class="product-list" id="full-productos-ya"></div></div><div class="full-section" id="full-no"><div class="product-list" id="full-productos-no"></div></div><div class="full-section" id="full-faltan"><div class="product-list" id="full-productos-faltan"></div></div></div></div>
+        <div class="tabs">
+          <button class="tab-btn on" onclick="showRecTab(this,'escalar')">Escalar</button>
+          <button class="tab-btn" onclick="showRecTab(this,'testear')">Testear</button>
+          <button class="tab-btn" onclick="showRecTab(this,'revisar')">Revisar</button>
+          <button class="tab-btn" onclick="showRecTab(this,'bloqueados')">No anunciar</button>
+        </div>
+        <div class="rec-section on" id="rec-escalar"><div class="product-list" id="productos-escalar"></div></div>
+        <div class="rec-section" id="rec-testear"><div class="product-list" id="productos-testear"></div></div>
+        <div class="rec-section" id="rec-revisar"><div class="product-list" id="productos-revisar"></div></div>
+        <div class="rec-section" id="rec-bloqueados"><div class="product-list" id="productos-bloqueados"></div></div>
+      </div>
+    </div>
 
-    <div class="view" id="view-envios"><div class="topbar"><div class="page-title">Envíos por zona</div></div><div class="metrics" id="env-met"></div><div class="card"><div class="ct">Gasto por partido</div><div id="env-bars"></div></div></div>
-    <div class="view" id="view-localidades"><div class="topbar"><div class="page-title">Localidades y tarifas</div></div><div class="alert alert-info">Estas tarifas corresponden a tu mensajería/manual por localidad. Sólo se descuentan en ventas Flex / self_service.</div><div class="card"><div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap"><input type="text" id="inp-partido" placeholder="Partido" style="flex:1;min-width:90px;padding:6px 10px;font-size:13px;border:1px solid #ddd;border-radius:6px"><input type="text" id="inp-loc" placeholder="Localidad" style="flex:1.2;min-width:110px;padding:6px 10px;font-size:13px;border:1px solid #ddd;border-radius:6px"><input type="number" id="inp-tarifa" placeholder="Tarifa $" style="width:90px;padding:6px 10px;font-size:13px;border:1px solid #ddd;border-radius:6px"><button onclick="addLoc()" style="padding:6px 14px;font-size:13px;font-weight:700;background:#1a1a1a;color:#fff;border:none;border-radius:6px;cursor:pointer">Agregar</button></div><table><thead><tr><th>Partido</th><th>Localidad</th><th>Tarifa</th><th></th></tr></thead><tbody id="t-loc"></tbody></table></div></div>
+    <div class="view" id="view-full">
+      <div class="topbar"><div class="page-title">Asistente Full</div><div class="date-row" id="full-filters"></div></div>
+      <div id="full-loading" class="empty"><span class="spinner"></span> Analizando Full, stock y publicaciones...</div>
+      <div id="full-content" style="display:none">
+        <div class="assistant-hero full">
+          <div>
+            <div class="assistant-title">📦 Recomendador Full</div>
+            <div class="assistant-copy" id="full-ai-summary">Analizando qué enviar, testear, reponer o revisar antes de mover stock.</div>
+            <div class="small-muted" id="full-ai-note" style="color:#bbb;margin-top:.5rem"></div>
+          </div>
+          <div class="assistant-kpis" id="full-ai-kpis"></div>
+        </div>
+        <div class="metrics" id="full-met"></div>
+        <div class="card" style="margin-bottom:1rem">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:.85rem">
+            <div><div class="ct" style="margin:0">Plan operativo Full</div><div class="small-muted">El sistema separa oportunidad comercial, estado de publicación y stock real de fulfillment.</div></div>
+            <span class="badge bp" id="full-units-count">0 unidades sugeridas</span>
+          </div>
+          <div class="full-table-wrap">
+            <table><thead><tr><th>Grupo</th><th>Productos</th><th>Unidades sugeridas</th><th>Objetivo</th></tr></thead><tbody id="full-plan-table"></tbody></table>
+          </div>
+        </div>
+
+        <div class="tabs">
+          <button class="tab-btn on" onclick="showFullTab(this,'testear')">Testear Full</button>
+          <button class="tab-btn" onclick="showFullTab(this,'reponer')">Reponer Full</button>
+          <button class="tab-btn" onclick="showFullTab(this,'revisar')">Revisar publicación</button>
+          <button class="tab-btn" onclick="showFullTab(this,'enviar')">Enviar ahora</button>
+          <button class="tab-btn" onclick="showFullTab(this,'ya')">Ya está en Full</button>
+          <button class="tab-btn" onclick="showFullTab(this,'no')">No enviar</button>
+          <button class="tab-btn" onclick="showFullTab(this,'faltan')">Falta datos</button>
+        </div>
+        <div class="full-section on" id="full-testear"><div class="product-list" id="full-productos-testear"></div></div>
+        <div class="full-section" id="full-reponer"><div class="product-list" id="full-productos-reponer"></div></div>
+        <div class="full-section" id="full-revisar"><div class="product-list" id="full-productos-revisar"></div></div>
+        <div class="full-section" id="full-enviar"><div class="product-list" id="full-productos-enviar"></div></div>
+        <div class="full-section" id="full-ya"><div class="product-list" id="full-productos-ya"></div></div>
+        <div class="full-section" id="full-no"><div class="product-list" id="full-productos-no"></div></div>
+        <div class="full-section" id="full-faltan"><div class="product-list" id="full-productos-faltan"></div></div>
+      </div>
+    </div>
+
+    <div class="view" id="view-envios">
+      <div class="topbar"><div class="page-title">Envíos por zona</div></div>
+      <div class="metrics" id="env-met"></div>
+      <div class="card"><div class="ct">Mensajería Flex por zona</div><div id="env-bars"></div></div>
+    </div>
   </div>
 </div>
 
@@ -89,103 +214,866 @@ const fmt = n => '$' + Math.round(num(n)).toLocaleString('es-AR');
 const fmtPct = n => num(n).toFixed(1) + '%';
 const toISO = d => d.toISOString().slice(0,10);
 const daysAgo = n => { const d = new Date(); d.setDate(d.getDate()-n); return d; };
+
 function num(value){ const parsed = Number(value ?? 0); return Number.isFinite(parsed) ? parsed : 0; }
-function round2(value){ return Math.round(num(value) * 100) / 100; }
 function esc(value){ return String(value ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-let STATE = { connected:false, auth:null, ventas:[], ads:null, full:null, dias:7, accountFilter:'all' };
-let LOCALIDADES = JSON.parse(localStorage.getItem('ml_localidades') || '[]');
-let COSTOS = {};
-function renderFilters(){ const html = `<div class="qpill on" onclick="setAccountFilter(this,'all')">Todas</div><div class="qpill" onclick="setAccountFilter(this,'lebron')">Lebron</div><div class="qpill" onclick="setAccountFilter(this,'fragantify')">Fragantify</div><span class="sep">|</span><div class="qpill" onclick="setQ(this,7)">7d</div><div class="qpill" onclick="setQ(this,15)">15d</div><div class="qpill" onclick="setQ(this,30)">30d</div><span class="sep">|</span><input type="date" class="date-inp js-from"><span class="sep">→</span><input type="date" class="date-inp js-to"><div class="qpill" onclick="loadAll()" style="background:#1a1a1a;color:#fff;border-color:#1a1a1a">Aplicar</div><button onclick="loadAll()" style="background:none;border:none;cursor:pointer;font-size:16px;color:#888" title="Actualizar">↻</button>`; ['dash-filters','ventas-filters','ads-filters','full-filters'].forEach(id => { const el=document.getElementById(id); if(el) el.innerHTML=html; }); }
-function syncDatesToAll(from,to){ document.querySelectorAll('.js-from').forEach(el=>el.value=from); document.querySelectorAll('.js-to').forEach(el=>el.value=to); }
-function getDateRange(){ return { desde: document.querySelector('.js-from')?.value || toISO(daysAgo(STATE.dias)), hasta: document.querySelector('.js-to')?.value || toISO(new Date()) }; }
-function setQ(el,dias){ STATE.dias=dias; syncDatesToAll(toISO(daysAgo(dias)),toISO(new Date())); loadAll(); }
-function setAccountFilter(el,account){ STATE.accountFilter=account; document.querySelectorAll('.date-row .qpill').forEach(p=>{ const t=p.textContent.trim().toLowerCase(); if(['todas','lebron','fragantify'].includes(t)) p.classList.remove('on'); }); document.querySelectorAll('.date-row .qpill').forEach(p=>{ const t=p.textContent.trim().toLowerCase(); if((account==='all'&&t==='todas')||(account==='lebron'&&t==='lebron')||(account==='fragantify'&&t==='fragantify')) p.classList.add('on'); }); loadAll(); }
-function conectar(account='lebron'){ window.location.href = `/api/login?account=${encodeURIComponent(account)}`; }
-function nav(el,view){ document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on')); if(el)el.classList.add('on'); document.querySelectorAll('.view').forEach(v=>v.classList.remove('on')); document.getElementById('view-'+view).classList.add('on'); }
 function normalizarCodigo(value){ return String(value ?? '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' '); }
-function ordenarTexto(a,b){ return normalizarCodigo(a).localeCompare(normalizarCodigo(b),'es',{sensitivity:'base',numeric:true}); }
-function tieneTilde(value){ return /[áéíóúÁÉÍÓÚ]/.test(String(value || '')); }
 function nombreZonaDisplay(value){ return String(value || '—').trim() || '—'; }
-async function loadCostos(){ try{ const r=await fetch('/api/costos?cb='+Date.now(),{cache:'no-store'}); const d=await r.json(); const crudos=d.costos||{}; COSTOS={}; Object.entries(crudos).forEach(([codigo,costo])=>{ const original=String(codigo??'').trim(); const norm=normalizarCodigo(codigo); if(original) COSTOS[original]=num(costo); if(norm) COSTOS[norm]=num(costo); }); }catch(e){ console.error('Error costos',e); COSTOS={}; } }
-function buscarCostoPorCodigos(codigos=[]){ for(const codigo of codigos){ const original=String(codigo??'').trim(); const norm=normalizarCodigo(codigo); if(original && Object.prototype.hasOwnProperty.call(COSTOS,original)) return {costo:num(COSTOS[original]),tieneCosto:true,codigo_usado:original}; if(norm && Object.prototype.hasOwnProperty.call(COSTOS,norm)) return {costo:num(COSTOS[norm]),tieneCosto:true,codigo_usado:norm}; } return {costo:0,tieneCosto:false,codigo_usado:null}; }
-function getCostoProducto(venta){ const items=Array.isArray(venta?.items)?venta.items:[]; if(items.length){ let costoTotal=0; const faltantes=[]; const encontrados=[]; items.forEach(item=>{ const cantidad=num(item.cantidad)||1; const costoInfo=buscarCostoPorCodigos([item?.sku,item?.item_id,item?.item_id_ml]); if(!costoInfo.tieneCosto){ faltantes.push({producto:item?.producto||'—',sku:item?.sku||'—',item_id:item?.item_id||item?.item_id_ml||'—',cantidad}); return; } costoTotal+=costoInfo.costo*cantidad; encontrados.push({producto:item?.producto||'—',sku:item?.sku||'—',item_id:item?.item_id||item?.item_id_ml||'—',cantidad,costo_unitario:costoInfo.costo,costo_total:costoInfo.costo*cantidad}); }); return {costo:costoTotal,tieneCosto:faltantes.length===0,faltantes,encontrados,es_multi_item:items.length>1}; } const costoInfo=buscarCostoPorCodigos([venta?.sku,venta?.item_id,venta?.item_id_ml]); const cantidad=num(venta?.cantidad)||1; return {costo:costoInfo.costo*cantidad,tieneCosto:costoInfo.tieneCosto,faltantes:costoInfo.tieneCosto?[]:[{producto:venta?.producto||'—',sku:venta?.sku||'—',item_id:venta?.item_id||venta?.item_id_ml||'—',cantidad}],encontrados:costoInfo.tieneCosto?[{producto:venta?.producto||'—',sku:venta?.sku||'—',item_id:venta?.item_id||venta?.item_id_ml||'—',cantidad,costo_unitario:costoInfo.costo,costo_total:costoInfo.costo*cantidad}]:[],es_multi_item:false}; }
-function getEnvioCosto(localidad,partido){ const locTxt=normalizarCodigo(localidad); const partTxt=normalizarCodigo(partido); const loc=LOCALIDADES.find(l=>normalizarCodigo(l.localidad)===locTxt); if(loc)return num(loc.tarifa); const part=LOCALIDADES.find(l=>normalizarCodigo(l.partido)===partTxt); return part?num(part.tarifa):0; }
-function getMargenClass(margen,sinCosto=false){ if(sinCosto)return 'br2'; return margen>=15?'bg':margen>=5?'ba':'br2'; }
-function getPedidoKey(row){ const cuenta=row.cuenta_key||row.account||'cuenta'; const envio=row.envio_id||row.shipping_id||''; const pack=row.pack_id||''; const order=row.order_id||row.id||''; if(envio)return `${cuenta}:envio:${envio}`; if(pack)return `${cuenta}:pack:${pack}`; return `${cuenta}:order:${order}`; }
-function getPedidoDisplay(row){ if(row.pack_id)return `Pack ${row.pack_id}`; if(row.envio_id)return `Envío ${row.envio_id}`; if(row.order_id)return `Orden ${row.order_id}`; return String(row.id||'—'); }
-function splitSharedField(group,field,totalFieldNames=[]){ const totalPrecio=group.reduce((s,row)=>s+num(row.precio_total),0); if(!totalPrecio||group.length<=1)return; const explicitTotal=totalFieldNames.map(name=>Math.abs(num(group.find(row=>num(row[name]))?.[name]))).find(v=>v>0); const values=group.map(row=>Math.abs(num(row[field]))); const nonZero=values.filter(v=>v>0); const sum=values.reduce((a,b)=>a+b,0); const max=Math.max(0,...values); let sharedTotal=0; if(explicitTotal && Math.abs(sum-explicitTotal)>2) sharedTotal=explicitTotal; if(!sharedTotal && nonZero.length>1){ const allEqual=nonZero.every(v=>Math.abs(v-nonZero[0])<1); if(allEqual && sum>max*1.4) sharedTotal=max; } if(!sharedTotal)return; group.forEach(row=>{ const ratio=num(row.precio_total)/totalPrecio; row[field]=round2(sharedTotal*ratio); row[`${field}_total_pedido`]=sharedTotal; row.cargo_compartido_prorrateado=true; }); }
-function normalizarPedidosMultiProducto(rows){ const groups={}; rows.forEach(row=>{ const key=getPedidoKey(row); if(!groups[key])groups[key]=[]; groups[key].push(row); }); Object.values(groups).forEach(group=>{ if(group.length<=1)return; group.forEach(row=>{ row.es_paquete_multi_producto=true; row.pedido_key=getPedidoKey(row); row.pedido_display=getPedidoDisplay(row); row.productos_en_pedido=group.length; }); splitSharedField(group,'cargo_envio_ml',['cargo_envio_ml_total_orden','cargo_envio_ml_total_pedido','shipping_seller_cost_total_orden']); splitSharedField(group,'bonificaciones',['bonificaciones_envio_ml_total_orden','bonificaciones_envio_ml_total_pedido']); splitSharedField(group,'bonificaciones_envio_ml',['bonificaciones_envio_ml_total_orden','bonificaciones_envio_ml_total_pedido']); splitSharedField(group,'descuentos',['descuentos_total_orden','descuentos_total_pedido']); splitSharedField(group,'cargo_financiacion',['cargo_financiacion_total_orden','cargo_financiacion_total_pedido']); splitSharedField(group,'otros_gastos',['otros_gastos_total_orden','otros_gastos_total_pedido']); splitSharedField(group,'impuestos',['impuestos_total_orden','impuestos_total_pedido']); }); return rows; }
-function recalcularCobroNetoVisual(row){ return num(row.precio_total)-num(row.cargo_venta||row.ml_fee)-num(row.cargo_envio_ml)-num(row.cargo_financiacion)-num(row.descuentos)-num(row.impuestos)-num(row.retenciones)-num(row.otros_gastos)+num(row.bonificaciones); }
-async function checkAuth(){ try{ const r=await fetch('/api/me?cb='+Date.now(),{cache:'no-store'}); const d=await r.json(); STATE.auth=d; STATE.connected=!!d.connected; renderAccountStatus(); const badge=document.getElementById('conn-badge'); if(d.all_connected){ badge.className='conn ok'; badge.textContent='✓ 2/2 cuentas conectadas'; badge.onclick=null; document.getElementById('view-connecting').classList.remove('on'); nav(document.querySelectorAll('.ni')[0],'dash'); loadAll(); } else if(d.connected){ badge.className='conn warn'; badge.textContent=`⚠️ ${d.connected_count}/${d.total_accounts} cuentas conectadas`; document.getElementById('view-connecting').classList.remove('on'); nav(document.querySelectorAll('.ni')[0],'dash'); loadAll(); } else { badge.className='conn no'; badge.textContent='⚠️ ML no conectado'; document.getElementById('view-connecting').classList.add('on'); } }catch(e){ console.error('Auth check failed',e); } }
-function renderAccountStatus(){ const box=document.getElementById('account-status'); if(!box||!STATE.auth?.accounts)return; box.innerHTML=Object.values(STATE.auth.accounts).map(a=>`<div class="account-card"><div class="account-head"><div><div class="account-name">${esc(a.label)}</div><div class="small-muted">User ID: ${a.user_id||'—'}</div></div><span class="badge ${a.connected?'bg':'br2'}">${a.connected?'Conectada':'Desconectada'}</span></div><div class="account-actions"><a class="linkbtn" href="/api/login?account=${a.account}">Reconectar</a></div></div>`).join(''); }
+
+let STATE = {
+  connected:false,
+  auth:null,
+  ventas:[],
+  ventasMeta:null,
+  ads:null,
+  full:null,
+  dias:7,
+  accountFilter:'all'
+};
+
+function renderFilters(){
+  const html = `
+    <div class="qpill on" onclick="setAccountFilter(this,'all')">Todas</div>
+    <div class="qpill" onclick="setAccountFilter(this,'lebron')">Lebron</div>
+    <div class="qpill" onclick="setAccountFilter(this,'fragantify')">Fragantify</div>
+    <span class="sep">|</span>
+    <div class="qpill" onclick="setQ(this,7)">7d</div>
+    <div class="qpill" onclick="setQ(this,15)">15d</div>
+    <div class="qpill" onclick="setQ(this,30)">30d</div>
+    <span class="sep">|</span>
+    <input type="date" class="date-inp js-from">
+    <span class="sep">→</span>
+    <input type="date" class="date-inp js-to">
+    <div class="qpill" onclick="loadAll()" style="background:#1a1a1a;color:#fff;border-color:#1a1a1a">Aplicar</div>
+    <button onclick="loadAll()" style="background:none;border:none;cursor:pointer;font-size:16px;color:#888" title="Actualizar">↻</button>
+  `;
+
+  ['dash-filters','ventas-filters','ads-filters','full-filters'].forEach(id => {
+    const el=document.getElementById(id);
+    if(el) el.innerHTML=html;
+  });
+}
+
+function syncDatesToAll(from,to){
+  document.querySelectorAll('.js-from').forEach(el=>el.value=from);
+  document.querySelectorAll('.js-to').forEach(el=>el.value=to);
+}
+
+function getDateRange(){
+  return {
+    desde: document.querySelector('.js-from')?.value || toISO(daysAgo(STATE.dias)),
+    hasta: document.querySelector('.js-to')?.value || toISO(new Date())
+  };
+}
+
+function setQ(el,dias){
+  STATE.dias=dias;
+  syncDatesToAll(toISO(daysAgo(dias)),toISO(new Date()));
+  loadAll();
+}
+
+function setAccountFilter(el,account){
+  STATE.accountFilter=account;
+  document.querySelectorAll('.date-row .qpill').forEach(p=>{
+    const t=p.textContent.trim().toLowerCase();
+    if(['todas','lebron','fragantify'].includes(t)) p.classList.remove('on');
+  });
+  document.querySelectorAll('.date-row .qpill').forEach(p=>{
+    const t=p.textContent.trim().toLowerCase();
+    if((account==='all'&&t==='todas')||(account==='lebron'&&t==='lebron')||(account==='fragantify'&&t==='fragantify')) p.classList.add('on');
+  });
+  loadAll();
+}
+
+function conectar(account='lebron'){
+  window.location.href = `/api/login?account=${encodeURIComponent(account)}`;
+}
+
+function nav(el,view){
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
+  if(el) el.classList.add('on');
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  document.getElementById('view-'+view).classList.add('on');
+}
+
+function getMargenClass(margen,sinCosto=false){
+  if(sinCosto)return 'br2';
+  return margen>=15?'bg':margen>=5?'ba':'br2';
+}
+
+function getPedidoKey(row){
+  const cuenta=row.cuenta_key||row.account||'cuenta';
+  const envio=row.envio_id||row.shipping_id||'';
+  const pack=row.pack_id||'';
+  const order=row.order_id||row.id||'';
+  if(envio)return `${cuenta}:envio:${envio}`;
+  if(pack)return `${cuenta}:pack:${pack}`;
+  return `${cuenta}:order:${order}`;
+}
+
+function getPedidoDisplay(row){
+  if(row.pack_id)return `Pack ${row.pack_id}`;
+  if(row.envio_id)return `Envío ${row.envio_id}`;
+  if(row.order_id)return `Orden ${row.order_id}`;
+  return String(row.id||'—');
+}
+
+function hydrateVentaFromApi(o){
+  const precioTotal = num(o.precio_total);
+  const ganancia = num(o.ganancia);
+  const margen = precioTotal > 0 ? num(o.margen) : 0;
+  const costo = num(o.costo);
+  const mensajeria = num(o.mensajeria);
+
+  return {
+    ...o,
+    precio_total: precioTotal,
+    cargo_venta: num(o.cargo_venta || o.ml_fee),
+    ml_fee: num(o.cargo_venta || o.ml_fee),
+    cargo_envio_ml: num(o.cargo_envio_ml),
+    impuestos: num(o.impuestos),
+    cobro_neto: num(o.cobro_neto),
+    costo,
+    mensajeria,
+    envio_flex_manual: mensajeria,
+    envio_costo: num(o.envio_costo ?? (num(o.cargo_envio_ml) + mensajeria)),
+    ganancia,
+    margen,
+    sin_costo: !!o.sin_costo,
+    tiene_costo: o.tiene_costo !== false,
+    costo_faltantes: o.costo_faltantes || [],
+    bonificado: !!o.bonificado,
+    es_flex: !!o.es_flex,
+    flex_sin_mensajeria: !!o.flex_sin_mensajeria,
+    comprador: o.comprador || o.buyer_nickname || o.buyer?.nickname || '—',
+    pedido_key: o.pedido_key || getPedidoKey(o),
+    pedido_display: o.pedido_display || getPedidoDisplay(o),
+    es_paquete_multi_producto: !!o.es_paquete_multi_producto,
+    cuenta: o.cuenta || o.account || '—',
+    cuenta_key: o.cuenta_key || o.account || '—',
+    rentabilidad_fuente: o.rentabilidad_fuente || null
+  };
+}
+
+async function checkAuth(){
+  try{
+    const r=await fetch('/api/me?cb='+Date.now(),{cache:'no-store'});
+    const d=await r.json();
+    STATE.auth=d;
+    STATE.connected=!!d.connected;
+    renderAccountStatus();
+
+    const badge=document.getElementById('conn-badge');
+
+    if(d.all_connected){
+      badge.className='conn ok';
+      badge.textContent='✓ 2/2 cuentas conectadas';
+      badge.onclick=null;
+      document.getElementById('view-connecting').classList.remove('on');
+      nav(document.querySelectorAll('.ni')[0],'dash');
+      loadAll();
+    } else if(d.connected){
+      badge.className='conn warn';
+      badge.textContent=`⚠️ ${d.connected_count}/${d.total_accounts} cuentas conectadas`;
+      document.getElementById('view-connecting').classList.remove('on');
+      nav(document.querySelectorAll('.ni')[0],'dash');
+      loadAll();
+    } else {
+      badge.className='conn no';
+      badge.textContent='⚠️ ML no conectado';
+      document.getElementById('view-connecting').classList.add('on');
+    }
+  }catch(e){
+    console.error('Auth check failed',e);
+  }
+}
+
+function renderAccountStatus(){
+  const box=document.getElementById('account-status');
+  if(!box||!STATE.auth?.accounts)return;
+
+  box.innerHTML=Object.values(STATE.auth.accounts).map(a=>`
+    <div class="account-card">
+      <div class="account-head">
+        <div>
+          <div class="account-name">${esc(a.label)}</div>
+          <div class="small-muted">User ID: ${a.user_id||'—'}</div>
+        </div>
+        <span class="badge ${a.connected?'bg':'br2'}">${a.connected?'Conectada':'Desconectada'}</span>
+      </div>
+      <div class="account-actions"><a class="linkbtn" href="/api/login?account=${a.account}">Reconectar</a></div>
+    </div>
+  `).join('');
+}
+
 async function loadVentas(){
   const {desde,hasta}=getDateRange();
   document.getElementById('dash-loading').style.display='block';
   document.getElementById('dash-content').style.display='none';
   document.getElementById('ventas-loading').style.display='block';
   document.getElementById('ventas-table').style.display='none';
+
   try{
-    await loadCostos();
     const r=await fetch(`/api/ventas?account=${encodeURIComponent(STATE.accountFilter)}&desde=${desde}&hasta=${hasta}&cb=${Date.now()}`,{cache:'no-store'});
     const d=await r.json();
+
     if(d.error)throw new Error(d.message||d.detail||d.error);
-    const rawOrders=normalizarPedidosMultiProducto(d.orders||[]);
-    STATE.ventas=rawOrders.map(o=>{
-      const precioTotal=num(o.precio_total);
-      const cargoVenta=num(o.cargo_venta||o.ml_fee);
-      const cargoEnvioMl=num(o.cargo_envio_ml);
-      const cargoFinanciacion=num(o.cargo_financiacion);
-      const descuentos=num(o.descuentos);
-      const bonificaciones=num(o.bonificaciones);
-      const impuestos=num(o.impuestos);
-      const retenciones=num(o.retenciones);
-      const otrosGastos=num(o.otros_gastos);
-      const costoInfo=getCostoProducto(o);
-      const costo=costoInfo.costo;
-      const sinCosto=!costoInfo.tieneCosto;
-      const bonificado=costoInfo.tieneCosto&&costo===0;
-      const esFlex=!!o.es_flex;
-      const mensajeria=esFlex ? getEnvioCosto(o.localidad,o.partido) : 0;
-      const flexSinMensajeria=esFlex&&mensajeria===0;
-      const base={...o,precio_total:precioTotal,cargo_venta:cargoVenta,ml_fee:cargoVenta,cargo_envio_ml:cargoEnvioMl,cargo_financiacion:cargoFinanciacion,descuentos,bonificaciones,impuestos,retenciones,otros_gastos:otrosGastos};
-      const cobroNetoMl=o.cargo_compartido_prorrateado ? recalcularCobroNetoVisual(base) : (num(o.cobro_neto)||recalcularCobroNetoVisual(base));
-      const ganancia=cobroNetoMl-costo-mensajeria;
-      const margen=precioTotal>0?(ganancia/precioTotal*100):0;
-      return {...base,cobro_neto:cobroNetoMl,costo,tiene_costo:costoInfo.tieneCosto,costo_faltantes:costoInfo.faltantes||[],bonificado,es_flex:esFlex,flex_sin_mensajeria:flexSinMensajeria,envio_costo:cargoEnvioMl+mensajeria,envio_ml:cargoEnvioMl,mensajeria,envio_flex_manual:mensajeria,ganancia,margen,sin_costo:sinCosto,comprador:o.comprador||o.buyer_nickname||o.buyer?.nickname||'—',pedido_key:o.pedido_key||getPedidoKey(o),pedido_display:o.pedido_display||getPedidoDisplay(o),es_paquete_multi_producto:!!o.es_paquete_multi_producto,cuenta:o.cuenta||o.account||'—',cuenta_key:o.cuenta_key||o.account||'—'};
-    });
-    renderDash(); renderVentas(); renderEnvios(); renderMissingCosts(); renderFlexMissingMensajeria(); renderAccountStatus();
+
+    STATE.ventasMeta=d;
+    STATE.ventas=(d.orders||[]).map(hydrateVentaFromApi);
+
+    renderRentabilidadStatus();
+    renderDash();
+    renderVentas();
+    renderEnvios();
+    renderMissingCosts();
+    renderFlexMissingMensajeria();
+    renderAccountStatus();
   }catch(e){
     document.getElementById('dash-loading').textContent='Error: '+e.message;
     document.getElementById('ventas-loading').textContent='Error: '+e.message;
   }
 }
-async function loadAds(){ const loading=document.getElementById('roas-loading'),content=document.getElementById('roas-content'); loading.style.display='block'; loading.innerHTML='<span class="spinner"></span> Analizando ventas, costos y Ads...'; content.style.display='none'; try{ const {desde,hasta}=getDateRange(); const r=await fetch(`/api/ads-recomendaciones?account=${encodeURIComponent(STATE.accountFilter)}&desde=${desde}&hasta=${hasta}&cb=${Date.now()}`,{cache:'no-store'}); const d=await r.json(); if(d.error)throw new Error(d.detail||d.error); STATE.ads=d; renderRoas(); }catch(e){ loading.textContent='Error cargando Asistente Mercado Ads: '+e.message; } }
-async function loadFull(){ const loading=document.getElementById('full-loading'),content=document.getElementById('full-content'); loading.style.display='block'; loading.innerHTML='<span class="spinner"></span> Analizando Full, stock y publicaciones...'; content.style.display='none'; try{ const {desde,hasta}=getDateRange(); const r=await fetch(`/api/full-recomendaciones?account=${encodeURIComponent(STATE.accountFilter)}&desde=${desde}&hasta=${hasta}&cb=${Date.now()}`,{cache:'no-store'}); const d=await r.json(); if(d.error)throw new Error(d.detail||d.error); STATE.full=d; renderFull(); }catch(e){ loading.textContent='Error cargando Asistente Full: '+e.message; } }
-function loadAll(){ loadVentas(); loadAds(); loadFull(); }
-function groupByAccount(v){ const base={}; v.forEach(x=>{ const key=x.cuenta_key||'sin_cuenta', label=x.cuenta||key; if(!base[key])base[key]={key,label,ventas:0,facturacion:0,cobroNeto:0,ganancia:0,mensajeria:0,sinCosto:0,flexSinMensajeria:0,bonificados:0}; base[key].ventas++; base[key].facturacion+=x.precio_total; base[key].cobroNeto+=x.cobro_neto; base[key].ganancia+=x.ganancia; base[key].mensajeria+=x.mensajeria; if(x.sin_costo)base[key].sinCosto++; if(x.flex_sin_mensajeria)base[key].flexSinMensajeria++; if(x.bonificado)base[key].bonificados++; }); return Object.values(base); }
-function renderDash(){ const v=STATE.ventas; const tot=v.reduce((s,x)=>s+x.precio_total,0); const totGan=v.reduce((s,x)=>s+x.ganancia,0); const totEnvMl=v.reduce((s,x)=>s+num(x.cargo_envio_ml),0); const totMens=v.reduce((s,x)=>s+num(x.mensajeria),0); const totFee=v.reduce((s,x)=>s+x.ml_fee,0); const totImp=v.reduce((s,x)=>s+num(x.impuestos),0); const totDesc=v.reduce((s,x)=>s+num(x.descuentos),0); const sinCosto=v.filter(x=>x.sin_costo).length; const bonificados=v.filter(x=>x.bonificado).length; const flexSinMens=v.filter(x=>x.flex_sin_mensajeria).length; const margen=tot?totGan/tot*100:0; document.getElementById('met').innerHTML=[{lbl:'Facturación',val:fmt(tot),sub:v.length+' ventas',cls:''},{lbl:'Ganancia neta',val:fmt(totGan),sub:fmtPct(margen)+' margen',cls:margen>0?'green':'red'},{lbl:'Sin costo',val:sinCosto,sub:'ventas a revisar',cls:sinCosto>0?'red':'green'},{lbl:'Flex sin mensajería',val:flexSinMens,sub:'tarifa faltante',cls:flexSinMens>0?'red':'green'},{lbl:'Bonificados',val:bonificados,sub:'costo $0 válido',cls:'blue'},{lbl:'Comisiones ML',val:fmt(totFee),sub:tot?fmtPct(totFee/tot*100)+' del total':'',cls:'blue'},{lbl:'Envíos ML',val:fmt(totEnvMl),sub:tot?fmtPct(totEnvMl/tot*100)+' del total':'',cls:'amber'},{lbl:'Mensajería',val:fmt(totMens),sub:'solo ventas Flex',cls:'amber'},{lbl:'Impuestos',val:fmt(totImp),sub:tot?fmtPct(totImp/tot*100)+' del total':'',cls:'red'},{lbl:'Descuentos',val:fmt(totDesc),sub:tot?fmtPct(totDesc/tot*100)+' del total':'',cls:'amber'}].map(m=>`<div class="mc"><div class="mc-lbl">${m.lbl}</div><div class="mc-val ${m.cls}">${m.val}</div><div class="mc-sub">${m.sub}</div></div>`).join(''); renderAccountProfit(); renderProductBars(v,tot,totFee,totEnvMl,totMens,totImp,totGan); renderLatestRows(v); document.getElementById('dash-loading').style.display='none'; document.getElementById('dash-content').style.display='block'; }
-function renderAccountProfit(){ const box=document.getElementById('account-profit'); const groups=groupByAccount(STATE.ventas); if(!groups.length){ box.innerHTML=''; return; } box.innerHTML=groups.map(g=>{ const margen=g.facturacion?g.ganancia/g.facturacion*100:0; return `<div class="account-card"><div class="account-head"><div><div class="account-name">${esc(g.label)}</div><div class="small-muted">${g.ventas} ventas</div></div><span class="badge ${margen>=15?'bg':margen>=5?'ba':'br2'}">${fmtPct(margen)}</span></div><div class="account-stats"><div class="account-stat"><span>Facturación</span><b>${fmt(g.facturacion)}</b></div><div class="account-stat"><span>Ganancia</span><b>${fmt(g.ganancia)}</b></div><div class="account-stat"><span>Cobro neto ML</span><b>${fmt(g.cobroNeto)}</b></div><div class="account-stat"><span>Mensajería</span><b>${fmt(g.mensajeria)}</b></div></div><div class="small-muted" style="margin-top:.7rem">Sin costo: ${g.sinCosto} · Flex sin mensajería: ${g.flexSinMensajeria} · Bonificados: ${g.bonificados}</div></div>`; }).join(''); }
-function renderProductBars(v,tot,totFee,totEnvMl,totMens,totImp,totGan){ const byProd={}; v.forEach(x=>{ const name=`${x.cuenta_key==='fragantify'?'FRA':'LS'} · ${x.producto}`; if(!byProd[name])byProd[name]={gan:0,precio:0,sinCosto:false,bonificado:false,flexSinMensajeria:false}; byProd[name].gan+=x.ganancia; byProd[name].precio+=x.precio_total; byProd[name].sinCosto||=x.sin_costo; byProd[name].bonificado||=x.bonificado; byProd[name].flexSinMensajeria||=x.flex_sin_mensajeria; }); const prods=Object.entries(byProd).sort((a,b)=>b[1].gan-a[1].gan).slice(0,8); const maxG=Math.max(...prods.map(p=>Math.abs(p[1].gan)),1); document.getElementById('prod-bars').innerHTML=prods.map(([name,d])=>{ const m=d.precio?d.gan/d.precio*100:0; const w=Math.max(4,Math.round(Math.abs(d.gan)/maxG*100)); const col=d.sinCosto?'#E24B4A':d.flexSinMensajeria?'#BA7517':m>=15?'#1D9E75':m>=5?'#BA7517':'#E24B4A'; const cls=d.flexSinMensajeria&&!d.sinCosto?'ba':getMargenClass(m,d.sinCosto); const label=d.sinCosto?'SIN COSTO':d.flexSinMensajeria?'FLEX S/M':d.bonificado?'BONIF. '+fmtPct(m):fmtPct(m); return `<div class="br"><div class="bl">${esc(name)}</div><div class="bt"><div class="bf" style="width:${w}%;background:${col}"></div></div><div class="bv"><span class="badge ${d.bonificado&&!d.sinCosto&&!d.flexSinMensajeria?'bb':cls}">${label}</span></div></div>`; }).join('')||'<div class="empty">Sin datos</div>'; if(tot>0){ const totCosto=v.reduce((s,x)=>s+x.costo,0); const segs=[{lbl:'Costo producto',val:totCosto,col:'#1D9E75'},{lbl:'Comisión ML',val:totFee,col:'#378ADD'},{lbl:'Envíos ML',val:totEnvMl,col:'#EF9F27'},{lbl:'Mensajería Flex',val:totMens,col:'#BA7517'},{lbl:'Impuestos',val:totImp,col:'#E24B4A'},{lbl:'Ganancia',val:totGan,col:'#534AB7'}]; document.getElementById('cost-bars').innerHTML=segs.map(s=>{ const w=Math.max(3,Math.round((s.val/tot)*100)); return `<div class="br"><div class="bl" style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:${s.col};display:inline-block"></span>${s.lbl}</div><div class="bt"><div class="bf" style="width:${w}%;background:${s.col}"></div></div><div class="bv" style="width:48px;font-size:11px">${fmtPct(s.val/tot*100)}</div></div>`; }).join(''); } else document.getElementById('cost-bars').innerHTML='<div class="empty">Sin datos</div>'; }
-function renderLatestRows(v){ document.getElementById('t-dash').innerHTML=v.slice(0,8).map(x=>{ const cls=getMargenClass(x.margen,x.sin_costo); const rowClass=x.sin_costo?' class="row-warn"':x.flex_sin_mensajeria?' class="row-flex-warn"':''; const marginTxt=x.sin_costo?'SIN COSTO':fmtPct(x.margen); const costoTxt=x.sin_costo?'SIN COSTO':x.bonificado?'$0 BONIF.':fmt(x.costo); const mensajeriaTxt=x.es_flex?(x.flex_sin_mensajeria?'FALTA':fmt(x.mensajeria)):'—'; const pedidoTxt=x.es_paquete_multi_producto?`<span class="pack-mini">${x.productos_en_pedido||2} prod. mismo envío</span>`:''; return `<tr${rowClass}><td><span class="badge ${x.cuenta_key==='fragantify'?'bb':'bn'}">${esc(x.cuenta)}</span></td><td><span class="buyer-alias" title="${esc(x.comprador||'—')}">${esc(x.comprador||'—')}</span></td><td title="${esc(x.producto)}">${esc(String(x.producto||'—').substring(0,32))}${pedidoTxt}</td><td>${esc(x.localidad)}</td><td>${fmt(x.precio_total)}</td><td style="color:#185FA5">${fmt(x.ml_fee)}</td><td style="color:#854F0B">${fmt(x.cargo_envio_ml)}</td><td class="${x.flex_sin_mensajeria?'flex-warn':''}">${mensajeriaTxt}</td><td style="color:#a32d2d">${fmt(x.impuestos)}</td><td class="${x.sin_costo?'cost-warn':''}">${costoTxt}</td><td>${fmt(x.ganancia)}</td><td><span class="badge ${x.bonificado&&!x.sin_costo?'bb':cls}">${marginTxt}</span></td></tr>`; }).join('')||'<tr><td colspan="12" class="empty">Sin ventas en el período</td></tr>'; }
-function renderMissingCosts(){ const faltantes=[]; STATE.ventas.filter(x=>x.sin_costo).forEach(x=>{ const list=Array.isArray(x.costo_faltantes)&&x.costo_faltantes.length?x.costo_faltantes:[{producto:x.producto,sku:x.sku,item_id:x.item_id,cantidad:x.cantidad}]; list.forEach(f=>faltantes.push({...f,cuenta:x.cuenta,comprador:x.comprador,precio_total:x.precio_total,cobro_neto:x.cobro_neto})); }); const badge=document.getElementById('missing-count'),box=document.getElementById('missing-costs'); badge.textContent=`${faltantes.length} pendientes`; if(!faltantes.length){ box.innerHTML='<div class="empty">No hay ventas sin costo. Los productos bonificados con COSTO $0 se toman como válidos.</div>'; return; } box.innerHTML=`<table><thead><tr><th>Cuenta</th><th>Comprador</th><th>Producto</th><th>SKU detectado</th><th>Item ID</th><th>Cant.</th><th>Precio orden</th><th>Cobro neto ML</th></tr></thead><tbody>${faltantes.map(x=>`<tr class="row-warn"><td>${esc(x.cuenta)}</td><td><span class="buyer-alias" title="${esc(x.comprador||'—')}">${esc(x.comprador||'—')}</span></td><td title="${esc(x.producto)}">${esc(String(x.producto||'—').substring(0,44))}</td><td class="cost-warn">${esc(x.sku||'—')}</td><td>${esc(x.item_id||'—')}</td><td>${x.cantidad||1}</td><td>${fmt(x.precio_total)}</td><td>${fmt(x.cobro_neto)}</td></tr>`).join('')}</tbody></table>`; }
-function renderFlexMissingMensajeria(){ const faltantes=STATE.ventas.filter(x=>x.flex_sin_mensajeria); const badge=document.getElementById('flex-missing-count'),box=document.getElementById('flex-missing-costs'); badge.textContent=`${faltantes.length} pendientes`; if(!faltantes.length){ box.innerHTML='<div class="empty">No hay ventas Flex sin costo de mensajería.</div>'; return; } box.innerHTML=`<table><thead><tr><th>Cuenta</th><th>Comprador</th><th>Producto</th><th>Localidad</th><th>Partido</th><th>SKU</th><th>Precio</th><th>Cobro neto ML</th></tr></thead><tbody>${faltantes.map(x=>`<tr class="row-flex-warn"><td>${esc(x.cuenta)}</td><td><span class="buyer-alias" title="${esc(x.comprador||'—')}">${esc(x.comprador||'—')}</span></td><td title="${esc(x.producto)}">${esc(String(x.producto||'—').substring(0,44))}</td><td class="flex-warn">${esc(x.localidad||'—')}</td><td class="flex-warn">${esc(x.partido||'—')}</td><td>${esc(x.sku||'—')}</td><td>${fmt(x.precio_total)}</td><td>${fmt(x.cobro_neto)}</td></tr>`).join('')}</tbody></table>`; }
-function renderVentas(){ const v=STATE.ventas; const tot=v.reduce((s,x)=>s+x.precio_total,0); const totGan=v.reduce((s,x)=>s+x.ganancia,0); const margen=tot?totGan/tot*100:0; const sinCosto=v.filter(x=>x.sin_costo).length; const bonificados=v.filter(x=>x.bonificado).length; const flexSinMens=v.filter(x=>x.flex_sin_mensajeria).length; document.getElementById('v-met').innerHTML=[{lbl:'Ventas',val:v.length,sub:'filas/productos',cls:''},{lbl:'Facturado',val:fmt(tot),sub:'',cls:''},{lbl:'Ganancia neta',val:fmt(totGan),sub:fmtPct(margen),cls:margen>0?'green':'red'},{lbl:'Sin costo',val:sinCosto,sub:'productos a corregir',cls:sinCosto>0?'red':'green'},{lbl:'Flex sin mensajería',val:flexSinMens,sub:'tarifa faltante',cls:flexSinMens>0?'red':'green'},{lbl:'Bonificados',val:bonificados,sub:'costo $0 válido',cls:'blue'},{lbl:'Mensajería Flex',val:fmt(v.reduce((s,x)=>s+x.mensajeria,0)),sub:'sólo ventas Flex',cls:'amber'}].map(m=>`<div class="mc"><div class="mc-lbl">${m.lbl}</div><div class="mc-val ${m.cls}">${m.val}</div><div class="mc-sub">${m.sub}</div></div>`).join(''); document.getElementById('t-ventas').innerHTML=v.map((x,i)=>{ const cls=getMargenClass(x.margen,x.sin_costo); const rowClass=x.sin_costo?' class="row-warn"':x.flex_sin_mensajeria?' class="row-flex-warn"':''; const costoTxt=x.sin_costo?'SIN COSTO':x.bonificado?'$0 BONIF.':fmt(x.costo); const mensajeriaTxt=x.es_flex?(x.flex_sin_mensajeria?'FALTA':fmt(x.mensajeria)):'—'; const margenTxt=x.sin_costo?'SIN COSTO':fmtPct(x.margen); const pedidoTxt=x.es_paquete_multi_producto?`${x.productos_en_pedido||2} prod.`:'1 prod.'; return `<tr${rowClass}><td>${i+1}</td><td><span class="badge ${x.cuenta_key==='fragantify'?'bb':'bn'}">${esc(x.cuenta)}</span></td><td>${esc(x.fecha)}</td><td><span class="buyer-alias" title="${esc(x.comprador||'—')}">${esc(x.comprador||'—')}</span></td><td title="${esc(x.producto)}">${esc(String(x.producto||'—').substring(0,28))}</td><td class="${x.sin_costo?'cost-warn':''}">${esc(x.sku||'—')}</td><td title="${esc(x.pedido_display||'—')}">${pedidoTxt}</td><td>${esc(x.localidad)}</td><td>${x.es_flex?'SI':'NO'}</td><td>${fmt(x.precio_total)}</td><td>${fmt(x.cobro_neto)}</td><td class="${x.flex_sin_mensajeria?'flex-warn':''}">${mensajeriaTxt}</td><td class="${x.sin_costo?'cost-warn':''}">${costoTxt}</td><td>${fmt(x.ganancia)}</td><td><span class="badge ${x.bonificado&&!x.sin_costo?'bb':cls}">${margenTxt}</span></td></tr>`; }).join('')||'<tr><td colspan="15" class="empty">Sin ventas</td></tr>'; document.getElementById('ventas-loading').style.display='none'; document.getElementById('ventas-table').style.display='table'; }
-function getRecBadge(p){ const rec=p.recomendacion||''; if(rec==='Escalar')return 'bg'; if(rec==='Testear')return 'bb'; if(rec==='Revisar')return 'ba'; return 'br2'; }
-function showRecTab(btn,tab){ document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); document.querySelectorAll('.rec-section').forEach(s=>s.classList.remove('on')); document.getElementById('rec-'+tab).classList.add('on'); }
-function renderProductRecommendation(p){ return `<div class="product-card"><div class="product-title" title="${esc(p.producto)}">${esc(p.producto)}</div><div class="product-meta"><span class="badge ${p.cuenta_key==='fragantify'?'bb':'bn'}">${esc(p.cuenta)}</span><span class="badge ${getRecBadge(p)}">${esc(p.recomendacion)}</span></div><div class="product-stats"><div class="product-stat"><span>Ventas</span><b>${p.ventas||0}</b></div><div class="product-stat"><span>Margen</span><b>${fmtPct(p.margen_pre_ads||0)}</b></div><div class="product-stat"><span>Ganancia</span><b>${fmt(p.ganancia_pre_ads||0)}</b></div><div class="product-stat"><span>ROAS objetivo</span><b>${p.roas_objetivo_sugerido?p.roas_objetivo_sugerido+'x':'—'}</b></div><div class="product-stat"><span>Presupuesto</span><b>${fmt(p.presupuesto_sugerido||0)}</b></div><div class="product-stat"><span>Campaña</span><b title="${esc(p.campania_sugerida||'—')}">${esc(String(p.campania_sugerida||'—').substring(0,18))}</b></div></div><div class="reason">${esc(p.motivo||'Sin motivo informado.')}</div></div>`; }
-function renderRoas(){ const data=STATE.ads; const loading=document.getElementById('roas-loading'); if(!data||data.error){ loading.textContent=data?.detail||data?.error||'Sin datos del asistente'; return; } const r=data.resumen||{}; document.getElementById('ads-ai-summary').textContent=data.resumen_ia||'Sin resumen disponible.'; document.getElementById('ads-ai-note').textContent=data.nota||''; document.getElementById('ads-ai-kpis').innerHTML=[['Productos analizados',r.productos_analizados||0],['Campañas sugeridas',r.campanias_recomendadas||0],['Escalar',r.productos_escalar||0],['No anunciar',r.productos_bloqueados||0]].map(k=>`<div class="assistant-kpi"><span>${k[0]}</span><b>${k[1]}</b></div>`).join(''); document.getElementById('roas-met').innerHTML=[{lbl:'Ganancia pre Ads',val:fmt(r.ganancia_pre_ads||0),sub:'antes de publicidad',cls:'green'},{lbl:'Gasto Ads histórico',val:fmt(r.gasto_ads_historico||0),sub:'período consultado',cls:'amber'},{lbl:'ROAS histórico',val:(r.roas_ads_historico||0).toFixed(2)+'x',sub:'si hubo ads',cls:(r.roas_ads_historico||0)>=4?'green':(r.roas_ads_historico||0)>=2?'amber':'red'},{lbl:'Facturación',val:fmt(r.facturacion||0),sub:'productos analizados',cls:''},{lbl:'Para testear',val:r.productos_testear||0,sub:'presupuesto chico',cls:'blue'},{lbl:'Para revisar',val:r.productos_revisar||0,sub:'antes de invertir',cls:'amber'}].map(m=>`<div class="mc"><div class="mc-lbl">${m.lbl}</div><div class="mc-val ${m.cls}">${m.val}</div><div class="mc-sub">${m.sub}</div></div>`).join(''); const camp=data.campanias_recomendadas||[]; document.getElementById('campaign-count').textContent=`${camp.length} campaña${camp.length===1?'':'s'}`; document.getElementById('campaign-cards').innerHTML=camp.map(c=>`<div class="campaign-card"><div class="campaign-title">${esc(c.campania)}</div><div class="small-muted">${esc(c.objetivo||'')}</div><div class="campaign-stats"><div class="campaign-stat"><span>Productos</span><b>${c.cantidad_productos||0}</b></div><div class="campaign-stat"><span>ROAS obj.</span><b>${c.roas_objetivo||0}x</b></div><div class="campaign-stat"><span>Presupuesto</span><b>${fmt(c.presupuesto_diario_sugerido||0)}/día</b></div></div><div class="small-muted"><b>Acción:</b> ${esc(c.accion||'')}</div></div>`).join('')||'<div class="empty">No hay campañas recomendadas todavía.</div>'; document.getElementById('productos-escalar').innerHTML=(data.productos_escalar||[]).map(renderProductRecommendation).join('')||'<div class="empty">Sin productos para escalar.</div>'; document.getElementById('productos-testear').innerHTML=(data.productos_testear||[]).map(renderProductRecommendation).join('')||'<div class="empty">Sin productos para testear.</div>'; document.getElementById('productos-revisar').innerHTML=(data.productos_revisar||[]).map(renderProductRecommendation).join('')||'<div class="empty">Sin productos para revisar.</div>'; document.getElementById('productos-bloqueados').innerHTML=(data.productos_bloqueados||[]).map(renderProductRecommendation).join('')||'<div class="empty">Sin productos bloqueados.</div>'; loading.style.display='none'; document.getElementById('roas-content').style.display='block'; }
-function getFullBadge(p){ const rec=p.recomendacion_sistema||''; if(rec==='Enviar a Full')return 'bg'; if(rec==='Testear Full')return 'bb'; if(rec==='Reponer Full')return 'bp'; if(rec==='Ya está en Full')return 'bn'; if(rec==='Revisar publicación')return 'ba'; return 'br2'; }
-function showFullTab(btn,tab){ document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); document.querySelectorAll('.full-section').forEach(s=>s.classList.remove('on')); document.getElementById('full-'+tab).classList.add('on'); }
-function renderFullProduct(p){ const img=p.thumbnail||''; const alertas=Array.isArray(p.alertas)?p.alertas:[]; const ops=p.operaciones_full_resumen||{}; const link=p.permalink?`<a class="linkbtn" href="${esc(p.permalink)}" target="_blank" rel="noreferrer">Abrir publicación</a>`:''; const stockFull=p.stock_full_disponible??'—'; const stockFullTotal=p.stock_full_total??'—'; const inventory=p.inventory_id||'—'; const estado=p.estado_publicacion||'—'; const logistic=p.logistic_type||'—'; return `<div class="product-card full-card">${img?`<img class="full-thumb" src="${esc(img)}" alt="">`:`<div class="full-thumb"></div>`}<div><div class="product-title" title="${esc(p.producto)}">${esc(p.producto)}</div><div class="product-meta"><span class="badge ${p.cuenta_key==='fragantify'?'bb':'bn'}">${esc(p.cuenta)}</span><span class="badge ${getFullBadge(p)}">${esc(p.recomendacion_sistema)}</span><span class="badge ${estado==='active'?'bg':'ba'}">${esc(estado)}</span></div><div class="product-stats"><div class="product-stat"><span>Ventas</span><b>${p.ventas||0}</b></div><div class="product-stat"><span>Unid. vendidas</span><b>${p.unidades_vendidas||0}</b></div><div class="product-stat"><span>Margen</span><b>${fmtPct(p.margen_pre_full||0)}</b></div><div class="product-stat"><span>Ganancia</span><b>${fmt(p.ganancia_pre_full||0)}</b></div><div class="product-stat"><span>Stock ML</span><b>${p.stock_ml??'—'}</b></div><div class="product-stat"><span>Stock Full disp.</span><b>${stockFull}/${stockFullTotal}</b></div><div class="product-stat"><span>Enviar/Reponer</span><b>${p.unidades_sugeridas_full||0}</b></div><div class="product-stat"><span>Logística</span><b>${esc(logistic)}</b></div><div class="product-stat"><span>Inventory ID</span><b title="${esc(inventory)}">${esc(String(inventory).substring(0,14))}</b></div><div class="product-stat"><span>Ops Full 60d</span><b>${ops.total_operaciones??'—'}</b></div></div><div class="reason">${esc(p.motivo_sistema||'Sin motivo informado.')}<br><span class="small-muted">ML: ${esc(p.ml_motivo||'Sin señal ML.')}</span></div>${alertas.length?`<div class="full-alerts">⚠️ ${alertas.map(esc).join(' · ')}</div>`:''}<div class="full-actions">${link}</div></div></div>`; }
-function renderFull(){ const data=STATE.full; const loading=document.getElementById('full-loading'); if(!data||data.error){ loading.textContent=data?.detail||data?.error||'Sin datos del asistente Full'; return; } const r=data.resumen||{}; document.getElementById('full-ai-summary').textContent=data.resumen_ia||'Sin resumen disponible.'; document.getElementById('full-ai-note').textContent=data.nota||''; document.getElementById('full-ai-kpis').innerHTML=[['Analizados',r.productos_analizados||0],['Testear',r.testear_full||0],['Reponer',r.reponer_full||0],['Revisar pub.',r.revisar_publicacion||0]].map(k=>`<div class="assistant-kpi"><span>${k[0]}</span><b>${k[1]}</b></div>`).join(''); document.getElementById('full-met').innerHTML=[{lbl:'Unidades sugeridas',val:r.unidades_sugeridas_full||0,sub:'Full / reposición',cls:'blue'},{lbl:'Ganancia base',val:fmt(r.ganancia_potencial_base||0),sub:'productos accionables',cls:'green'},{lbl:'Testear Full',val:r.testear_full||0,sub:'pocas unidades',cls:'blue'},{lbl:'Reponer Full',val:r.reponer_full||0,sub:'stock insuficiente',cls:'amber'},{lbl:'Revisar publicación',val:r.revisar_publicacion||0,sub:'antes de mover stock',cls:'amber'},{lbl:'Falta datos',val:r.falta_datos||0,sub:'costo/datos faltantes',cls:'red'},{lbl:'No enviar',val:r.no_enviar||0,sub:'sin rotación/margen',cls:'red'},{lbl:'Ya está en Full',val:r.ya_full||0,sub:'stock suficiente',cls:''}].map(m=>`<div class="mc"><div class="mc-lbl">${m.lbl}</div><div class="mc-val ${m.cls}">${m.val}</div><div class="mc-sub">${m.sub}</div></div>`).join(''); const planRows=[['Testear Full',data.testear_full||[],'Validar con pocas unidades'],['Reponer Full',data.reponer_full||[],'Cubrir próximos días de venta'],['Enviar ahora',data.enviar_ahora||[],'Mover stock con alta convicción'],['Revisar publicación',data.revisar_publicacion||[],'Resolver estado antes de enviar']]; document.getElementById('full-units-count').textContent=`${r.unidades_sugeridas_full||0} unidades sugeridas`; document.getElementById('full-plan-table').innerHTML=planRows.map(([grupo,items,objetivo])=>`<tr><td><span class="badge ${grupo==='Reponer Full'?'bp':grupo==='Revisar publicación'?'ba':grupo==='Enviar ahora'?'bg':'bb'}">${grupo}</span></td><td>${items.length}</td><td>${items.reduce((s,p)=>s+num(p.unidades_sugeridas_full),0)}</td><td>${objetivo}</td></tr>`).join(''); document.getElementById('full-productos-testear').innerHTML=(data.testear_full||[]).map(renderFullProduct).join('')||'<div class="empty">Sin productos para testear Full.</div>'; document.getElementById('full-productos-reponer').innerHTML=(data.reponer_full||[]).map(renderFullProduct).join('')||'<div class="empty">Sin productos para reponer Full.</div>'; document.getElementById('full-productos-revisar').innerHTML=(data.revisar_publicacion||[]).map(renderFullProduct).join('')||'<div class="empty">Sin publicaciones para revisar.</div>'; document.getElementById('full-productos-enviar').innerHTML=(data.enviar_ahora||[]).map(renderFullProduct).join('')||'<div class="empty">Sin productos para enviar ahora.</div>'; document.getElementById('full-productos-ya').innerHTML=(data.ya_full||[]).map(renderFullProduct).join('')||'<div class="empty">Sin productos ya en Full con stock suficiente.</div>'; document.getElementById('full-productos-no').innerHTML=(data.no_enviar||[]).map(renderFullProduct).join('')||'<div class="empty">Sin productos en No enviar.</div>'; document.getElementById('full-productos-faltan').innerHTML=(data.falta_datos||[]).map(renderFullProduct).join('')||'<div class="empty">Sin productos con falta de datos.</div>'; loading.style.display='none'; document.getElementById('full-content').style.display='block'; }
-function renderEnvios(){ const v=STATE.ventas; const byZone={}; v.forEach(x=>{ if(!x.es_flex) return; const rawZona=x.partido||x.localidad||'—'; const key=normalizarCodigo(rawZona); const label=nombreZonaDisplay(rawZona); if(!byZone[key])byZone[key]={label,total:0,n:0}; if(!tieneTilde(byZone[key].label)&&tieneTilde(label))byZone[key].label=label; byZone[key].total+=x.mensajeria; byZone[key].n++; }); const zones=Object.values(byZone).sort((a,b)=>b.total-a.total); const maxZ=Math.max(...zones.map(z=>z.total),1); const flexVentas=v.filter(x=>x.es_flex); const totEnv=flexVentas.reduce((s,x)=>s+x.mensajeria,0); const avgEnv=flexVentas.length?totEnv/flexVentas.length:0; document.getElementById('env-met').innerHTML=[{lbl:'Total mensajería Flex',val:fmt(totEnv),sub:'sólo ventas Flex',cls:'amber'},{lbl:'Promedio Flex',val:fmt(avgEnv),sub:'',cls:''},{lbl:'Zona más cara',val:zones[0]?zones[0].label:'—',sub:zones[0]?fmt(zones[0].total):'',cls:'red'},{lbl:'Zona más barata',val:zones.length?zones[zones.length-1].label:'—',sub:zones.length?fmt(zones[zones.length-1].total):'',cls:'green'}].map(m=>`<div class="mc"><div class="mc-lbl">${m.lbl}</div><div class="mc-val ${m.cls}" style="font-size:${String(m.val).length>8?'15px':'20px'}">${esc(m.val)}</div><div class="mc-sub">${esc(m.sub)}</div></div>`).join(''); document.getElementById('env-bars').innerHTML=zones.map(z=>{ const w=Math.max(4,Math.round(z.total/maxZ*100)); return `<div class="br"><div class="bl">${esc(z.label)}</div><div class="bt"><div class="bf" style="width:${w}%;background:#EF9F27"></div></div><div class="bv">${fmt(z.total)}</div></div>`; }).join('')||'<div class="empty">Sin datos de mensajería Flex</div>'; }
-function ordenarLocalidadesGuardadas(){ LOCALIDADES.sort((a,b)=>{ const pc=ordenarTexto(a.partido,b.partido); return pc!==0?pc:ordenarTexto(a.localidad,b.localidad); }); }
-function addLoc(){ const partido=document.getElementById('inp-partido').value.trim(); const localidad=document.getElementById('inp-loc').value.trim(); const tarifa=parseFloat(document.getElementById('inp-tarifa').value); if(!partido||!localidad||isNaN(tarifa))return alert('Completá todos los campos'); LOCALIDADES.push({partido,localidad,tarifa}); ordenarLocalidadesGuardadas(); localStorage.setItem('ml_localidades',JSON.stringify(LOCALIDADES)); renderLoc(); document.getElementById('inp-partido').value=''; document.getElementById('inp-loc').value=''; document.getElementById('inp-tarifa').value=''; }
-function removeLoc(i){ LOCALIDADES.splice(i,1); ordenarLocalidadesGuardadas(); localStorage.setItem('ml_localidades',JSON.stringify(LOCALIDADES)); renderLoc(); }
-function renderLoc(){ ordenarLocalidadesGuardadas(); localStorage.setItem('ml_localidades',JSON.stringify(LOCALIDADES)); const grouped={}; LOCALIDADES.forEach((l,i)=>{ const key=normalizarCodigo(l.partido); const label=String(l.partido||'—').trim()||'—'; if(!grouped[key])grouped[key]={label,localidades:[]}; if(!tieneTilde(grouped[key].label)&&tieneTilde(label))grouped[key].label=label; grouped[key].localidades.push({...l,i}); }); const grupos=Object.values(grouped).sort((a,b)=>ordenarTexto(a.label,b.label)); document.getElementById('t-loc').innerHTML=grupos.map(grupo=>{ const locs=grupo.localidades.sort((a,b)=>ordenarTexto(a.localidad,b.localidad)); return `<tr style="background:#f5f5f5"><td colspan="4" style="padding:5px 8px;font-size:11px;font-weight:700;color:#888">${esc(grupo.label)}</td></tr>`+locs.map(l=>`<tr><td></td><td>${esc(l.localidad)}</td><td>${fmt(l.tarifa)}</td><td><button onclick="removeLoc(${l.i})" style="background:none;border:none;cursor:pointer;font-size:12px;color:#a32d2d">Eliminar</button></td></tr>`).join(''); }).join('')||'<tr><td colspan="4" class="empty">Sin localidades cargadas</td></tr>'; }
-renderFilters(); const today=toISO(new Date()); const start='2026-01-01'; syncDatesToAll(start,today); renderLoc(); loadCostos().then(()=>checkAuth()); if(window.location.search.includes('connected=1')) history.replaceState({}, '', '/');
+
+async function loadAds(){
+  const loading=document.getElementById('roas-loading');
+  const content=document.getElementById('roas-content');
+  loading.style.display='block';
+  loading.innerHTML='<span class="spinner"></span> Analizando ventas, costos y Ads...';
+  content.style.display='none';
+
+  try{
+    const {desde,hasta}=getDateRange();
+    const r=await fetch(`/api/ads-recomendaciones?account=${encodeURIComponent(STATE.accountFilter)}&desde=${desde}&hasta=${hasta}&cb=${Date.now()}`,{cache:'no-store'});
+    const d=await r.json();
+    if(d.error)throw new Error(d.detail||d.error);
+    STATE.ads=d;
+    renderRoas();
+  }catch(e){
+    loading.textContent='Error cargando Asistente Mercado Ads: '+e.message;
+  }
+}
+
+async function loadFull(){
+  const loading=document.getElementById('full-loading');
+  const content=document.getElementById('full-content');
+  loading.style.display='block';
+  loading.innerHTML='<span class="spinner"></span> Analizando Full, stock y publicaciones...';
+  content.style.display='none';
+
+  try{
+    const {desde,hasta}=getDateRange();
+    const r=await fetch(`/api/full-recomendaciones?account=${encodeURIComponent(STATE.accountFilter)}&desde=${desde}&hasta=${hasta}&cb=${Date.now()}`,{cache:'no-store'});
+    const d=await r.json();
+    if(d.error)throw new Error(d.detail||d.error);
+    STATE.full=d;
+    renderFull();
+  }catch(e){
+    loading.textContent='Error cargando Asistente Full: '+e.message;
+  }
+}
+
+function loadAll(){
+  loadVentas();
+  loadAds();
+  loadFull();
+}
+
+function renderRentabilidadStatus(){
+  const box=document.getElementById('rentabilidad-status');
+  const r=STATE.ventasMeta?.rentabilidad;
+  if(!box)return;
+
+  if(!r){
+    box.innerHTML=`
+      <div class="alert alert-info">
+        La API de ventas todavía no informa rentabilidad centralizada. Revisar deploy de /api/ventas.
+      </div>
+    `;
+    return;
+  }
+
+  const cls = r.localidades_error || r.costos_error ? 'alert' : 'alert alert-info';
+  box.innerHTML=`
+    <div class="${cls}">
+      <b>Rentabilidad centralizada:</b> ${esc(r.fuente || '—')} ·
+      Costos cargados: <b>${r.costos_cargados || 0}</b> ·
+      Localidades Supabase: <b>${r.localidades_cargadas || 0}</b> ·
+      Flex sin tarifa: <b>${r.flex_sin_mensajeria || 0}</b> ·
+      Mensajería descontada: <b>${fmt(r.mensajeria_total || 0)}</b>.
+      <div class="small-muted">${esc(r.regla || '')}</div>
+    </div>
+  `;
+}
+
+function groupByAccount(v){
+  const base={};
+
+  v.forEach(x=>{
+    const key=x.cuenta_key||'sin_cuenta';
+    const label=x.cuenta||key;
+
+    if(!base[key]){
+      base[key]={key,label,ventas:0,facturacion:0,cobroNeto:0,ganancia:0,mensajeria:0,sinCosto:0,flexSinMensajeria:0,bonificados:0};
+    }
+
+    base[key].ventas++;
+    base[key].facturacion+=num(x.precio_total);
+    base[key].cobroNeto+=num(x.cobro_neto);
+    base[key].ganancia+=num(x.ganancia);
+    base[key].mensajeria+=num(x.mensajeria);
+    if(x.sin_costo)base[key].sinCosto++;
+    if(x.flex_sin_mensajeria)base[key].flexSinMensajeria++;
+    if(x.bonificado)base[key].bonificados++;
+  });
+
+  return Object.values(base);
+}
+
+function renderDash(){
+  const v=STATE.ventas;
+  const tot=v.reduce((s,x)=>s+num(x.precio_total),0);
+  const totGan=v.reduce((s,x)=>s+num(x.ganancia),0);
+  const totEnvMl=v.reduce((s,x)=>s+num(x.cargo_envio_ml),0);
+  const totMens=v.reduce((s,x)=>s+num(x.mensajeria),0);
+  const totFee=v.reduce((s,x)=>s+num(x.ml_fee),0);
+  const totImp=v.reduce((s,x)=>s+num(x.impuestos),0);
+  const sinCosto=v.filter(x=>x.sin_costo).length;
+  const bonificados=v.filter(x=>x.bonificado).length;
+  const flexSinMens=v.filter(x=>x.flex_sin_mensajeria).length;
+  const margen=tot?totGan/tot*100:0;
+
+  document.getElementById('met').innerHTML=[
+    {lbl:'Facturación',val:fmt(tot),sub:v.length+' ventas',cls:''},
+    {lbl:'Ganancia neta',val:fmt(totGan),sub:fmtPct(margen)+' margen',cls:margen>0?'green':'red'},
+    {lbl:'Sin costo',val:sinCosto,sub:'ventas a revisar',cls:sinCosto>0?'red':'green'},
+    {lbl:'Flex sin mensajería',val:flexSinMens,sub:'tarifa faltante Supabase',cls:flexSinMens>0?'red':'green'},
+    {lbl:'Bonificados',val:bonificados,sub:'costo $0 válido',cls:'blue'},
+    {lbl:'Comisiones ML',val:fmt(totFee),sub:tot?fmtPct(totFee/tot*100)+' del total':'',cls:'blue'},
+    {lbl:'Envíos ML',val:fmt(totEnvMl),sub:tot?fmtPct(totEnvMl/tot*100)+' del total':'',cls:'amber'},
+    {lbl:'Mensajería Flex',val:fmt(totMens),sub:'desde Supabase',cls:'amber'},
+    {lbl:'Impuestos',val:fmt(totImp),sub:tot?fmtPct(totImp/tot*100)+' del total':'',cls:'red'}
+  ].map(m=>`
+    <div class="mc">
+      <div class="mc-lbl">${m.lbl}</div>
+      <div class="mc-val ${m.cls}">${m.val}</div>
+      <div class="mc-sub">${m.sub}</div>
+    </div>
+  `).join('');
+
+  renderAccountProfit();
+  renderProductBars(v,tot,totFee,totEnvMl,totMens,totImp,totGan);
+  renderLatestRows(v);
+
+  document.getElementById('dash-loading').style.display='none';
+  document.getElementById('dash-content').style.display='block';
+}
+
+function renderAccountProfit(){
+  const box=document.getElementById('account-profit');
+  const groups=groupByAccount(STATE.ventas);
+
+  if(!groups.length){
+    box.innerHTML='';
+    return;
+  }
+
+  box.innerHTML=groups.map(g=>{
+    const margen=g.facturacion?g.ganancia/g.facturacion*100:0;
+    return `
+      <div class="account-card">
+        <div class="account-head">
+          <div>
+            <div class="account-name">${esc(g.label)}</div>
+            <div class="small-muted">${g.ventas} ventas</div>
+          </div>
+          <span class="badge ${margen>=15?'bg':margen>=5?'ba':'br2'}">${fmtPct(margen)}</span>
+        </div>
+        <div class="account-stats">
+          <div class="account-stat"><span>Facturación</span><b>${fmt(g.facturacion)}</b></div>
+          <div class="account-stat"><span>Ganancia</span><b>${fmt(g.ganancia)}</b></div>
+          <div class="account-stat"><span>Cobro neto ML</span><b>${fmt(g.cobroNeto)}</b></div>
+          <div class="account-stat"><span>Mensajería</span><b>${fmt(g.mensajeria)}</b></div>
+        </div>
+        <div class="small-muted" style="margin-top:.7rem">Sin costo: ${g.sinCosto} · Flex sin mensajería: ${g.flexSinMensajeria} · Bonificados: ${g.bonificados}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderProductBars(v,tot,totFee,totEnvMl,totMens,totImp,totGan){
+  const byProd={};
+
+  v.forEach(x=>{
+    const name=`${x.cuenta_key==='fragantify'?'FRA':'LS'} · ${x.producto}`;
+    if(!byProd[name])byProd[name]={gan:0,precio:0,sinCosto:false,bonificado:false,flexSinMensajeria:false};
+    byProd[name].gan+=num(x.ganancia);
+    byProd[name].precio+=num(x.precio_total);
+    byProd[name].sinCosto||=x.sin_costo;
+    byProd[name].bonificado||=x.bonificado;
+    byProd[name].flexSinMensajeria||=x.flex_sin_mensajeria;
+  });
+
+  const prods=Object.entries(byProd).sort((a,b)=>b[1].gan-a[1].gan).slice(0,8);
+  const maxG=Math.max(...prods.map(p=>Math.abs(p[1].gan)),1);
+
+  document.getElementById('prod-bars').innerHTML=prods.map(([name,d])=>{
+    const m=d.precio?d.gan/d.precio*100:0;
+    const w=Math.max(4,Math.round(Math.abs(d.gan)/maxG*100));
+    const col=d.sinCosto?'#E24B4A':d.flexSinMensajeria?'#BA7517':m>=15?'#1D9E75':m>=5?'#BA7517':'#E24B4A';
+    const cls=d.flexSinMensajeria&&!d.sinCosto?'ba':getMargenClass(m,d.sinCosto);
+    const label=d.sinCosto?'SIN COSTO':d.flexSinMensajeria?'FLEX S/M':d.bonificado?'BONIF. '+fmtPct(m):fmtPct(m);
+
+    return `
+      <div class="br">
+        <div class="bl">${esc(name)}</div>
+        <div class="bt"><div class="bf" style="width:${w}%;background:${col}"></div></div>
+        <div class="bv"><span class="badge ${d.bonificado&&!d.sinCosto&&!d.flexSinMensajeria?'bb':cls}">${label}</span></div>
+      </div>
+    `;
+  }).join('')||'<div class="empty">Sin datos</div>';
+
+  if(tot>0){
+    const totCosto=v.reduce((s,x)=>s+num(x.costo),0);
+    const segs=[
+      {lbl:'Costo producto',val:totCosto,col:'#1D9E75'},
+      {lbl:'Comisión ML',val:totFee,col:'#378ADD'},
+      {lbl:'Envíos ML',val:totEnvMl,col:'#EF9F27'},
+      {lbl:'Mensajería Flex',val:totMens,col:'#BA7517'},
+      {lbl:'Impuestos',val:totImp,col:'#E24B4A'},
+      {lbl:'Ganancia',val:totGan,col:'#534AB7'}
+    ];
+
+    document.getElementById('cost-bars').innerHTML=segs.map(s=>{
+      const w=Math.max(3,Math.round((s.val/tot)*100));
+      return `
+        <div class="br">
+          <div class="bl" style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:${s.col};display:inline-block"></span>${s.lbl}</div>
+          <div class="bt"><div class="bf" style="width:${w}%;background:${s.col}"></div></div>
+          <div class="bv" style="width:48px;font-size:11px">${fmtPct(s.val/tot*100)}</div>
+        </div>
+      `;
+    }).join('');
+  } else {
+    document.getElementById('cost-bars').innerHTML='<div class="empty">Sin datos</div>';
+  }
+}
+
+function renderLatestRows(v){
+  document.getElementById('t-dash').innerHTML=v.slice(0,8).map(x=>{
+    const cls=getMargenClass(x.margen,x.sin_costo);
+    const rowClass=x.sin_costo?' class="row-warn"':x.flex_sin_mensajeria?' class="row-flex-warn"':'';
+    const marginTxt=x.sin_costo?'SIN COSTO':fmtPct(x.margen);
+    const costoTxt=x.sin_costo?'SIN COSTO':x.bonificado?'$0 BONIF.':fmt(x.costo);
+    const mensajeriaTxt=x.es_flex?(x.flex_sin_mensajeria?'FALTA':fmt(x.mensajeria)):'—';
+    const pedidoTxt=x.es_paquete_multi_producto?`<span class="pack-mini">${x.productos_en_pedido||2} prod. mismo envío</span>`:'';
+
+    return `
+      <tr${rowClass}>
+        <td><span class="badge ${x.cuenta_key==='fragantify'?'bb':'bn'}">${esc(x.cuenta)}</span></td>
+        <td><span class="buyer-alias" title="${esc(x.comprador||'—')}">${esc(x.comprador||'—')}</span></td>
+        <td title="${esc(x.producto)}">${esc(String(x.producto||'—').substring(0,32))}${pedidoTxt}</td>
+        <td>${esc(x.localidad)}</td>
+        <td>${fmt(x.precio_total)}</td>
+        <td style="color:#185FA5">${fmt(x.ml_fee)}</td>
+        <td style="color:#854F0B">${fmt(x.cargo_envio_ml)}</td>
+        <td class="${x.flex_sin_mensajeria?'flex-warn':''}">${mensajeriaTxt}</td>
+        <td style="color:#a32d2d">${fmt(x.impuestos)}</td>
+        <td class="${x.sin_costo?'cost-warn':''}">${costoTxt}</td>
+        <td>${fmt(x.ganancia)}</td>
+        <td><span class="badge ${x.bonificado&&!x.sin_costo?'bb':cls}">${marginTxt}</span></td>
+      </tr>
+    `;
+  }).join('')||'<tr><td colspan="12" class="empty">Sin ventas en el período</td></tr>';
+}
+
+function renderMissingCosts(){
+  const faltantes=[];
+
+  STATE.ventas.filter(x=>x.sin_costo).forEach(x=>{
+    const list=Array.isArray(x.costo_faltantes)&&x.costo_faltantes.length
+      ? x.costo_faltantes
+      : [{producto:x.producto,sku:x.sku,item_id:x.item_id,cantidad:x.cantidad}];
+
+    list.forEach(f=>faltantes.push({...f,cuenta:x.cuenta,comprador:x.comprador,precio_total:x.precio_total,cobro_neto:x.cobro_neto}));
+  });
+
+  const badge=document.getElementById('missing-count');
+  const box=document.getElementById('missing-costs');
+  badge.textContent=`${faltantes.length} pendientes`;
+
+  if(!faltantes.length){
+    box.innerHTML='<div class="empty">No hay ventas sin costo. Los productos bonificados con COSTO $0 se toman como válidos.</div>';
+    return;
+  }
+
+  box.innerHTML=`
+    <table>
+      <thead><tr><th>Cuenta</th><th>Comprador</th><th>Producto</th><th>SKU detectado</th><th>Item ID</th><th>Cant.</th><th>Precio orden</th><th>Cobro neto ML</th></tr></thead>
+      <tbody>${faltantes.map(x=>`
+        <tr class="row-warn">
+          <td>${esc(x.cuenta)}</td>
+          <td><span class="buyer-alias" title="${esc(x.comprador||'—')}">${esc(x.comprador||'—')}</span></td>
+          <td title="${esc(x.producto)}">${esc(String(x.producto||'—').substring(0,44))}</td>
+          <td class="cost-warn">${esc(x.sku||'—')}</td>
+          <td>${esc(x.item_id||'—')}</td>
+          <td>${x.cantidad||1}</td>
+          <td>${fmt(x.precio_total)}</td>
+          <td>${fmt(x.cobro_neto)}</td>
+        </tr>
+      `).join('')}</tbody>
+    </table>
+  `;
+}
+
+function renderFlexMissingMensajeria(){
+  const faltantes=STATE.ventas.filter(x=>x.flex_sin_mensajeria);
+  const badge=document.getElementById('flex-missing-count');
+  const box=document.getElementById('flex-missing-costs');
+
+  badge.textContent=`${faltantes.length} pendientes`;
+
+  if(!faltantes.length){
+    box.innerHTML='<div class="empty">No hay ventas Flex sin costo de mensajería.</div>';
+    return;
+  }
+
+  box.innerHTML=`
+    <table>
+      <thead><tr><th>Cuenta</th><th>Comprador</th><th>Producto</th><th>Localidad</th><th>Partido</th><th>SKU</th><th>Precio</th><th>Cobro neto ML</th></tr></thead>
+      <tbody>${faltantes.map(x=>`
+        <tr class="row-flex-warn">
+          <td>${esc(x.cuenta)}</td>
+          <td><span class="buyer-alias" title="${esc(x.comprador||'—')}">${esc(x.comprador||'—')}</span></td>
+          <td title="${esc(x.producto)}">${esc(String(x.producto||'—').substring(0,44))}</td>
+          <td class="flex-warn">${esc(x.localidad||'—')}</td>
+          <td class="flex-warn">${esc(x.partido||'—')}</td>
+          <td>${esc(x.sku||'—')}</td>
+          <td>${fmt(x.precio_total)}</td>
+          <td>${fmt(x.cobro_neto)}</td>
+        </tr>
+      `).join('')}</tbody>
+    </table>
+  `;
+}
+
+function renderVentas(){
+  const v=STATE.ventas;
+  const tot=v.reduce((s,x)=>s+num(x.precio_total),0);
+  const totGan=v.reduce((s,x)=>s+num(x.ganancia),0);
+  const margen=tot?totGan/tot*100:0;
+  const sinCosto=v.filter(x=>x.sin_costo).length;
+  const bonificados=v.filter(x=>x.bonificado).length;
+  const flexSinMens=v.filter(x=>x.flex_sin_mensajeria).length;
+
+  document.getElementById('v-met').innerHTML=[
+    {lbl:'Ventas',val:v.length,sub:'filas/productos',cls:''},
+    {lbl:'Facturado',val:fmt(tot),sub:'',cls:''},
+    {lbl:'Ganancia neta',val:fmt(totGan),sub:fmtPct(margen),cls:margen>0?'green':'red'},
+    {lbl:'Sin costo',val:sinCosto,sub:'productos a corregir',cls:sinCosto>0?'red':'green'},
+    {lbl:'Flex sin mensajería',val:flexSinMens,sub:'tarifa faltante Supabase',cls:flexSinMens>0?'red':'green'},
+    {lbl:'Bonificados',val:bonificados,sub:'costo $0 válido',cls:'blue'},
+    {lbl:'Mensajería Flex',val:fmt(v.reduce((s,x)=>s+num(x.mensajeria),0)),sub:'desde Supabase',cls:'amber'}
+  ].map(m=>`
+    <div class="mc"><div class="mc-lbl">${m.lbl}</div><div class="mc-val ${m.cls}">${m.val}</div><div class="mc-sub">${m.sub}</div></div>
+  `).join('');
+
+  document.getElementById('t-ventas').innerHTML=v.map((x,i)=>{
+    const cls=getMargenClass(x.margen,x.sin_costo);
+    const rowClass=x.sin_costo?' class="row-warn"':x.flex_sin_mensajeria?' class="row-flex-warn"':'';
+    const costoTxt=x.sin_costo?'SIN COSTO':x.bonificado?'$0 BONIF.':fmt(x.costo);
+    const mensajeriaTxt=x.es_flex?(x.flex_sin_mensajeria?'FALTA':fmt(x.mensajeria)):'—';
+    const margenTxt=x.sin_costo?'SIN COSTO':fmtPct(x.margen);
+    const pedidoTxt=x.es_paquete_multi_producto?`${x.productos_en_pedido||2} prod.`:'1 prod.';
+
+    return `
+      <tr${rowClass}>
+        <td>${i+1}</td>
+        <td><span class="badge ${x.cuenta_key==='fragantify'?'bb':'bn'}">${esc(x.cuenta)}</span></td>
+        <td>${esc(x.fecha)}</td>
+        <td><span class="buyer-alias" title="${esc(x.comprador||'—')}">${esc(x.comprador||'—')}</span></td>
+        <td title="${esc(x.producto)}">${esc(String(x.producto||'—').substring(0,28))}</td>
+        <td class="${x.sin_costo?'cost-warn':''}">${esc(x.sku||'—')}</td>
+        <td title="${esc(x.pedido_display||'—')}">${pedidoTxt}</td>
+        <td>${esc(x.localidad)}</td>
+        <td>${x.es_flex?'SI':'NO'}</td>
+        <td>${fmt(x.precio_total)}</td>
+        <td>${fmt(x.cobro_neto)}</td>
+        <td class="${x.flex_sin_mensajeria?'flex-warn':''}">${mensajeriaTxt}</td>
+        <td class="${x.sin_costo?'cost-warn':''}">${costoTxt}</td>
+        <td>${fmt(x.ganancia)}</td>
+        <td><span class="badge ${x.bonificado&&!x.sin_costo?'bb':cls}">${margenTxt}</span></td>
+      </tr>
+    `;
+  }).join('')||'<tr><td colspan="15" class="empty">Sin ventas</td></tr>';
+
+  document.getElementById('ventas-loading').style.display='none';
+  document.getElementById('ventas-table').style.display='table';
+}
+
+function renderEnvios(){
+  const v=STATE.ventas;
+  const byZone={};
+
+  v.forEach(x=>{
+    if(!x.es_flex) return;
+    const rawZona=x.localidad||x.partido||'—';
+    const key=normalizarCodigo(rawZona);
+    const label=nombreZonaDisplay(rawZona);
+
+    if(!byZone[key])byZone[key]={label,total:0,n:0};
+    byZone[key].total+=num(x.mensajeria);
+    byZone[key].n++;
+  });
+
+  const zones=Object.values(byZone).sort((a,b)=>b.total-a.total);
+  const maxZ=Math.max(...zones.map(z=>z.total),1);
+  const flexVentas=v.filter(x=>x.es_flex);
+  const totEnv=flexVentas.reduce((s,x)=>s+num(x.mensajeria),0);
+  const avgEnv=flexVentas.length?totEnv/flexVentas.length:0;
+  const faltantes=v.filter(x=>x.flex_sin_mensajeria).length;
+
+  document.getElementById('env-met').innerHTML=[
+    {lbl:'Total mensajería Flex',val:fmt(totEnv),sub:'desde Supabase',cls:'amber'},
+    {lbl:'Promedio Flex',val:fmt(avgEnv),sub:'por venta Flex',cls:''},
+    {lbl:'Flex sin tarifa',val:faltantes,sub:'cargar en Localidades',cls:faltantes>0?'red':'green'},
+    {lbl:'Zona más cara',val:zones[0]?zones[0].label:'—',sub:zones[0]?fmt(zones[0].total):'',cls:'red'}
+  ].map(m=>`
+    <div class="mc">
+      <div class="mc-lbl">${m.lbl}</div>
+      <div class="mc-val ${m.cls}" style="font-size:${String(m.val).length>8?'15px':'20px'}">${esc(m.val)}</div>
+      <div class="mc-sub">${esc(m.sub)}</div>
+    </div>
+  `).join('');
+
+  document.getElementById('env-bars').innerHTML=zones.map(z=>{
+    const w=Math.max(4,Math.round(z.total/maxZ*100));
+    return `
+      <div class="br">
+        <div class="bl">${esc(z.label)}</div>
+        <div class="bt"><div class="bf" style="width:${w}%;background:#EF9F27"></div></div>
+        <div class="bv">${fmt(z.total)}</div>
+      </div>
+    `;
+  }).join('')||'<div class="empty">Sin datos de mensajería Flex</div>';
+}
+
+function getRecBadge(p){
+  const rec=p.recomendacion||'';
+  if(rec==='Escalar')return 'bg';
+  if(rec==='Testear')return 'bb';
+  if(rec==='Revisar')return 'ba';
+  return 'br2';
+}
+
+function showRecTab(btn,tab){
+  btn.closest('.view').querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  document.querySelectorAll('.rec-section').forEach(s=>s.classList.remove('on'));
+  document.getElementById('rec-'+tab).classList.add('on');
+}
+
+function renderProductRecommendation(p){
+  return `
+    <div class="product-card">
+      <div class="product-title" title="${esc(p.producto)}">${esc(p.producto)}</div>
+      <div class="product-meta">
+        <span class="badge ${p.cuenta_key==='fragantify'?'bb':'bn'}">${esc(p.cuenta)}</span>
+        <span class="badge ${getRecBadge(p)}">${esc(p.recomendacion)}</span>
+      </div>
+      <div class="product-stats">
+        <div class="product-stat"><span>Ventas</span><b>${p.ventas||0}</b></div>
+        <div class="product-stat"><span>Margen</span><b>${fmtPct(p.margen_pre_ads||0)}</b></div>
+        <div class="product-stat"><span>Ganancia</span><b>${fmt(p.ganancia_pre_ads||0)}</b></div>
+        <div class="product-stat"><span>Mensajería</span><b>${fmt(p.mensajeria_total||0)}</b></div>
+        <div class="product-stat"><span>ROAS objetivo</span><b>${p.roas_objetivo_sugerido?p.roas_objetivo_sugerido+'x':'—'}</b></div>
+        <div class="product-stat"><span>Presupuesto</span><b>${fmt(p.presupuesto_sugerido||0)}</b></div>
+      </div>
+      <div class="reason">${esc(p.motivo||'Sin motivo informado.')}</div>
+    </div>
+  `;
+}
+
+function renderRoas(){
+  const data=STATE.ads;
+  const loading=document.getElementById('roas-loading');
+
+  if(!data||data.error){
+    loading.textContent=data?.detail||data?.error||'Sin datos del asistente';
+    return;
+  }
+
+  const r=data.resumen||{};
+
+  document.getElementById('ads-ai-summary').textContent=data.resumen_ia||'Sin resumen disponible.';
+  document.getElementById('ads-ai-note').textContent=data.nota||'';
+
+  document.getElementById('ads-ai-kpis').innerHTML=[
+    ['Productos analizados',r.productos_analizados||0],
+    ['Campañas sugeridas',r.campanias_recomendadas||0],
+    ['Escalar',r.productos_escalar||0],
+    ['No anunciar',r.productos_bloqueados||0]
+  ].map(k=>`<div class="assistant-kpi"><span>${k[0]}</span><b>${k[1]}</b></div>`).join('');
+
+  document.getElementById('roas-met').innerHTML=[
+    {lbl:'Ganancia pre Ads',val:fmt(r.ganancia_pre_ads||0),sub:'antes de publicidad',cls:'green'},
+    {lbl:'Mensajería Flex',val:fmt(r.mensajeria_flex_descontada||0),sub:'desde Supabase',cls:'amber'},
+    {lbl:'Flex sin tarifa',val:r.productos_con_tarifa_flex_faltante||0,sub:'revisar localidades',cls:(r.productos_con_tarifa_flex_faltante||0)>0?'red':'green'},
+    {lbl:'Gasto Ads histórico',val:fmt(r.gasto_ads_historico||0),sub:'período consultado',cls:'amber'},
+    {lbl:'ROAS histórico',val:(r.roas_ads_historico||0).toFixed(2)+'x',sub:'si hubo ads',cls:(r.roas_ads_historico||0)>=4?'green':(r.roas_ads_historico||0)>=2?'amber':'red'},
+    {lbl:'Facturación',val:fmt(r.facturacion||0),sub:'productos analizados',cls:''}
+  ].map(m=>`<div class="mc"><div class="mc-lbl">${m.lbl}</div><div class="mc-val ${m.cls}">${m.val}</div><div class="mc-sub">${m.sub}</div></div>`).join('');
+
+  const camp=data.campanias_recomendadas||[];
+  document.getElementById('campaign-count').textContent=`${camp.length} campaña${camp.length===1?'':'s'}`;
+  document.getElementById('campaign-cards').innerHTML=camp.map(c=>`
+    <div class="campaign-card">
+      <div class="campaign-title">${esc(c.campania)}</div>
+      <div class="small-muted">${esc(c.objetivo||'')}</div>
+      <div class="campaign-stats">
+        <div class="campaign-stat"><span>Productos</span><b>${c.cantidad_productos||0}</b></div>
+        <div class="campaign-stat"><span>ROAS obj.</span><b>${c.roas_objetivo||0}x</b></div>
+        <div class="campaign-stat"><span>Presupuesto</span><b>${fmt(c.presupuesto_diario_sugerido||0)}/día</b></div>
+      </div>
+      <div class="small-muted"><b>Acción:</b> ${esc(c.accion||'')}</div>
+    </div>
+  `).join('')||'<div class="empty">No hay campañas recomendadas todavía.</div>';
+
+  document.getElementById('productos-escalar').innerHTML=(data.productos_escalar||[]).map(renderProductRecommendation).join('')||'<div class="empty">Sin productos para escalar.</div>';
+  document.getElementById('productos-testear').innerHTML=(data.productos_testear||[]).map(renderProductRecommendation).join('')||'<div class="empty">Sin productos para testear.</div>';
+  document.getElementById('productos-revisar').innerHTML=(data.productos_revisar||[]).map(renderProductRecommendation).join('')||'<div class="empty">Sin productos para revisar.</div>';
+  document.getElementById('productos-bloqueados').innerHTML=(data.productos_bloqueados||[]).map(renderProductRecommendation).join('')||'<div class="empty">Sin productos bloqueados.</div>';
+
+  loading.style.display='none';
+  document.getElementById('roas-content').style.display='block';
+}
+
+function getFullBadge(p){
+  const rec=p.recomendacion_sistema||'';
+  if(rec==='Enviar a Full')return 'bg';
+  if(rec==='Testear Full')return 'bb';
+  if(rec==='Reponer Full')return 'bp';
+  if(rec==='Ya está en Full')return 'bn';
+  if(rec==='Revisar publicación')return 'ba';
+  return 'br2';
+}
+
+function showFullTab(btn,tab){
+  btn.closest('.view').querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  document.querySelectorAll('.full-section').forEach(s=>s.classList.remove('on'));
+  document.getElementById('full-'+tab).classList.add('on');
+}
+
+function renderFullProduct(p){
+  const img=p.thumbnail||'';
+  const alertas=Array.isArray(p.alertas)?p.alertas:[];
+  const ops=p.operaciones_full_resumen||{};
+  const link=p.permalink?`<a class="linkbtn" href="${esc(p.permalink)}" target="_blank" rel="noreferrer">Abrir publicación</a>`:'';
+  const stockFull=p.stock_full_disponible??'—';
+  const stockFullTotal=p.stock_full_total??'—';
+  const inventory=p.inventory_id||'—';
+  const estado=p.estado_publicacion||'—';
+  const logistic=p.logistic_type||'—';
+
+  return `
+    <div class="product-card full-card">
+      ${img?`<img class="full-thumb" src="${esc(img)}" alt="">`:`<div class="full-thumb"></div>`}
+      <div>
+        <div class="product-title" title="${esc(p.producto)}">${esc(p.producto)}</div>
+        <div class="product-meta">
+          <span class="badge ${p.cuenta_key==='fragantify'?'bb':'bn'}">${esc(p.cuenta)}</span>
+          <span class="badge ${getFullBadge(p)}">${esc(p.recomendacion_sistema)}</span>
+          <span class="badge ${estado==='active'?'bg':'ba'}">${esc(estado)}</span>
+        </div>
+        <div class="product-stats">
+          <div class="product-stat"><span>Ventas</span><b>${p.ventas||0}</b></div>
+          <div class="product-stat"><span>Unid. vendidas</span><b>${p.unidades_vendidas||0}</b></div>
+          <div class="product-stat"><span>Margen</span><b>${fmtPct(p.margen_pre_full||0)}</b></div>
+          <div class="product-stat"><span>Ganancia</span><b>${fmt(p.ganancia_pre_full||0)}</b></div>
+          <div class="product-stat"><span>Stock ML</span><b>${p.stock_ml??'—'}</b></div>
+          <div class="product-stat"><span>Stock Full disp.</span><b>${stockFull}/${stockFullTotal}</b></div>
+          <div class="product-stat"><span>Enviar/Reponer</span><b>${p.unidades_sugeridas_full||0}</b></div>
+          <div class="product-stat"><span>Logística</span><b>${esc(logistic)}</b></div>
+          <div class="product-stat"><span>Inventory ID</span><b title="${esc(inventory)}">${esc(String(inventory).substring(0,14))}</b></div>
+          <div class="product-stat"><span>Ops Full 60d</span><b>${ops.total_operaciones??'—'}</b></div>
+        </div>
+        <div class="reason">${esc(p.motivo_sistema||'Sin motivo informado.')}<br><span class="small-muted">ML: ${esc(p.ml_motivo||'Sin señal ML.')}</span></div>
+        ${alertas.length?`<div class="full-alerts">⚠️ ${alertas.map(esc).join(' · ')}</div>`:''}
+        <div class="full-actions">${link}</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderFull(){
+  const data=STATE.full;
+  const loading=document.getElementById('full-loading');
+
+  if(!data||data.error){
+    loading.textContent=data?.detail||data?.error||'Sin datos del asistente Full';
+    return;
+  }
+
+  const r=data.resumen||{};
+
+  document.getElementById('full-ai-summary').textContent=data.resumen_ia||'Sin resumen disponible.';
+  document.getElementById('full-ai-note').textContent=data.nota||'';
+
+  document.getElementById('full-ai-kpis').innerHTML=[
+    ['Analizados',r.productos_analizados||0],
+    ['Testear',r.testear_full||0],
+    ['Reponer',r.reponer_full||0],
+    ['Revisar pub.',r.revisar_publicacion||0]
+  ].map(k=>`<div class="assistant-kpi"><span>${k[0]}</span><b>${k[1]}</b></div>`).join('');
+
+  document.getElementById('full-met').innerHTML=[
+    {lbl:'Unidades sugeridas',val:r.unidades_sugeridas_full||0,sub:'Full / reposición',cls:'blue'},
+    {lbl:'Ganancia base',val:fmt(r.ganancia_potencial_base||0),sub:'productos accionables',cls:'green'},
+    {lbl:'Testear Full',val:r.testear_full||0,sub:'pocas unidades',cls:'blue'},
+    {lbl:'Reponer Full',val:r.reponer_full||0,sub:'stock insuficiente',cls:'amber'},
+    {lbl:'Revisar publicación',val:r.revisar_publicacion||0,sub:'antes de mover stock',cls:'amber'},
+    {lbl:'Falta datos',val:r.falta_datos||0,sub:'costo/datos faltantes',cls:'red'},
+    {lbl:'No enviar',val:r.no_enviar||0,sub:'sin rotación/margen',cls:'red'},
+    {lbl:'Ya está en Full',val:r.ya_full||0,sub:'stock suficiente',cls:''}
+  ].map(m=>`<div class="mc"><div class="mc-lbl">${m.lbl}</div><div class="mc-val ${m.cls}">${m.val}</div><div class="mc-sub">${m.sub}</div></div>`).join('');
+
+  const planRows=[
+    ['Testear Full',data.testear_full||[],'Validar con pocas unidades'],
+    ['Reponer Full',data.reponer_full||[],'Cubrir próximos días de venta'],
+    ['Enviar ahora',data.enviar_ahora||[],'Mover stock con alta convicción'],
+    ['Revisar publicación',data.revisar_publicacion||[],'Resolver estado antes de enviar']
+  ];
+
+  document.getElementById('full-units-count').textContent=`${r.unidades_sugeridas_full||0} unidades sugeridas`;
+  document.getElementById('full-plan-table').innerHTML=planRows.map(([grupo,items,objetivo])=>`
+    <tr>
+      <td><span class="badge ${grupo==='Reponer Full'?'bp':grupo==='Revisar publicación'?'ba':grupo==='Enviar ahora'?'bg':'bb'}">${grupo}</span></td>
+      <td>${items.length}</td>
+      <td>${items.reduce((s,p)=>s+num(p.unidades_sugeridas_full),0)}</td>
+      <td>${objetivo}</td>
+    </tr>
+  `).join('');
+
+  document.getElementById('full-productos-testear').innerHTML=(data.testear_full||[]).map(renderFullProduct).join('')||'<div class="empty">Sin productos para testear Full.</div>';
+  document.getElementById('full-productos-reponer').innerHTML=(data.reponer_full||[]).map(renderFullProduct).join('')||'<div class="empty">Sin productos para reponer Full.</div>';
+  document.getElementById('full-productos-revisar').innerHTML=(data.revisar_publicacion||[]).map(renderFullProduct).join('')||'<div class="empty">Sin publicaciones para revisar.</div>';
+  document.getElementById('full-productos-enviar').innerHTML=(data.enviar_ahora||[]).map(renderFullProduct).join('')||'<div class="empty">Sin productos para enviar ahora.</div>';
+  document.getElementById('full-productos-ya').innerHTML=(data.ya_full||[]).map(renderFullProduct).join('')||'<div class="empty">Sin productos ya en Full con stock suficiente.</div>';
+  document.getElementById('full-productos-no').innerHTML=(data.no_enviar||[]).map(renderFullProduct).join('')||'<div class="empty">Sin productos en No enviar.</div>';
+  document.getElementById('full-productos-faltan').innerHTML=(data.falta_datos||[]).map(renderFullProduct).join('')||'<div class="empty">Sin productos con falta de datos.</div>';
+
+  loading.style.display='none';
+  document.getElementById('full-content').style.display='block';
+}
+
+renderFilters();
+syncDatesToAll('2026-01-01',toISO(new Date()));
+checkAuth();
+
+if(window.location.search.includes('connected=1')){
+  history.replaceState({}, '', '/');
+}
 </script>
 </body>
 </html>
-```
-```
