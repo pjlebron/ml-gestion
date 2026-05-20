@@ -90,6 +90,54 @@ function buscarCosto(costosMap, codigos = []) {
   };
 }
 
+function buildLocalidadesMap(localidadesData = {}) {
+  const rows = Array.isArray(localidadesData.localidades_activas)
+    ? localidadesData.localidades_activas
+    : Array.isArray(localidadesData.localidades)
+      ? localidadesData.localidades.filter(l => l.activo !== false)
+      : [];
+
+  const byLocalidad = {};
+  const byPartido = {};
+
+  rows.forEach(row => {
+    const localidad = row.localidad || row.nombre || '';
+    const partido = row.partido || '';
+    const tarifa = num(row.tarifa);
+
+    const localidadKey = normalizarCodigo(localidad);
+    const partidoKey = normalizarCodigo(partido);
+
+    if (localidadKey) byLocalidad[localidadKey] = tarifa;
+    if (partidoKey && !Object.prototype.hasOwnProperty.call(byPartido, partidoKey)) {
+      byPartido[partidoKey] = tarifa;
+    }
+  });
+
+  return {
+    rows,
+    byLocalidad,
+    byPartido,
+  };
+}
+
+function getMensajeriaFlex(localidadesMap, venta) {
+  if (!venta?.es_flex) return 0;
+
+  const localidadKey = normalizarCodigo(venta.localidad);
+  const partidoKey = normalizarCodigo(venta.partido);
+
+  if (localidadKey && Object.prototype.hasOwnProperty.call(localidadesMap.byLocalidad, localidadKey)) {
+    return num(localidadesMap.byLocalidad[localidadKey]);
+  }
+
+  if (partidoKey && Object.prototype.hasOwnProperty.call(localidadesMap.byPartido, partidoKey)) {
+    return num(localidadesMap.byPartido[partidoKey]);
+  }
+
+  return 0;
+}
+
 function accountPrefix(cuentaKey) {
   if (cuentaKey === 'fragantify') return 'FRA';
   return 'LS';
@@ -144,11 +192,14 @@ function addToAggregate(agg, key, patch) {
       facturacion: 0,
       cobro_neto: 0,
       costo_total: 0,
+      mensajeria_total: 0,
       ganancia_pre_ads: 0,
       margen_pre_ads: 0,
       falta_costo: false,
+      falta_mensajeria_flex: false,
       costo_cero_valido: false,
       codigos_faltantes: [],
+      localidades_faltantes: [],
       ads_gasto: 0,
       ads_ingresos: 0,
       ads_clicks: 0,
@@ -169,7 +220,7 @@ function addToAggregate(agg, key, patch) {
   return agg[key];
 }
 
-function aggregateVentas(ventas = [], costosMap = {}) {
+function aggregateVentas(ventas = [], costosMap = {}, localidadesMap = { byLocalidad: {}, byPartido: {}, rows: [] }) {
   const agg = {};
 
   ventas.forEach(venta => {
@@ -177,6 +228,8 @@ function aggregateVentas(ventas = [], costosMap = {}) {
     const cuenta = venta.cuenta || (cuentaKey === 'fragantify' ? 'Fragantify' : 'Lebron Store');
     const items = extractVentaItems(venta);
     const cobroNetoVenta = num(venta.cobro_neto) || num(venta.precio_total);
+    const mensajeriaVenta = getMensajeriaFlex(localidadesMap, venta);
+    const esFlexSinTarifa = !!venta.es_flex && mensajeriaVenta === 0;
 
     items.forEach(item => {
       const costoInfo = buscarCosto(costosMap, [
@@ -187,6 +240,8 @@ function aggregateVentas(ventas = [], costosMap = {}) {
 
       const costoUnitario = costoInfo.costo;
       const costoTotal = costoInfo.tieneCosto ? costoUnitario * item.cantidad : 0;
+      const mensajeriaItem = mensajeriaVenta * item.proporcion;
+
       const key = getProductoKey({
         cuentaKey,
         itemId: item.item_id,
@@ -207,6 +262,7 @@ function aggregateVentas(ventas = [], costosMap = {}) {
       row.facturacion += item.precio_total_item;
       row.cobro_neto += cobroNetoVenta * item.proporcion;
       row.costo_total += costoTotal;
+      row.mensajeria_total += mensajeriaItem;
 
       if (!costoInfo.tieneCosto) {
         row.falta_costo = true;
@@ -220,6 +276,15 @@ function aggregateVentas(ventas = [], costosMap = {}) {
       if (costoInfo.tieneCosto && costoInfo.costo === 0) {
         row.costo_cero_valido = true;
       }
+
+      if (esFlexSinTarifa) {
+        row.falta_mensajeria_flex = true;
+        row.localidades_faltantes.push({
+          producto: item.producto,
+          localidad: venta.localidad || '—',
+          partido: venta.partido || '—',
+        });
+      }
     });
   });
 
@@ -227,7 +292,8 @@ function aggregateVentas(ventas = [], costosMap = {}) {
     row.facturacion = round(row.facturacion);
     row.cobro_neto = round(row.cobro_neto);
     row.costo_total = round(row.costo_total);
-    row.ganancia_pre_ads = round(row.cobro_neto - row.costo_total);
+    row.mensajeria_total = round(row.mensajeria_total);
+    row.ganancia_pre_ads = round(row.cobro_neto - row.costo_total - row.mensajeria_total);
     row.margen_pre_ads = row.facturacion > 0 ? round(row.ganancia_pre_ads / row.facturacion * 100, 2) : 0;
   });
 
@@ -312,6 +378,13 @@ function clasificarProducto(row) {
     return 'bloqueados';
   }
 
+  if (row.falta_mensajeria_flex) {
+    row.recomendacion = 'Revisar';
+    row.campania_sugerida = 'Revisar mensajería Flex';
+    row.motivo = 'Tiene ventas Flex sin tarifa de mensajería cargada en Supabase. Corregir localidad/partido antes de invertir.';
+    return 'revisar';
+  }
+
   if (row.facturacion <= 0 || row.ventas <= 0) {
     row.recomendacion = 'No anunciar';
     row.campania_sugerida = 'Sin ventas recientes';
@@ -322,7 +395,7 @@ function clasificarProducto(row) {
   if (row.ganancia_pre_ads <= 0 || row.margen_pre_ads < 10) {
     row.recomendacion = 'No anunciar';
     row.campania_sugerida = 'Margen insuficiente';
-    row.motivo = 'Margen bajo o ganancia negativa antes de publicidad.';
+    row.motivo = 'Margen bajo o ganancia negativa antes de publicidad, descontando costo y mensajería Flex.';
     return 'bloqueados';
   }
 
@@ -373,6 +446,7 @@ function armarCampanias(productosEscalar = [], productosTestear = []) {
 
   function add(producto, tipo) {
     const nombre = producto.campania_sugerida;
+
     if (!grupos[nombre]) {
       grupos[nombre] = {
         campania: nombre,
@@ -395,6 +469,7 @@ function armarCampanias(productosEscalar = [], productosTestear = []) {
       ventas: producto.ventas,
       margen_pre_ads: producto.margen_pre_ads,
       ganancia_pre_ads: producto.ganancia_pre_ads,
+      mensajeria_total: producto.mensajeria_total,
       roas_objetivo_sugerido: producto.roas_objetivo_sugerido,
       presupuesto_sugerido: producto.presupuesto_sugerido,
     });
@@ -421,7 +496,7 @@ function armarCampanias(productosEscalar = [], productosTestear = []) {
 
 function resumenAsistente({ escalar, testear, revisar, bloqueados, campanias }) {
   if (!escalar.length && !testear.length) {
-    return 'No conviene activar campañas todavía: primero corregí costos faltantes, márgenes bajos o productos sin demanda reciente.';
+    return 'No conviene activar campañas todavía: primero corregí costos faltantes, tarifas Flex faltantes, márgenes bajos o productos sin demanda reciente.';
   }
 
   const partes = [];
@@ -432,6 +507,7 @@ function resumenAsistente({ escalar, testear, revisar, bloqueados, campanias }) 
 
   if (escalar.length) partes.push(`${escalar.length} producto${escalar.length === 1 ? '' : 's'} aparecen aptos para escalar.`);
   if (testear.length) partes.push(`${testear.length} producto${testear.length === 1 ? '' : 's'} conviene testear con presupuesto chico.`);
+  if (revisar.length) partes.push(`${revisar.length} producto${revisar.length === 1 ? '' : 's'} requieren revisión antes de invertir.`);
   if (bloqueados.length) partes.push(`${bloqueados.length} producto${bloqueados.length === 1 ? '' : 's'} no deberían entrar a Ads todavía.`);
 
   return partes.join(' ');
@@ -450,14 +526,16 @@ export default async function handler(req, res) {
   try {
     const baseUrl = getBaseUrl(req);
 
-    const [ventasData, adsData, costosData] = await Promise.all([
+    const [ventasData, adsData, costosData, localidadesData] = await Promise.all([
       fetchJson(`${baseUrl}/api/ventas?account=${encodeURIComponent(account)}&desde=${encodeURIComponent(desde)}&hasta=${encodeURIComponent(hasta)}`, req),
       fetchJson(`${baseUrl}/api/ads?account=${encodeURIComponent(account)}&desde=${encodeURIComponent(desde)}&hasta=${encodeURIComponent(hasta)}`, req).catch(error => ({ error: error.message, items: [] })),
       fetchJson(`${baseUrl}/api/costos?cb=${Date.now()}`, req),
+      fetchJson(`${baseUrl}/api/costos?modulo=localidades&cb=${Date.now()}`, req).catch(error => ({ error: error.message, localidades: [], localidades_activas: [] })),
     ]);
 
     const costosMap = buildCostosMap(costosData.costos || {});
-    const agg = aggregateVentas(ventasData.orders || [], costosMap);
+    const localidadesMap = buildLocalidadesMap(localidadesData || {});
+    const agg = aggregateVentas(ventasData.orders || [], costosMap, localidadesMap);
 
     mergeAds(agg, adsData.items || []);
 
@@ -483,8 +561,10 @@ export default async function handler(req, res) {
 
     const totalFacturacion = round(productos.reduce((sum, p) => sum + num(p.facturacion), 0));
     const totalGananciaPreAds = round(productos.reduce((sum, p) => sum + num(p.ganancia_pre_ads), 0));
+    const totalMensajeria = round(productos.reduce((sum, p) => sum + num(p.mensajeria_total), 0));
     const totalAdsGasto = round(productos.reduce((sum, p) => sum + num(p.ads_gasto), 0));
     const totalAdsIngresos = round(productos.reduce((sum, p) => sum + num(p.ads_ingresos), 0));
+    const productosConTarifaFlexFaltante = productos.filter(p => p.falta_mensajeria_flex).length;
 
     res.status(200).json({
       ok: true,
@@ -492,16 +572,18 @@ export default async function handler(req, res) {
       account,
       desde,
       hasta,
-      nota: 'La recomendación descuenta costos de producto desde la planilla. La mensajería manual aún no se descuenta porque hoy vive en localStorage del navegador; próximo paso recomendado: pasar tarifas a Supabase.',
+      nota: 'La recomendación descuenta costos de producto desde la planilla y mensajería Flex desde Supabase. Las ventas no Flex no descuentan mensajería manual.',
       resumen: {
         productos_analizados: productos.length,
         productos_escalar: productosEscalar.length,
         productos_testear: productosTestear.length,
         productos_revisar: productosRevisar.length,
         productos_bloqueados: productosBloqueados.length,
+        productos_con_tarifa_flex_faltante: productosConTarifaFlexFaltante,
         campanias_recomendadas: campanias.length,
         facturacion: totalFacturacion,
         ganancia_pre_ads: totalGananciaPreAds,
+        mensajeria_flex_descontada: totalMensajeria,
         gasto_ads_historico: totalAdsGasto,
         ingresos_ads_historico: totalAdsIngresos,
         roas_ads_historico: totalAdsGasto > 0 ? round(totalAdsIngresos / totalAdsGasto, 2) : 0,
@@ -523,6 +605,10 @@ export default async function handler(req, res) {
         ads_error: adsData.error || null,
         ads_items: Array.isArray(adsData.items) ? adsData.items.length : 0,
         costos_cargados: Object.keys(costosData.costos || {}).length,
+        localidades_error: localidadesData.error || null,
+        localidades_cargadas: localidadesMap.rows.length,
+        mensajeria_flex_descontada: totalMensajeria,
+        productos_con_tarifa_flex_faltante: productosConTarifaFlexFaltante,
       },
     });
   } catch (error) {
