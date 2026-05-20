@@ -135,16 +135,6 @@ function sumarPayments(order) {
   });
 }
 
-function getCreditAmount(fee = {}) {
-  const rawAmount = toNumber(fee.amount);
-  const amount = Math.abs(rawAmount);
-
-  // En ML, los descuentos/bonificaciones pueden venir como crédito al vendedor.
-  // Si algún caso llega con signo negativo, lo respetamos como débito.
-  if (rawAmount < 0) return -amount;
-  return amount;
-}
-
 function clasificarBillingFees(billingInfo) {
   const result = {
     cargo_venta: 0,
@@ -164,7 +154,6 @@ function clasificarBillingFees(billingInfo) {
     const type = String(fee.type || '').toLowerCase();
     const detail = String(fee.detail || fee.name || fee.description || '').toLowerCase();
     const amount = absNumber(fee.amount);
-    const creditAmount = getCreditAmount(fee);
 
     if (!amount) return;
 
@@ -204,13 +193,28 @@ function clasificarBillingFees(billingInfo) {
       return;
     }
 
-    if (type.includes('discount') || detail.includes('descuento')) {
-      result.descuentos += creditAmount;
+    if (
+      type.includes('discount') ||
+      type.includes('coupon') ||
+      type.includes('rebate') ||
+      type.includes('subsidy') ||
+      detail.includes('descuento') ||
+      detail.includes('cupón') ||
+      detail.includes('cupon') ||
+      detail.includes('subsidio')
+    ) {
+      result.descuentos += amount;
       return;
     }
 
-    if (type.includes('bonus') || type.includes('bonification') || detail.includes('bonific')) {
-      result.bonificaciones += creditAmount;
+    if (
+      type.includes('bonus') ||
+      type.includes('bonification') ||
+      type.includes('compensation') ||
+      detail.includes('bonific') ||
+      detail.includes('compensaci')
+    ) {
+      result.bonificaciones += amount;
       return;
     }
 
@@ -259,16 +263,84 @@ function detectarFlex(shipData) {
     tags.includes('self_service');
 }
 
+function getFirstNumber(...values) {
+  for (const value of values) {
+    const parsed = toNumber(value);
+    if (parsed) return parsed;
+  }
+  return 0;
+}
+
 function getShipmentCost(shipData) {
   if (!shipData) return 0;
 
+  // Este es el costo real que paga el vendedor por el envío.
+  // En algunos casos ML muestra list_cost alto y cost/base_cost en $1 porque bonifica casi todo.
   return absNumber(
-    shipData.base_cost ||
-    shipData.shipping_option?.cost ||
-    shipData.shipping_option?.list_cost ||
-    shipData.cost_components?.loyal_discount ||
-    0
+    getFirstNumber(
+      shipData.base_cost,
+      shipData.cost,
+      shipData.shipping_option?.cost,
+      shipData.shipping_option?.base_cost,
+      shipData.cost_components?.seller_cost,
+      shipData.shipping_option?.cost_components?.seller_cost,
+      0
+    )
   );
+}
+
+function collectShipmentCreditsFromObject(obj, path = '') {
+  if (!obj || typeof obj !== 'object') return [];
+
+  const credits = [];
+  const creditKeyPattern = /(discount|bonification|bonus|compensation|subsidy|subsidized|loyal|promotion|promoted|gap)/i;
+  const ignoreKeyPattern = /(cost|price|amount|list|base|seller|buyer|paid|charge|fee|tax)/i;
+
+  Object.entries(obj).forEach(([key, value]) => {
+    const fullPath = path ? `${path}.${key}` : key;
+
+    if (typeof value === 'number' || typeof value === 'string') {
+      const numeric = absNumber(value);
+      if (!numeric) return;
+
+      if (creditKeyPattern.test(key) || creditKeyPattern.test(fullPath)) {
+        // Evitamos tomar montos genéricos de costo como crédito.
+        if (!ignoreKeyPattern.test(key) || creditKeyPattern.test(key)) {
+          credits.push({ key: fullPath, amount: numeric });
+        }
+      }
+      return;
+    }
+
+    if (value && typeof value === 'object') {
+      credits.push(...collectShipmentCreditsFromObject(value, fullPath));
+    }
+  });
+
+  return credits;
+}
+
+function getShipmentCredits(shipData) {
+  if (!shipData) return { total: 0, detail: [] };
+
+  const candidates = [
+    shipData.cost_components,
+    shipData.shipping_option?.cost_components,
+    shipData.shipping_option,
+  ];
+
+  const byKey = new Map();
+
+  candidates.forEach(candidate => {
+    collectShipmentCreditsFromObject(candidate).forEach(item => {
+      if (!byKey.has(item.key)) byKey.set(item.key, item.amount);
+    });
+  });
+
+  const detail = Array.from(byKey.entries()).map(([key, amount]) => ({ key, amount }));
+  const total = detail.reduce((sum, item) => sum + item.amount, 0);
+
+  return { total, detail };
 }
 
 function buildDateFrom(desde) {
@@ -331,7 +403,7 @@ function calcularCobroNeto({
   retenciones,
   otrosGastos,
 }) {
-  const creditosMl = toNumber(descuentos) + toNumber(bonificaciones);
+  const creditosMl = absNumber(descuentos) + absNumber(bonificaciones);
 
   const cobroNetoCalculado = precioTotal
     - cargoVenta
@@ -354,8 +426,8 @@ function calcularCobroNeto({
   }
 
   if (mp.mp_net_received_amount) {
-    // Mercado Pago suele traer net_received_amount sin sumar los créditos/bonificaciones que ML muestra
-    // como "Descuentos y bonificaciones" en el detalle de la venta. Por eso se suman acá.
+    // Mercado Pago suele traer net_received_amount sin sumar el crédito que ML muestra como
+    // "Descuentos y bonificaciones", especialmente cuando el envío queda casi todo bonificado.
     return {
       cobroNeto: mp.mp_net_received_amount + creditosMl,
       cobroNetoCalculado,
@@ -393,6 +465,7 @@ async function normalizarOrden(order, token, account) {
 
   const billing = clasificarBillingFees(billingInfo);
   const mp = resumirMercadoPago(mpPayments);
+  const shipmentCredits = getShipmentCredits(shipData);
 
   const precioTotal = toNumber(order.total_amount) || orderItems.precio_items || payments.transaction_amount;
 
@@ -400,7 +473,8 @@ async function normalizarOrden(order, token, account) {
   const cargoEnvioMl = billing.cargo_envio_ml || getShipmentCost(shipData) || 0;
   const cargoFinanciacion = billing.cargo_financiacion || 0;
   const descuentos = billing.descuentos || payments.coupon_amount || 0;
-  const bonificaciones = billing.bonificaciones || 0;
+  const bonificacionesEnvioMl = shipmentCredits.total;
+  const bonificaciones = billing.bonificaciones || bonificacionesEnvioMl || 0;
   const impuestos = billing.impuestos || payments.taxes_amount || mp.mp_taxes_total || 0;
   const retenciones = billing.retenciones || 0;
   const otrosGastos = billing.otros_gastos || 0;
@@ -454,6 +528,8 @@ async function normalizarOrden(order, token, account) {
     cargo_financiacion: cargoFinanciacion,
     descuentos,
     bonificaciones,
+    bonificaciones_envio_ml: bonificacionesEnvioMl,
+    bonificaciones_envio_ml_detalle: shipmentCredits.detail,
     creditos_ml: cobro.creditosMl,
     impuestos,
     retenciones,
