@@ -276,46 +276,18 @@ function detectarFlex(shipData) {
     tags.includes('self_service');
 }
 
-function flattenNumericFields(input, prefix = '', output = []) {
-  if (!input || typeof input !== 'object') return output;
-
-  Object.entries(input).forEach(([key, value]) => {
-    const path = prefix ? `${prefix}.${key}` : key;
-
-    if (typeof value === 'number') {
-      output.push({ path, value });
-      return;
-    }
-
-    if (typeof value === 'string') {
-      const parsed = Number(value);
-      if (Number.isFinite(parsed) && value.trim() !== '') {
-        output.push({ path, value: parsed });
-      }
-      return;
-    }
-
-    if (value && typeof value === 'object') {
-      flattenNumericFields(value, path, output);
-    }
-  });
-
-  return output;
+function sumDiscounts(discounts) {
+  if (!Array.isArray(discounts)) return 0;
+  return discounts.reduce((sum, discount) => sum + absNumber(discount.promoted_amount || discount.amount || discount.value), 0);
 }
 
-function pathHasAny(path, words) {
-  const clean = String(path || '').toLowerCase();
-  return words.some(word => clean.includes(word));
-}
-
-function getShipmentCost(shipData, shipmentCosts) {
-  // Costo real a cargo del vendedor. No usar gross_amount ni list_cost acá:
-  // esos son valores brutos/de lista, no el costo que descuenta ML al vendedor.
-  const exactCandidates = [
-    shipmentCosts?.sender?.cost,
-    shipmentCosts?.sender?.amount,
+function getShipmentSellerCost(shipData, shipmentCosts) {
+  // Costo real que paga el vendedor. Nunca usar gross_amount/list_cost acá.
+  const candidates = [
     shipmentCosts?.seller?.cost,
     shipmentCosts?.seller?.amount,
+    shipmentCosts?.sender?.cost,
+    shipmentCosts?.sender?.amount,
     Array.isArray(shipmentCosts?.senders) ? shipmentCosts.senders[0]?.cost : null,
     Array.isArray(shipmentCosts?.senders) ? shipmentCosts.senders[0]?.amount : null,
     shipData?.base_cost,
@@ -326,76 +298,52 @@ function getShipmentCost(shipData, shipmentCosts) {
     shipData?.shipping_option?.cost_components?.seller_cost,
   ];
 
-  const positives = exactCandidates
+  const positives = candidates
     .map(value => absNumber(value))
     .filter(value => value > 0 && value < 1000000);
 
-  if (positives.length) return Math.min(...positives);
-
-  return 0;
+  return positives.length ? Math.min(...positives) : 0;
 }
 
-function getShipmentListCost(shipData, shipmentCosts) {
-  const exactCandidates = [
-    shipmentCosts?.list_cost,
+function getShipmentGrossCost(shipData, shipmentCosts) {
+  const candidates = [
     shipmentCosts?.gross_amount,
+    shipmentCosts?.list_cost,
     shipmentCosts?.shipping_cost_before_discount,
     shipmentCosts?.shipping_option?.list_cost,
-    shipmentCosts?.cost_components?.list_cost,
-    shipmentCosts?.shipping_option?.cost_components?.list_cost,
     shipData?.shipping_option?.list_cost,
     shipData?.list_cost,
-    shipData?.cost_components?.list_cost,
-    shipData?.shipping_option?.cost_components?.list_cost,
   ];
 
-  const positives = exactCandidates
+  const positives = candidates
     .map(value => absNumber(value))
     .filter(value => value > 0 && value < 1000000);
 
-  if (positives.length) return Math.max(...positives);
-
-  return 0;
+  return positives.length ? Math.max(...positives) : 0;
 }
 
-function getShipmentBonusFromCosts(shipmentCosts) {
-  if (!shipmentCosts) return { total: 0, detail: [] };
+function getShipmentBonus({ shipData, shipmentCosts, sellerCost }) {
+  const grossCost = getShipmentGrossCost(shipData, shipmentCosts);
+  const receiverDiscount = sumDiscounts(shipmentCosts?.receiver?.discounts);
 
-  const creditWords = ['discount', 'bonification', 'bonus', 'compensation', 'subsidy', 'subsidized', 'promoted', 'promotion', 'loyal', 'gap'];
-  const ignoredWords = ['id', 'date', 'time', 'zip', 'quantity', 'rate', 'ratio', 'order_id', 'shipment_id', 'sender_id', 'seller_id', 'user_id', 'receiver_id'];
+  // Punto clave:
+  // - receiver.discounts es beneficio del comprador y NO se suma a la ganancia si el vendedor paga envío.
+  // - sólo lo tomamos como bonificación ML cuando el costo vendedor es 0 y ML cubre el envío completo.
+  // Esto repara Bariloche/Pontevedra sin romper Épico, donde sellerCost=0 y promoted_amount=6490.
+  const shouldUseReceiverDiscount = sellerCost === 0 && receiverDiscount > 0 && grossCost > 0;
 
-  const candidates = flattenNumericFields(shipmentCosts)
-    .filter(field => field.value > 0 && field.value < 1000000)
-    .filter(field => pathHasAny(field.path, creditWords))
-    .filter(field => !pathHasAny(field.path, ignoredWords));
+  const total = shouldUseReceiverDiscount ? receiverDiscount : 0;
+  const detail = shouldUseReceiverDiscount
+    ? [{ key: 'receiver.discounts.promoted_amount_seller_cost_zero', amount: receiverDiscount }]
+    : [];
 
-  if (!candidates.length) return { total: 0, detail: [] };
-
-  const byPath = new Map();
-  candidates.forEach(field => {
-    if (!byPath.has(field.path)) byPath.set(field.path, field.value);
-  });
-
-  const detail = Array.from(byPath.entries()).map(([key, amount]) => ({ key, amount }));
-  const total = detail.reduce((sum, item) => sum + absNumber(item.amount), 0);
-
-  return { total, detail };
-}
-
-function getShipmentBonus({ shipData, shipmentCosts, cargoEnvioMl }) {
-  const fromCosts = getShipmentBonusFromCosts(shipmentCosts);
-  const listCost = getShipmentListCost(shipData, shipmentCosts);
-  const sellerCost = absNumber(cargoEnvioMl || getShipmentCost(shipData, shipmentCosts));
-
-  let total = fromCosts.total;
-  const detail = [...fromCosts.detail];
-
-  if (!total && listCost > 0 && sellerCost <= 10) {
-    total = listCost;
-    detail.push({ key: 'list_cost_as_bonus_fallback', amount: listCost });
-  }
-
-  return { total, detail, list_cost: listCost, seller_cost: sellerCost };
+  return {
+    total,
+    detail,
+    gross_cost: grossCost,
+    seller_cost: sellerCost,
+    receiver_discount: receiverDiscount,
+  };
 }
 
 function buildDateFrom(desde) {
@@ -446,8 +394,6 @@ async function buscarOrdenesPaginadas(token, dateFrom, dateTo) {
 }
 
 function calcularCobroNeto({
-  billingInfo,
-  mp,
   precioTotal,
   cargoVenta,
   cargoEnvioMl,
@@ -458,54 +404,17 @@ function calcularCobroNeto({
   retenciones,
   otrosGastos,
 }) {
-  const creditosMl = absNumber(descuentos) + absNumber(bonificaciones);
-
-  const cobroNetoCalculado = precioTotal
+  return round2(
+    precioTotal
     - cargoVenta
     - cargoEnvioMl
     - cargoFinanciacion
-    + creditosMl
+    - descuentos
     - impuestos
     - retenciones
-    - otrosGastos;
-
-  const billingNetAmount = toNumber(billingInfo?.net_amount);
-
-  // Si tenemos detalle de ML con envío, bonificación o impuestos, la fórmula reproduce mejor
-  // el panel de Mercado Libre que el net_received_amount de Mercado Pago.
-  if (creditosMl || cargoEnvioMl || impuestos || retenciones || cargoFinanciacion || otrosGastos) {
-    return {
-      cobroNeto: cobroNetoCalculado,
-      cobroNetoCalculado,
-      creditosMl,
-      fuente: 'calculado_detalle_ml',
-    };
-  }
-
-  if (billingNetAmount) {
-    return {
-      cobroNeto: billingNetAmount,
-      cobroNetoCalculado,
-      creditosMl,
-      fuente: 'billing_info_net_amount',
-    };
-  }
-
-  if (mp.mp_net_received_amount) {
-    return {
-      cobroNeto: mp.mp_net_received_amount,
-      cobroNetoCalculado,
-      creditosMl,
-      fuente: 'mercadopago_net',
-    };
-  }
-
-  return {
-    cobroNeto: cobroNetoCalculado,
-    cobroNetoCalculado,
-    creditosMl,
-    fuente: 'calculado',
-  };
+    - otrosGastos
+    + bonificaciones
+  );
 }
 
 function prorratear(value, item, totalOrden, itemCount) {
@@ -513,30 +422,82 @@ function prorratear(value, item, totalOrden, itemCount) {
   return round2(toNumber(value) * porcentaje);
 }
 
-function construirFilasPorItem({
-  order,
-  items,
-  orderItems,
-  payments,
-  account,
-  token,
-  shipData,
-  shipmentCosts,
-  billing,
-  mp,
-  cobro,
-  precioTotal,
-  cargoVenta,
-  cargoEnvioMl,
-  cargoFinanciacion,
-  descuentos,
-  bonificaciones,
-  bonificacionesEnvioMl,
-  shipmentBonus,
-  impuestos,
-  retenciones,
-  otrosGastos,
-}) {
+async function normalizarOrden(order, token, account) {
+  const items = normalizeOrderItems(order);
+  const orderItems = sumarOrderItems(order);
+  const payments = sumarPayments(order);
+  const shipping = order.shipping || {};
+
+  const billingInfoPromise = fetchJsonSafe(`${ML_API}/orders/${order.id}/billing_info`, token);
+  const shipmentPromise = shipping.id ? fetchJsonSafe(`${ML_API}/shipments/${shipping.id}`, token) : Promise.resolve(null);
+  const shipmentCostsPromise = shipping.id ? fetchJsonSafe(`${ML_API}/shipments/${shipping.id}/costs`, token) : Promise.resolve(null);
+  const mpPromises = payments.payment_ids.map(paymentId => fetchJsonSafe(`${MP_API}/v1/payments/${paymentId}`, token));
+
+  const [billingInfo, shipData, shipmentCosts, ...mpPayments] = await Promise.all([
+    billingInfoPromise,
+    shipmentPromise,
+    shipmentCostsPromise,
+    ...mpPromises,
+  ]);
+
+  const billing = clasificarBillingFees(billingInfo);
+  const mp = resumirMercadoPago(mpPayments);
+  const precioTotal = toNumber(order.total_amount) || orderItems.precio_items || payments.transaction_amount;
+  const sellerCost = billing.cargo_envio_ml || getShipmentSellerCost(shipData, shipmentCosts) || 0;
+  const shipmentBonus = getShipmentBonus({ shipData, shipmentCosts, sellerCost });
+
+  const orderData = {
+    order,
+    items,
+    orderItems,
+    payments,
+    account,
+    token,
+    shipData,
+    shipmentCosts,
+    billing,
+    mp,
+    precioTotal,
+    cargoVenta: billing.cargo_venta || payments.marketplace_fee || orderItems.sale_fee || mp.mp_charges_fee_total || mp.mp_fee_details_total || 0,
+    cargoEnvioMl: sellerCost,
+    cargoFinanciacion: billing.cargo_financiacion || 0,
+    descuentos: billing.descuentos || payments.coupon_amount || 0,
+    bonificaciones: billing.bonificaciones || shipmentBonus.total || 0,
+    bonificacionesEnvioMl: shipmentBonus.total || 0,
+    shipmentBonus,
+    impuestos: billing.impuestos || payments.taxes_amount || mp.mp_taxes_total || 0,
+    retenciones: billing.retenciones || 0,
+    otrosGastos: billing.otros_gastos || 0,
+  };
+
+  return construirFilasPorItem(orderData);
+}
+
+function construirFilasPorItem(data) {
+  const {
+    order,
+    items,
+    orderItems,
+    payments,
+    account,
+    token,
+    shipData,
+    shipmentCosts,
+    billing,
+    mp,
+    precioTotal,
+    cargoVenta,
+    cargoEnvioMl,
+    cargoFinanciacion,
+    descuentos,
+    bonificaciones,
+    bonificacionesEnvioMl,
+    shipmentBonus,
+    impuestos,
+    retenciones,
+    otrosGastos,
+  } = data;
+
   const shipping = order.shipping || {};
   const localidad = shipData?.receiver_address?.city?.name || '—';
   const partido = shipData?.receiver_address?.state?.name || '—';
@@ -544,6 +505,7 @@ function construirFilasPorItem({
   const sellerId = order.seller?.id || token.user_id || null;
   const cantidadItemsDistintos = items.length;
   const esOrdenMultiItem = cantidadItemsDistintos > 1;
+  const comprador = order.buyer?.nickname || '—';
 
   return items.map(item => {
     const itemCargoVenta = round2(item.sale_fee || prorratear(cargoVenta, item, precioTotal, cantidadItemsDistintos));
@@ -555,22 +517,17 @@ function construirFilasPorItem({
     const itemImpuestos = prorratear(impuestos, item, precioTotal, cantidadItemsDistintos);
     const itemRetenciones = prorratear(retenciones, item, precioTotal, cantidadItemsDistintos);
     const itemOtrosGastos = prorratear(otrosGastos, item, precioTotal, cantidadItemsDistintos);
-
-    const itemCobroNetoCalculado = round2(
-      item.precio_total_item
-      - itemCargoVenta
-      - itemCargoEnvioMl
-      - itemCargoFinanciacion
-      + itemDescuentos
-      + itemBonificaciones
-      - itemImpuestos
-      - itemRetenciones
-      - itemOtrosGastos
-    );
-
-    const itemCobroNeto = esOrdenMultiItem
-      ? itemCobroNetoCalculado
-      : round2(cobro.cobroNeto);
+    const itemCobroNeto = calcularCobroNeto({
+      precioTotal: item.precio_total_item,
+      cargoVenta: itemCargoVenta,
+      cargoEnvioMl: itemCargoEnvioMl,
+      cargoFinanciacion: itemCargoFinanciacion,
+      descuentos: itemDescuentos,
+      bonificaciones: itemBonificaciones,
+      impuestos: itemImpuestos,
+      retenciones: itemRetenciones,
+      otrosGastos: itemOtrosGastos,
+    });
 
     return {
       id: esOrdenMultiItem ? `${order.id}-${item.index}` : order.id,
@@ -602,8 +559,8 @@ function construirFilasPorItem({
       bonificaciones_envio_ml: itemBonificacionesEnvio,
       bonificaciones_envio_ml_total_orden: round2(bonificacionesEnvioMl),
       bonificaciones_envio_ml_detalle: shipmentBonus.detail,
-      shipping_list_cost: prorratear(shipmentBonus.list_cost, item, precioTotal, cantidadItemsDistintos),
-      shipping_list_cost_total_orden: round2(shipmentBonus.list_cost),
+      shipping_list_cost: prorratear(shipmentBonus.gross_cost, item, precioTotal, cantidadItemsDistintos),
+      shipping_list_cost_total_orden: round2(shipmentBonus.gross_cost),
       shipping_seller_cost: itemCargoEnvioMl,
       shipping_seller_cost_total_orden: round2(shipmentBonus.seller_cost),
       shipment_costs_raw: shipmentCosts || null,
@@ -612,9 +569,8 @@ function construirFilasPorItem({
       retenciones: itemRetenciones,
       otros_gastos: itemOtrosGastos,
       cobro_neto: itemCobroNeto,
-      cobro_neto_calculado: itemCobroNetoCalculado,
-      cobro_neto_total_orden: round2(cobro.cobroNeto),
-      cobro_neto_fuente: esOrdenMultiItem ? `${cobro.fuente}_item_prorrateado` : cobro.fuente,
+      cobro_neto_calculado: itemCobroNeto,
+      cobro_neto_fuente: 'calculado_detalle_ml',
 
       mp_fee_details_total: prorratear(mp.mp_fee_details_total, item, precioTotal, cantidadItemsDistintos),
       mp_charges_fee_total: prorratear(mp.mp_charges_fee_total, item, precioTotal, cantidadItemsDistintos),
@@ -626,7 +582,9 @@ function construirFilasPorItem({
       localidad,
       partido,
       estado: order.status,
-      comprador: order.buyer?.nickname || '—',
+      comprador,
+      comprador_alias: comprador,
+      buyer_nickname: comprador,
       payment_ids: payments.payment_ids,
       detalle_fees: billing.detalle_fees,
 
@@ -637,79 +595,128 @@ function construirFilasPorItem({
   });
 }
 
-async function normalizarOrden(order, token, account) {
-  const items = normalizeOrderItems(order);
-  const shipping = order.shipping || {};
+function getPackageKey(row) {
+  const account = row.cuenta_key || row.account || 'account';
+  if (row.envio_id) return `${account}:shipment:${row.envio_id}`;
+  if (row.pack_id) return `${account}:pack:${row.pack_id}`;
+  return `${account}:order:${row.order_id || row.id}`;
+}
 
-  const orderItems = sumarOrderItems(order);
-  const payments = sumarPayments(order);
+function getSharedTotal(group, field, totalFields = []) {
+  const totalCandidates = [];
 
-  const billingInfoPromise = fetchJsonSafe(`${ML_API}/orders/${order.id}/billing_info`, token);
-  const shipmentPromise = shipping.id ? fetchJsonSafe(`${ML_API}/shipments/${shipping.id}`, token) : Promise.resolve(null);
-  const shipmentCostsPromise = shipping.id ? fetchJsonSafe(`${ML_API}/shipments/${shipping.id}/costs`, token) : Promise.resolve(null);
-  const mpPromises = payments.payment_ids.map(paymentId => fetchJsonSafe(`${MP_API}/v1/payments/${paymentId}`, token));
-
-  const [billingInfo, shipData, shipmentCosts, ...mpPayments] = await Promise.all([
-    billingInfoPromise,
-    shipmentPromise,
-    shipmentCostsPromise,
-    ...mpPromises,
-  ]);
-
-  const billing = clasificarBillingFees(billingInfo);
-  const mp = resumirMercadoPago(mpPayments);
-
-  const precioTotal = toNumber(order.total_amount) || orderItems.precio_items || payments.transaction_amount;
-
-  const cargoVenta = billing.cargo_venta || payments.marketplace_fee || orderItems.sale_fee || mp.mp_charges_fee_total || mp.mp_fee_details_total || 0;
-  const cargoEnvioMl = billing.cargo_envio_ml || getShipmentCost(shipData, shipmentCosts) || 0;
-  const shipmentBonus = getShipmentBonus({ shipData, shipmentCosts, cargoEnvioMl });
-  const cargoFinanciacion = billing.cargo_financiacion || 0;
-  const descuentos = billing.descuentos || payments.coupon_amount || 0;
-  const bonificacionesEnvioMl = shipmentBonus.total;
-  const bonificaciones = billing.bonificaciones || bonificacionesEnvioMl || 0;
-  const impuestos = billing.impuestos || payments.taxes_amount || mp.mp_taxes_total || 0;
-  const retenciones = billing.retenciones || 0;
-  const otrosGastos = billing.otros_gastos || 0;
-
-  const cobro = calcularCobroNeto({
-    billingInfo,
-    mp,
-    precioTotal,
-    cargoVenta,
-    cargoEnvioMl,
-    cargoFinanciacion,
-    descuentos,
-    bonificaciones,
-    impuestos,
-    retenciones,
-    otrosGastos,
+  group.forEach(row => {
+    totalFields.forEach(name => {
+      const value = absNumber(row[name]);
+      if (value > 0 && value < 1000000) totalCandidates.push(value);
+    });
   });
 
-  return construirFilasPorItem({
-    order,
-    items,
-    orderItems,
-    payments,
-    account,
-    token,
-    shipData,
-    shipmentCosts,
-    billing,
-    mp,
-    cobro,
-    precioTotal,
-    cargoVenta,
-    cargoEnvioMl,
-    cargoFinanciacion,
-    descuentos,
-    bonificaciones,
-    bonificacionesEnvioMl,
-    shipmentBonus,
-    impuestos,
-    retenciones,
-    otrosGastos,
+  if (totalCandidates.length) return Math.max(...totalCandidates);
+
+  const values = group.map(row => absNumber(row[field])).filter(value => value > 0 && value < 1000000);
+  if (!values.length) return 0;
+
+  const max = Math.max(...values);
+  const sum = values.reduce((a, b) => a + b, 0);
+  const allEqual = values.every(value => Math.abs(value - values[0]) < 1);
+
+  if (allEqual && sum > max * 1.4) return max;
+  return 0;
+}
+
+function splitSharedField(group, field, totalFields = []) {
+  if (group.length <= 1) return false;
+
+  const totalPrecio = group.reduce((sum, row) => sum + toNumber(row.precio_total), 0);
+  if (!totalPrecio) return false;
+
+  const currentSum = group.reduce((sum, row) => sum + absNumber(row[field]), 0);
+  const sharedTotal = getSharedTotal(group, field, totalFields);
+
+  if (!sharedTotal || currentSum <= sharedTotal + 1) return false;
+
+  group.forEach(row => {
+    const ratio = toNumber(row.precio_total) / totalPrecio;
+    row[field] = round2(sharedTotal * ratio);
+    row[`${field}_total_pedido`] = round2(sharedTotal);
+    row.cargo_compartido_prorrateado = true;
   });
+
+  return true;
+}
+
+function recalcularRowCobro(row) {
+  row.cobro_neto = calcularCobroNeto({
+    precioTotal: toNumber(row.precio_total),
+    cargoVenta: toNumber(row.cargo_venta || row.ml_fee),
+    cargoEnvioMl: toNumber(row.cargo_envio_ml),
+    cargoFinanciacion: toNumber(row.cargo_financiacion),
+    descuentos: toNumber(row.descuentos),
+    bonificaciones: toNumber(row.bonificaciones),
+    impuestos: toNumber(row.impuestos),
+    retenciones: toNumber(row.retenciones),
+    otrosGastos: toNumber(row.otros_gastos),
+  });
+  row.cobro_neto_calculado = row.cobro_neto;
+  row.cobro_neto_fuente = row.cargo_compartido_prorrateado
+    ? 'calculado_detalle_ml_pack_prorrateado'
+    : row.cobro_neto_fuente || 'calculado_detalle_ml';
+}
+
+function normalizarPaquetesCompartidos(rows) {
+  const groups = new Map();
+
+  rows.forEach(row => {
+    const key = getPackageKey(row);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(row);
+  });
+
+  groups.forEach(group => {
+    if (group.length <= 1) return;
+
+    group.forEach(row => {
+      row.es_paquete_multi_producto = true;
+      row.productos_en_pedido = group.length;
+      row.pedido_key = getPackageKey(row);
+    });
+
+    splitSharedField(group, 'cargo_envio_ml', [
+      'cargo_envio_ml_total_orden',
+      'cargo_envio_ml_total_pedido',
+      'shipping_seller_cost_total_orden',
+    ]);
+
+    splitSharedField(group, 'bonificaciones', [
+      'bonificaciones_envio_ml_total_orden',
+      'bonificaciones_envio_ml_total_pedido',
+    ]);
+
+    splitSharedField(group, 'bonificaciones_envio_ml', [
+      'bonificaciones_envio_ml_total_orden',
+      'bonificaciones_envio_ml_total_pedido',
+    ]);
+
+    splitSharedField(group, 'descuentos', ['descuentos_total_orden', 'descuentos_total_pedido']);
+    splitSharedField(group, 'cargo_financiacion', ['cargo_financiacion_total_orden', 'cargo_financiacion_total_pedido']);
+    splitSharedField(group, 'otros_gastos', ['otros_gastos_total_orden', 'otros_gastos_total_pedido']);
+
+    // Impuestos: normalmente vienen por orden. Sólo se prorratean si están duplicados idénticos.
+    splitSharedField(group, 'impuestos', ['impuestos_total_orden', 'impuestos_total_pedido']);
+
+    group.forEach(recalcularRowCobro);
+
+    const totalCobro = round2(group.reduce((sum, row) => sum + toNumber(row.cobro_neto), 0));
+    const totalEnvio = round2(group.reduce((sum, row) => sum + toNumber(row.cargo_envio_ml), 0));
+
+    group.forEach(row => {
+      row.cobro_neto_total_pedido = totalCobro;
+      row.cargo_envio_ml_total_pedido = totalEnvio;
+    });
+  });
+
+  return rows;
 }
 
 function deduplicarOrdenes(orders) {
@@ -718,7 +725,6 @@ function deduplicarOrdenes(orders) {
 
   for (const order of orders) {
     const key = String(order.id || order.order_id || '');
-
     if (!key) continue;
 
     if (!byId.has(key)) {
@@ -764,8 +770,7 @@ export default async function handler(req, res) {
 
   try {
     const accounts = {};
-    const allOrdersRaw = [];
-    const orderCounters = {};
+    const allRowsRaw = [];
 
     for (const accountKey of requestedAccounts) {
       const token = await getValidToken(req, res, accountKey);
@@ -784,8 +789,6 @@ export default async function handler(req, res) {
         error: null,
       };
 
-      orderCounters[accountKey] = new Set();
-
       if (!token) continue;
 
       try {
@@ -797,20 +800,18 @@ export default async function handler(req, res) {
         accounts[accountKey].truncated = searchData.truncated;
         accounts[accountKey].max_orders = searchData.max_orders;
 
-        const normalizedOrderGroups = await Promise.all(
+        const normalizedGroups = await Promise.all(
           searchData.results.map(order => normalizarOrden(order, token, accountKey))
         );
 
-        normalizedOrderGroups.flat().forEach(row => {
-          allOrdersRaw.push(row);
-          if (row.order_id) orderCounters[accountKey].add(String(row.order_id));
-        });
+        normalizedGroups.flat().forEach(row => allRowsRaw.push(row));
       } catch (accountError) {
         accounts[accountKey].error = accountError.message;
       }
     }
 
-    const dedupeResult = deduplicarOrdenes(allOrdersRaw);
+    const rowsWithSharedPackagesFixed = normalizarPaquetesCompartidos(allRowsRaw);
+    const dedupeResult = deduplicarOrdenes(rowsWithSharedPackagesFixed);
     const allOrders = dedupeResult.orders;
 
     allOrders.sort((a, b) => {
@@ -834,7 +835,7 @@ export default async function handler(req, res) {
       total_accounts: Object.keys(accounts).length,
       total: Object.values(accounts).reduce((s, a) => s + (a.total || 0), 0),
       total_orders: Object.values(accounts).reduce((s, a) => s + (a.total_orders || 0), 0),
-      returned_raw: allOrdersRaw.length,
+      returned_raw: allRowsRaw.length,
       returned: allOrders.length,
       returned_orders: new Set(allOrders.map(order => String(order.order_id))).size,
       duplicated_removed: dedupeResult.duplicados.length,
