@@ -22,6 +22,10 @@ function absNumber(value) {
   return Math.abs(toNumber(value));
 }
 
+function round2(value) {
+  return Math.round(toNumber(value) * 100) / 100;
+}
+
 async function fetchJson(url, token) {
   const response = await fetch(url, {
     headers: { Authorization: `Bearer ${token.access_token}` },
@@ -304,14 +308,6 @@ function pathHasAny(path, words) {
   return words.some(word => clean.includes(word));
 }
 
-function getFirstNumber(...values) {
-  for (const value of values) {
-    const parsed = toNumber(value);
-    if (parsed) return parsed;
-  }
-  return 0;
-}
-
 function getShipmentCost(shipData, shipmentCosts) {
   // Costo real a cargo del vendedor. No usar gross_amount ni list_cost acá:
   // esos son valores brutos/de lista, no el costo que descuenta ML al vendedor.
@@ -512,10 +508,137 @@ function calcularCobroNeto({
   };
 }
 
+function prorratear(value, item, totalOrden, itemCount) {
+  const porcentaje = item?.porcentaje_sobre_orden || (itemCount ? 1 / itemCount : 1);
+  return round2(toNumber(value) * porcentaje);
+}
+
+function construirFilasPorItem({
+  order,
+  items,
+  orderItems,
+  payments,
+  account,
+  token,
+  shipData,
+  shipmentCosts,
+  billing,
+  mp,
+  cobro,
+  precioTotal,
+  cargoVenta,
+  cargoEnvioMl,
+  cargoFinanciacion,
+  descuentos,
+  bonificaciones,
+  bonificacionesEnvioMl,
+  shipmentBonus,
+  impuestos,
+  retenciones,
+  otrosGastos,
+}) {
+  const shipping = order.shipping || {};
+  const localidad = shipData?.receiver_address?.city?.name || '—';
+  const partido = shipData?.receiver_address?.state?.name || '—';
+  const esFlex = detectarFlex(shipData);
+  const sellerId = order.seller?.id || token.user_id || null;
+  const cantidadItemsDistintos = items.length;
+  const esOrdenMultiItem = cantidadItemsDistintos > 1;
+
+  return items.map(item => {
+    const itemCargoVenta = round2(item.sale_fee || prorratear(cargoVenta, item, precioTotal, cantidadItemsDistintos));
+    const itemCargoEnvioMl = prorratear(cargoEnvioMl, item, precioTotal, cantidadItemsDistintos);
+    const itemCargoFinanciacion = prorratear(cargoFinanciacion, item, precioTotal, cantidadItemsDistintos);
+    const itemDescuentos = prorratear(descuentos, item, precioTotal, cantidadItemsDistintos);
+    const itemBonificaciones = prorratear(bonificaciones, item, precioTotal, cantidadItemsDistintos);
+    const itemBonificacionesEnvio = prorratear(bonificacionesEnvioMl, item, precioTotal, cantidadItemsDistintos);
+    const itemImpuestos = prorratear(impuestos, item, precioTotal, cantidadItemsDistintos);
+    const itemRetenciones = prorratear(retenciones, item, precioTotal, cantidadItemsDistintos);
+    const itemOtrosGastos = prorratear(otrosGastos, item, precioTotal, cantidadItemsDistintos);
+
+    const itemCobroNetoCalculado = round2(
+      item.precio_total_item
+      - itemCargoVenta
+      - itemCargoEnvioMl
+      - itemCargoFinanciacion
+      + itemDescuentos
+      + itemBonificaciones
+      - itemImpuestos
+      - itemRetenciones
+      - itemOtrosGastos
+    );
+
+    const itemCobroNeto = esOrdenMultiItem
+      ? itemCobroNetoCalculado
+      : round2(cobro.cobroNeto);
+
+    return {
+      id: esOrdenMultiItem ? `${order.id}-${item.index}` : order.id,
+      order_id: order.id,
+      pack_id: order.pack_id || null,
+      seller_id: sellerId,
+      fecha: order.date_created?.slice(0, 10),
+      producto: item.producto,
+      producto_principal: item.producto,
+      item_id: item.item_id,
+      item_id_ml: item.item_id_ml,
+      sku: item.sku,
+      cantidad: item.cantidad,
+      cantidad_items_distintos: cantidadItemsDistintos,
+      cantidad_unidades_total: orderItems.cantidad || item.cantidad || 1,
+      es_orden_multi_item: esOrdenMultiItem,
+      items: [item],
+      precio_unitario: item.precio_unitario,
+      precio_total: round2(item.precio_total_item),
+      precio_lista: round2(item.precio_lista_item),
+
+      cargo_venta: itemCargoVenta,
+      ml_fee: itemCargoVenta,
+      cargo_envio_ml: itemCargoEnvioMl,
+      cargo_envio_ml_total_orden: round2(cargoEnvioMl),
+      cargo_financiacion: itemCargoFinanciacion,
+      descuentos: itemDescuentos,
+      bonificaciones: itemBonificaciones,
+      bonificaciones_envio_ml: itemBonificacionesEnvio,
+      bonificaciones_envio_ml_total_orden: round2(bonificacionesEnvioMl),
+      bonificaciones_envio_ml_detalle: shipmentBonus.detail,
+      shipping_list_cost: prorratear(shipmentBonus.list_cost, item, precioTotal, cantidadItemsDistintos),
+      shipping_list_cost_total_orden: round2(shipmentBonus.list_cost),
+      shipping_seller_cost: itemCargoEnvioMl,
+      shipping_seller_cost_total_orden: round2(shipmentBonus.seller_cost),
+      shipment_costs_raw: shipmentCosts || null,
+      creditos_ml: round2(itemDescuentos + itemBonificaciones),
+      impuestos: itemImpuestos,
+      retenciones: itemRetenciones,
+      otros_gastos: itemOtrosGastos,
+      cobro_neto: itemCobroNeto,
+      cobro_neto_calculado: itemCobroNetoCalculado,
+      cobro_neto_total_orden: round2(cobro.cobroNeto),
+      cobro_neto_fuente: esOrdenMultiItem ? `${cobro.fuente}_item_prorrateado` : cobro.fuente,
+
+      mp_fee_details_total: prorratear(mp.mp_fee_details_total, item, precioTotal, cantidadItemsDistintos),
+      mp_charges_fee_total: prorratear(mp.mp_charges_fee_total, item, precioTotal, cantidadItemsDistintos),
+      mp_net_received_amount: prorratear(mp.mp_net_received_amount, item, precioTotal, cantidadItemsDistintos),
+      mp_shipping_amount: prorratear(mp.mp_shipping_amount, item, precioTotal, cantidadItemsDistintos),
+
+      es_flex: esFlex,
+      envio_id: shipping.id || null,
+      localidad,
+      partido,
+      estado: order.status,
+      comprador: order.buyer?.nickname || '—',
+      payment_ids: payments.payment_ids,
+      detalle_fees: billing.detalle_fees,
+
+      account,
+      cuenta: getAccountLabel(account),
+      cuenta_key: account,
+    };
+  });
+}
+
 async function normalizarOrden(order, token, account) {
   const items = normalizeOrderItems(order);
-  const firstItem = order.order_items?.[0] || {};
-  const firstNormalizedItem = items[0] || null;
   const shipping = order.shipping || {};
 
   const orderItems = sumarOrderItems(order);
@@ -563,73 +686,30 @@ async function normalizarOrden(order, token, account) {
     otrosGastos,
   });
 
-  const localidad = shipData?.receiver_address?.city?.name || '—';
-  const partido = shipData?.receiver_address?.state?.name || '—';
-  const esFlex = detectarFlex(shipData);
-  const sellerId = order.seller?.id || token.user_id || null;
-  const cantidadItemsDistintos = items.length;
-  const esOrdenMultiItem = cantidadItemsDistintos > 1;
-  const productoDisplay = esOrdenMultiItem
-    ? `${firstNormalizedItem?.producto || firstItem.item?.title || '—'} + ${cantidadItemsDistintos - 1} producto${cantidadItemsDistintos - 1 === 1 ? '' : 's'}`
-    : (firstNormalizedItem?.producto || firstItem.item?.title || '—');
-
-  return {
-    id: order.id,
-    order_id: order.id,
-    pack_id: order.pack_id || null,
-    seller_id: sellerId,
-    fecha: order.date_created?.slice(0, 10),
-    producto: productoDisplay,
-    producto_principal: firstNormalizedItem?.producto || firstItem.item?.title || '—',
-    item_id: firstNormalizedItem?.item_id || firstItem.item?.id || null,
-    item_id_ml: firstNormalizedItem?.item_id || firstItem.item?.id || null,
-    sku: firstNormalizedItem?.sku || getSkuFromOrderItem(firstItem),
-    cantidad: orderItems.cantidad || firstItem.quantity || 1,
-    cantidad_items_distintos: cantidadItemsDistintos,
-    cantidad_unidades_total: orderItems.cantidad || 1,
-    es_orden_multi_item: esOrdenMultiItem,
+  return construirFilasPorItem({
+    order,
     items,
-    precio_unitario: toNumber(firstItem.unit_price),
-    precio_total: precioTotal,
-    precio_lista: orderItems.precio_lista,
-
-    cargo_venta: cargoVenta,
-    ml_fee: cargoVenta,
-    cargo_envio_ml: cargoEnvioMl,
-    cargo_financiacion: cargoFinanciacion,
+    orderItems,
+    payments,
+    account,
+    token,
+    shipData,
+    shipmentCosts,
+    billing,
+    mp,
+    cobro,
+    precioTotal,
+    cargoVenta,
+    cargoEnvioMl,
+    cargoFinanciacion,
     descuentos,
     bonificaciones,
-    bonificaciones_envio_ml: bonificacionesEnvioMl,
-    bonificaciones_envio_ml_detalle: shipmentBonus.detail,
-    shipping_list_cost: shipmentBonus.list_cost,
-    shipping_seller_cost: shipmentBonus.seller_cost,
-    shipment_costs_raw: shipmentCosts || null,
-    creditos_ml: cobro.creditosMl,
+    bonificacionesEnvioMl,
+    shipmentBonus,
     impuestos,
     retenciones,
-    otros_gastos: otrosGastos,
-    cobro_neto: cobro.cobroNeto,
-    cobro_neto_calculado: cobro.cobroNetoCalculado,
-    cobro_neto_fuente: cobro.fuente,
-
-    mp_fee_details_total: mp.mp_fee_details_total,
-    mp_charges_fee_total: mp.mp_charges_fee_total,
-    mp_net_received_amount: mp.mp_net_received_amount,
-    mp_shipping_amount: mp.mp_shipping_amount,
-
-    es_flex: esFlex,
-    envio_id: shipping.id || null,
-    localidad,
-    partido,
-    estado: order.status,
-    comprador: order.buyer?.nickname || '—',
-    payment_ids: payments.payment_ids,
-    detalle_fees: billing.detalle_fees,
-
-    account,
-    cuenta: getAccountLabel(account),
-    cuenta_key: account,
-  };
+    otrosGastos,
+  });
 }
 
 function deduplicarOrdenes(orders) {
@@ -649,7 +729,9 @@ function deduplicarOrdenes(orders) {
     const existente = byId.get(key);
 
     duplicados.push({
-      order_id: key,
+      id: key,
+      order_id: order.order_id,
+      pack_id: order.pack_id,
       primera_cuenta: existente.cuenta,
       primera_cuenta_key: existente.cuenta_key,
       segunda_cuenta: order.cuenta,
@@ -683,6 +765,7 @@ export default async function handler(req, res) {
   try {
     const accounts = {};
     const allOrdersRaw = [];
+    const orderCounters = {};
 
     for (const accountKey of requestedAccounts) {
       const token = await getValidToken(req, res, accountKey);
@@ -693,11 +776,15 @@ export default async function handler(req, res) {
         connected: !!token,
         user_id: token?.user_id || null,
         total: 0,
+        total_orders: 0,
         returned: 0,
+        returned_orders: 0,
         returned_raw: 0,
         truncated: false,
         error: null,
       };
+
+      orderCounters[accountKey] = new Set();
 
       if (!token) continue;
 
@@ -705,15 +792,19 @@ export default async function handler(req, res) {
         const searchData = await buscarOrdenesPaginadas(token, dateFrom, dateTo);
 
         accounts[accountKey].total = searchData.total;
+        accounts[accountKey].total_orders = searchData.total;
         accounts[accountKey].returned_raw = searchData.returned;
         accounts[accountKey].truncated = searchData.truncated;
         accounts[accountKey].max_orders = searchData.max_orders;
 
-        const normalizedOrders = await Promise.all(
+        const normalizedOrderGroups = await Promise.all(
           searchData.results.map(order => normalizarOrden(order, token, accountKey))
         );
 
-        allOrdersRaw.push(...normalizedOrders);
+        normalizedOrderGroups.flat().forEach(row => {
+          allOrdersRaw.push(row);
+          if (row.order_id) orderCounters[accountKey].add(String(row.order_id));
+        });
       } catch (accountError) {
         accounts[accountKey].error = accountError.message;
       }
@@ -729,7 +820,9 @@ export default async function handler(req, res) {
     });
 
     for (const accountKey of Object.keys(accounts)) {
-      accounts[accountKey].returned = allOrders.filter(order => order.cuenta_key === accountKey).length;
+      const rowsForAccount = allOrders.filter(order => order.cuenta_key === accountKey);
+      accounts[accountKey].returned = rowsForAccount.length;
+      accounts[accountKey].returned_orders = new Set(rowsForAccount.map(order => String(order.order_id))).size;
     }
 
     res.status(200).json({
@@ -740,8 +833,10 @@ export default async function handler(req, res) {
       connected_accounts: Object.values(accounts).filter(a => a.connected).length,
       total_accounts: Object.keys(accounts).length,
       total: Object.values(accounts).reduce((s, a) => s + (a.total || 0), 0),
+      total_orders: Object.values(accounts).reduce((s, a) => s + (a.total_orders || 0), 0),
       returned_raw: allOrdersRaw.length,
       returned: allOrders.length,
+      returned_orders: new Set(allOrders.map(order => String(order.order_id))).size,
       duplicated_removed: dedupeResult.duplicados.length,
       duplicados_eliminados: dedupeResult.duplicados,
       truncated: Object.values(accounts).some(a => a.truncated),
