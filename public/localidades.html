@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Localidades y tarifas - ML Gestión</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f5;color:#171717;font-size:14px}
+.wrap{max-width:1300px;margin:0 auto;padding:24px}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.title{font-size:24px;font-weight:900;letter-spacing:-.03em}
+.sub{font-size:13px;color:#666;margin-top:5px;line-height:1.45;max-width:850px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+button,.btn{border:none;border-radius:10px;background:#111;color:#fff;padding:9px 13px;font-size:12px;font-weight:850;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+button:hover,.btn:hover{opacity:.88}
+.secondary{background:#fff!important;color:#111!important;border:1px solid #ddd!important}
+.green{background:#20703a!important}
+.red{background:#a32d2d!important}
+.amber{background:#8a5400!important}
+.card{background:#fff;border:1px solid #e1e1e1;border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 1px 2px rgba(0,0,0,.025)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.grid.form-partido{grid-template-columns:1fr auto}
+.grid.form-localidad{grid-template-columns:1fr 1.3fr .8fr auto auto}
+label{display:block;font-size:11px;color:#777;margin-bottom:5px}
+input,select{width:100%;border:1px solid #ddd;border-radius:10px;padding:8px 10px;font-size:13px;background:#fff}
+input:focus,select:focus{outline:none;border-color:#111;box-shadow:0 0 0 3px rgba(0,0,0,.06)}
+.metric{background:#fff;border:1px solid #e5e5e5;border-radius:13px;padding:14px}
+.metric .l{font-size:11px;color:#777;margin-bottom:4px}
+.metric .v{font-size:23px;font-weight:900;letter-spacing:-.03em}
+.metric .s{font-size:11px;color:#888;margin-top:3px}
+.green-text{color:#20703a}.red-text{color:#a32d2d}.amber-text{color:#8a5400}.blue-text{color:#0c447c}
+.section-title{font-size:16px;font-weight:900;margin-bottom:10px}
+.muted{font-size:12px;color:#777;line-height:1.45}
+.alert{padding:12px;border-radius:13px;background:#fff8ea;border:1px solid #f3d8a8;color:#633806;font-size:13px;line-height:1.45;margin-bottom:14px}
+.ok-alert{background:#edf8ec;border-color:#c9e5c5;color:#245a22}
+.bad-alert{background:#fff0f0;border-color:#f0bcbc;color:#8b1e1e}
+.table-wrap{overflow:auto;border-radius:12px;border:1px solid #eee;background:#fff}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;color:#777;font-weight:700;background:#fafafa;border-bottom:1px solid #eee;padding:8px;white-space:nowrap}
+td{border-bottom:1px solid #f0f0f0;padding:8px;white-space:nowrap;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+.num{text-align:right}
+.badge{display:inline-flex;align-items:center;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:850;white-space:nowrap}
+.ok{background:#eaf3de;color:#27500a}
+.bad{background:#fcebeb;color:#a32d2d}
+.warn{background:#faeeda;color:#633806}
+.neutral{background:#f2f2f2;color:#666}
+.info{background:#e6f1fb;color:#0c447c}
+.small{padding:5px 8px;font-size:11px;border-radius:7px}
+.two{display:grid;grid-template-columns:.9fr 1.4fr;gap:14px}
+.empty{text-align:center;color:#aaa;padding:22px}
+.group-row td{background:#f7f7f7;color:#555;font-size:12px;font-weight:850}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid #ddd;border-top-color:#111;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:900px){
+  .wrap{padding:14px}
+  .two,.grid.form-localidad,.grid.form-partido{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <div class="title">📍 Partidos, localidades y tarifas</div>
+      <div class="sub">
+        Administración de mensajería desde Supabase. Partidos con desplegable, localidades editables y tarifas ordenadas de la A a la Z.
+        Se terminó el festival de “Moron”, “Morón” y “MORON”, una obra de terror administrativo.
+      </div>
+    </div>
+    <div class="actions">
+      <a class="btn secondary" href="/">← Dashboard</a>
+      <button onclick="loadData()">Actualizar</button>
+    </div>
+  </div>
+
+  <div id="msg"></div>
+
+  <div class="grid" id="metrics"></div>
+
+  <div class="alert">
+    <b>Regla operativa:</b> primero creás o elegís un partido. Después cargás localidades con tarifa. 
+    Si el partido no figura, lo creás desde esta misma pantalla.
+  </div>
+
+  <div class="two">
+    <div>
+      <div class="card">
+        <div class="section-title">Crear / editar partido</div>
+        <div class="grid form-partido">
+          <div>
+            <label>Nombre del partido</label>
+            <input id="partido-nombre" placeholder="Ej: Morón">
+            <input type="hidden" id="partido-id">
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <button class="green" onclick="savePartido()" id="btn-partido">Guardar partido</button>
+          </div>
+        </div>
+        <div style="margin-top:10px">
+          <button class="secondary small" onclick="clearPartidoForm()">Limpiar</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Partidos cargados</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Partido</th>
+                <th>Localidades</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="partidos-body">
+              <tr><td colspan="3" class="empty">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Migrar desde navegador</div>
+        <div class="muted">
+          Si todavía tenés tarifas viejas en este navegador, podés migrarlas a Supabase. Esto lee la clave <b>ml_localidades</b> del localStorage.
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="amber" onclick="migrateFromLocalStorage()">Migrar localStorage → Supabase</button>
+          <button class="secondary" onclick="previewLocalStorage()">Ver cantidad local</button>
+        </div>
+        <div id="migration-preview" class="muted" style="margin-top:10px"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="section-title">Crear / editar localidad</div>
+        <div class="grid form-localidad">
+          <div>
+            <label>Partido</label>
+            <select id="localidad-partido"></select>
+          </div>
+          <div>
+            <label>Localidad</label>
+            <input id="localidad-nombre" placeholder="Ej: Castelar">
+            <input type="hidden" id="localidad-id">
+          </div>
+          <div>
+            <label>Tarifa</label>
+            <input id="localidad-tarifa" type="number" step="0.01" placeholder="0">
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <button class="green" onclick="saveLocalidad()" id="btn-localidad">Guardar</button>
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <button class="secondary" onclick="clearLocalidadForm()">Limpiar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+          <div>
+            <div class="section-title" style="margin:0">Localidades y tarifas</div>
+            <div class="muted">Editá localidad, partido o tarifa desde la fila. Todo queda guardado en Supabase.</div>
+          </div>
+          <div>
+            <label>Buscar</label>
+            <input id="search" placeholder="partido/localidad..." oninput="renderAll()">
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Partido</th>
+                <th>Localidad</th>
+                <th class="num">Tarifa</th>
+                <th>Estado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="localidades-body">
+              <tr><td colspan="5" class="empty">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_URL = '/api/costos?modulo=localidades';
+
+const STATE = {
+  partidos: [],
+  localidades: [],
+  loading: false
+};
+
+const num = v => {
+  const n = Number(v ?? 0);
+  return Number.isFinite(n) ? n : 0;
+};
+
+const fmt = n => '$' + Math.round(num(n)).toLocaleString('es-AR');
+
+const esc = v => String(v ?? '').replace(/[&<>"]/g, c => ({
+  '&':'&amp;',
+  '<':'&lt;',
+  '>':'&gt;',
+  '"':'&quot;'
+}[c]));
+
+const norm = v => String(v ?? '')
+  .trim()
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/\s+/g, ' ');
+
+function showMsg(text, type = 'ok') {
+  const cls = type === 'bad' ? 'bad-alert' : type === 'warn' ? 'alert' : 'ok-alert';
+  document.getElementById('msg').innerHTML = `<div class="alert ${cls}">${esc(text)}</div>`;
+  setTimeout(() => {
+    document.getElementById('msg').innerHTML = '';
+  }, 4500);
+}
+
+async function apiRequest(method = 'GET', body = null) {
+  const options = {
+    method,
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    cache: 'no-store'
+  };
+
+  if (body) options.body = JSON.stringify(body);
+
+  const r = await fetch(`${API_URL}&cb=${Date.now()}`, options);
+  const data = await r.json().catch(() => ({}));
+
+  if (!r.ok || data.ok === false) {
+    throw new Error(data.detail || data.error || `Error HTTP ${r.status}`);
+  }
+
+  return data;
+}
+
+async function loadData() {
+  STATE.loading = true;
+  renderLoading();
+
+  try {
+    const data = await apiRequest('GET');
+    STATE.partidos = data.partidos || [];
+    STATE.localidades = data.localidades || [];
+    renderAll();
+  } catch (error) {
+    showMsg('Error cargando localidades: ' + error.message, 'bad');
+    renderAll();
+  } finally {
+    STATE.loading = false;
+  }
+}
+
+function renderLoading() {
+  document.getElementById('partidos-body').innerHTML = '<tr><td colspan="3" class="empty"><span class="spinner"></span> Cargando...</td></tr>';
+  document.getElementById('localidades-body').innerHTML = '<tr><td colspan="5" class="empty"><span class="spinner"></span> Cargando...</td></tr>';
+}
+
+function getActivePartidos() {
+  return STATE.partidos
+    .filter(p => p.activo !== false)
+    .sort((a, b) => norm(a.nombre).localeCompare(norm(b.nombre), 'es'));
+}
+
+function getActiveLocalidades() {
+  return STATE.localidades
+    .filter(l => l.activo !== false)
+    .sort((a, b) => {
+      const partidoCompare = norm(a.partido).localeCompare(norm(b.partido), 'es');
+      if (partidoCompare !== 0) return partidoCompare;
+      return norm(a.localidad).localeCompare(norm(b.localidad), 'es');
+    });
+}
+
+function renderAll() {
+  renderMetrics();
+  renderPartidoSelect();
+  renderPartidos();
+  renderLocalidades();
+}
+
+function renderMetrics() {
+  const partidosActivos = getActivePartidos();
+  const localidadesActivas = getActiveLocalidades();
+  const tarifaPromedio = localidadesActivas.length
+    ? localidadesActivas.reduce((s, x) => s + num(x.tarifa), 0) / localidadesActivas.length
+    : 0;
+
+  document.getElementById('metrics').innerHTML = [
+    { l: 'Partidos activos', v: partidosActivos.length, s: 'desplegable limpio', cls: 'blue-text' },
+    { l: 'Localidades activas', v: localidadesActivas.length, s: 'con tarifa editable', cls: 'green-text' },
+    { l: 'Tarifa promedio', v: fmt(tarifaPromedio), s: 'referencia operativa', cls: 'amber-text' },
+    { l: 'Origen', v: 'Supabase', s: 'no más navegador', cls: 'green-text' }
+  ].map(m => `
+    <div class="metric">
+      <div class="l">${m.l}</div>
+      <div class="v ${m.cls}">${m.v}</div>
+      <div class="s">${m.s}</div>
+    </div>
+  `).join('');
+}
+
+function renderPartidoSelect() {
+  const select = document.getElementById('localidad-partido');
+  const current = select.value;
+  const partidos = getActivePartidos();
+
+  select.innerHTML = partidos.length
+    ? partidos.map(p => `<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join('')
+    : '<option value="">Primero creá un partido</option>';
+
+  if (current && partidos.some(p => p.id === current)) {
+    select.value = current;
+  }
+}
+
+function countLocalidadesByPartido(partidoId) {
+  return STATE.localidades.filter(l => l.partido_id === partidoId && l.activo !== false).length;
+}
+
+function renderPartidos() {
+  const partidos = getActivePartidos();
+
+  if (!partidos.length) {
+    document.getElementById('partidos-body').innerHTML = '<tr><td colspan="3" class="empty">Todavía no hay partidos cargados.</td></tr>';
+    return;
+  }
+
+  document.getElementById('partidos-body').innerHTML = partidos.map(p => `
+    <tr>
+      <td><b>${esc(p.nombre)}</b></td>
+      <td><span class="badge info">${countLocalidadesByPartido(p.id)} localidades</span></td>
+      <td style="text-align:right">
+        <button class="secondary small" onclick="editPartido('${esc(p.id)}')">Editar</button>
+        <button class="red small" onclick="disablePartido('${esc(p.id)}')">Desactivar</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function renderLocalidades() {
+  const q = norm(document.getElementById('search').value);
+  let rows = getActiveLocalidades();
+
+  if (q) {
+    rows = rows.filter(l =>
+      norm(l.partido).includes(q) ||
+      norm(l.localidad).includes(q)
+    );
+  }
+
+  if (!rows.length) {
+    document.getElementById('localidades-body').innerHTML = '<tr><td colspan="5" class="empty">No hay localidades para mostrar.</td></tr>';
+    return;
+  }
+
+  let lastPartido = null;
+  let html = '';
+
+  rows.forEach(l => {
+    if (l.partido !== lastPartido) {
+      lastPartido = l.partido;
+      html += `<tr class="group-row"><td colspan="5">${esc(l.partido)}</td></tr>`;
+    }
+
+    html += `
+      <tr>
+        <td>${esc(l.partido)}</td>
+        <td><b>${esc(l.localidad)}</b></td>
+        <td class="num"><b>${fmt(l.tarifa)}</b></td>
+        <td><span class="badge ok">Activa</span></td>
+        <td style="text-align:right">
+          <button class="secondary small" onclick="editLocalidad('${esc(l.id)}')">Editar</button>
+          <button class="red small" onclick="disableLocalidad('${esc(l.id)}')">Desactivar</button>
+        </td>
+      </tr>
+    `;
+  });
+
+  document.getElementById('localidades-body').innerHTML = html;
+}
+
+async function savePartido() {
+  const id = document.getElementById('partido-id').value;
+  const nombre = document.getElementById('partido-nombre').value.trim();
+
+  if (!nombre) {
+    showMsg('Cargá el nombre del partido.', 'warn');
+    return;
+  }
+
+  try {
+    if (id) {
+      await apiRequest('PUT', {
+        type: 'partido',
+        id,
+        nombre,
+        activo: true
+      });
+      showMsg('Partido actualizado.');
+    } else {
+      await apiRequest('POST', {
+        type: 'partido',
+        nombre
+      });
+      showMsg('Partido creado.');
+    }
+
+    clearPartidoForm();
+    await loadData();
+  } catch (error) {
+    showMsg('Error guardando partido: ' + error.message, 'bad');
+  }
+}
+
+function editPartido(id) {
+  const p = STATE.partidos.find(x => x.id === id);
+  if (!p) return;
+
+  document.getElementById('partido-id').value = p.id;
+  document.getElementById('partido-nombre').value = p.nombre;
+  document.getElementById('btn-partido').textContent = 'Actualizar partido';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function clearPartidoForm() {
+  document.getElementById('partido-id').value = '';
+  document.getElementById('partido-nombre').value = '';
+  document.getElementById('btn-partido').textContent = 'Guardar partido';
+}
+
+async function disablePartido(id) {
+  const p = STATE.partidos.find(x => x.id === id);
+  if (!p) return;
+
+  const ok = confirm(`¿Desactivar el partido "${p.nombre}"? Sus localidades dejarán de aparecer en la vista activa.`);
+  if (!ok) return;
+
+  try {
+    await apiRequest('DELETE', {
+      type: 'partido',
+      id
+    });
+    showMsg('Partido desactivado.');
+    await loadData();
+  } catch (error) {
+    showMsg('Error desactivando partido: ' + error.message, 'bad');
+  }
+}
+
+async function saveLocalidad() {
+  const id = document.getElementById('localidad-id').value;
+  const partido_id = document.getElementById('localidad-partido').value;
+  const localidad = document.getElementById('localidad-nombre').value.trim();
+  const tarifa = num(document.getElementById('localidad-tarifa').value);
+
+  if (!partido_id) {
+    showMsg('Elegí un partido. Si no existe, crealo primero.', 'warn');
+    return;
+  }
+
+  if (!localidad) {
+    showMsg('Cargá el nombre de la localidad.', 'warn');
+    return;
+  }
+
+  try {
+    if (id) {
+      await apiRequest('PUT', {
+        type: 'localidad',
+        id,
+        partido_id,
+        localidad,
+        tarifa,
+        activo: true
+      });
+      showMsg('Localidad actualizada.');
+    } else {
+      await apiRequest('POST', {
+        type: 'localidad',
+        partido_id,
+        localidad,
+        tarifa,
+        activo: true
+      });
+      showMsg('Localidad creada.');
+    }
+
+    clearLocalidadForm();
+    await loadData();
+  } catch (error) {
+    showMsg('Error guardando localidad: ' + error.message, 'bad');
+  }
+}
+
+function editLocalidad(id) {
+  const l = STATE.localidades.find(x => x.id === id);
+  if (!l) return;
+
+  document.getElementById('localidad-id').value = l.id;
+  document.getElementById('localidad-partido').value = l.partido_id;
+  document.getElementById('localidad-nombre').value = l.localidad;
+  document.getElementById('localidad-tarifa').value = l.tarifa;
+  document.getElementById('btn-localidad').textContent = 'Actualizar';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function clearLocalidadForm() {
+  document.getElementById('localidad-id').value = '';
+  document.getElementById('localidad-nombre').value = '';
+  document.getElementById('localidad-tarifa').value = '';
+  document.getElementById('btn-localidad').textContent = 'Guardar';
+}
+
+async function disableLocalidad(id) {
+  const l = STATE.localidades.find(x => x.id === id);
+  if (!l) return;
+
+  const ok = confirm(`¿Desactivar "${l.localidad}" de ${l.partido}?`);
+  if (!ok) return;
+
+  try {
+    await apiRequest('DELETE', {
+      type: 'localidad',
+      id
+    });
+    showMsg('Localidad desactivada.');
+    await loadData();
+  } catch (error) {
+    showMsg('Error desactivando localidad: ' + error.message, 'bad');
+  }
+}
+
+function getLocalStorageItems() {
+  try {
+    const raw = localStorage.getItem('ml_localidades') || '[]';
+    const items = JSON.parse(raw);
+    return Array.isArray(items) ? items : [];
+  } catch {
+    return [];
+  }
+}
+
+function previewLocalStorage() {
+  const items = getLocalStorageItems();
+  document.getElementById('migration-preview').innerHTML =
+    `LocalStorage tiene <b>${items.length}</b> localidades/tarifas para migrar.`;
+}
+
+async function migrateFromLocalStorage() {
+  const items = getLocalStorageItems();
+
+  if (!items.length) {
+    showMsg('No hay datos en localStorage para migrar.', 'warn');
+    return;
+  }
+
+  const ok = confirm(`Se van a migrar ${items.length} registros desde este navegador a Supabase. ¿Seguimos?`);
+  if (!ok) return;
+
+  try {
+    const data = await apiRequest('POST', {
+      action: 'migrate',
+      items
+    });
+
+    const mig = data.migracion || {};
+    showMsg(`Migración lista. Creados/actualizados: ${mig.creados_o_actualizados || 0}. Omitidos: ${mig.omitidos || 0}.`);
+    await loadData();
+  } catch (error) {
+    showMsg('Error migrando datos: ' + error.message, 'bad');
+  }
+}
+
+loadData();
+previewLocalStorage();
+</script>
+</body>
+</html>
