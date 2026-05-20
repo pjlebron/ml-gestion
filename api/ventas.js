@@ -270,9 +270,12 @@ function detectarFlex(shipData) {
   if (!shipData) return false;
 
   const tags = shipData.tags || [];
+  const logisticType = String(shipData.logistic_type || '').toLowerCase();
+  const mode = String(shipData.mode || '').toLowerCase();
+  const subMode = String(shipData.sub_mode || '').toLowerCase();
 
-  return shipData.logistic_type === 'self_service' ||
-    (shipData.mode === 'me2' && shipData.sub_mode === 'flex') ||
+  return logisticType === 'self_service' ||
+    (mode === 'me2' && subMode === 'flex') ||
     tags.includes('self_service');
 }
 
@@ -281,8 +284,7 @@ function sumDiscounts(discounts) {
   return discounts.reduce((sum, discount) => sum + absNumber(discount.promoted_amount || discount.amount || discount.value), 0);
 }
 
-function getShipmentSellerCost(shipData, shipmentCosts) {
-  // Costo real que paga el vendedor. Nunca usar gross_amount/list_cost acá.
+function getShipmentSellerCostRaw(shipData, shipmentCosts) {
   const candidates = [
     shipmentCosts?.seller?.cost,
     shipmentCosts?.seller?.amount,
@@ -305,6 +307,15 @@ function getShipmentSellerCost(shipData, shipmentCosts) {
   return positives.length ? Math.min(...positives) : 0;
 }
 
+function getShipmentSellerCost({ shipData, shipmentCosts, isFlex }) {
+  // Regla clave:
+  // En Flex/self_service, el costo operativo lo pagás por mensajería propia/manual.
+  // Mercado Libre NO lo muestra como "Envíos" en el detalle de cobro.
+  // Por eso NO debemos restar senders[0].cost como cargo_envio_ml.
+  if (isFlex) return 0;
+  return getShipmentSellerCostRaw(shipData, shipmentCosts);
+}
+
 function getShipmentGrossCost(shipData, shipmentCosts) {
   const candidates = [
     shipmentCosts?.gross_amount,
@@ -322,27 +333,39 @@ function getShipmentGrossCost(shipData, shipmentCosts) {
   return positives.length ? Math.max(...positives) : 0;
 }
 
-function getShipmentBonus({ shipData, shipmentCosts, sellerCost }) {
+function getShipmentBonus({ shipData, shipmentCosts, sellerCost, rawSellerCost, isFlex }) {
   const grossCost = getShipmentGrossCost(shipData, shipmentCosts);
   const receiverDiscount = sumDiscounts(shipmentCosts?.receiver?.discounts);
+  const senderDiscount = Array.isArray(shipmentCosts?.senders)
+    ? shipmentCosts.senders.reduce((sum, sender) => sum + sumDiscounts(sender.discounts), 0)
+    : 0;
 
-  // Punto clave:
-  // - receiver.discounts es beneficio del comprador y NO se suma a la ganancia si el vendedor paga envío.
-  // - sólo lo tomamos como bonificación ML cuando el costo vendedor es 0 y ML cubre el envío completo.
-  // Esto repara Bariloche/Pontevedra sin romper Épico, donde sellerCost=0 y promoted_amount=6490.
-  const shouldUseReceiverDiscount = sellerCost === 0 && receiverDiscount > 0 && grossCost > 0;
+  let total = 0;
+  const detail = [];
 
-  const total = shouldUseReceiverDiscount ? receiverDiscount : 0;
-  const detail = shouldUseReceiverDiscount
-    ? [{ key: 'receiver.discounts.promoted_amount_seller_cost_zero', amount: receiverDiscount }]
-    : [];
+  // En Flex, si ML muestra "Descuentos y bonificaciones" por el tramo del vendedor,
+  // suele venir como senders[0].discounts.promoted_amount. Ejemplo Garín: $849.
+  if (isFlex && senderDiscount > 0) {
+    total += senderDiscount;
+    detail.push({ key: 'senders.discounts.promoted_amount_flex', amount: senderDiscount });
+  }
+
+  // Si el vendedor no paga envío real y no hay descuento del sender, ML puede exponer la
+  // bonificación completa como receiver.discounts. Ejemplo Épico: $6.490.
+  // Pero si rawSellerCost > 0, receiver.discounts es beneficio del comprador y NO ganancia tuya.
+  if (rawSellerCost === 0 && senderDiscount === 0 && receiverDiscount > 0 && grossCost > 0) {
+    total += receiverDiscount;
+    detail.push({ key: 'receiver.discounts.promoted_amount_seller_cost_zero', amount: receiverDiscount });
+  }
 
   return {
-    total,
+    total: round2(total),
     detail,
     gross_cost: grossCost,
     seller_cost: sellerCost,
+    raw_seller_cost: rawSellerCost,
     receiver_discount: receiverDiscount,
+    sender_discount: senderDiscount,
   };
 }
 
@@ -443,8 +466,10 @@ async function normalizarOrden(order, token, account) {
   const billing = clasificarBillingFees(billingInfo);
   const mp = resumirMercadoPago(mpPayments);
   const precioTotal = toNumber(order.total_amount) || orderItems.precio_items || payments.transaction_amount;
-  const sellerCost = billing.cargo_envio_ml || getShipmentSellerCost(shipData, shipmentCosts) || 0;
-  const shipmentBonus = getShipmentBonus({ shipData, shipmentCosts, sellerCost });
+  const isFlex = detectarFlex(shipData);
+  const rawSellerCost = getShipmentSellerCostRaw(shipData, shipmentCosts);
+  const sellerCost = billing.cargo_envio_ml || getShipmentSellerCost({ shipData, shipmentCosts, isFlex }) || 0;
+  const shipmentBonus = getShipmentBonus({ shipData, shipmentCosts, sellerCost, rawSellerCost, isFlex });
 
   const orderData = {
     order,
@@ -458,6 +483,8 @@ async function normalizarOrden(order, token, account) {
     billing,
     mp,
     precioTotal,
+    isFlex,
+    rawSellerCost,
     cargoVenta: billing.cargo_venta || payments.marketplace_fee || orderItems.sale_fee || mp.mp_charges_fee_total || mp.mp_fee_details_total || 0,
     cargoEnvioMl: sellerCost,
     cargoFinanciacion: billing.cargo_financiacion || 0,
@@ -496,12 +523,13 @@ function construirFilasPorItem(data) {
     impuestos,
     retenciones,
     otrosGastos,
+    isFlex,
+    rawSellerCost,
   } = data;
 
   const shipping = order.shipping || {};
   const localidad = shipData?.receiver_address?.city?.name || '—';
   const partido = shipData?.receiver_address?.state?.name || '—';
-  const esFlex = detectarFlex(shipData);
   const sellerId = order.seller?.id || token.user_id || null;
   const cantidadItemsDistintos = items.length;
   const esOrdenMultiItem = cantidadItemsDistintos > 1;
@@ -563,6 +591,7 @@ function construirFilasPorItem(data) {
       shipping_list_cost_total_orden: round2(shipmentBonus.gross_cost),
       shipping_seller_cost: itemCargoEnvioMl,
       shipping_seller_cost_total_orden: round2(shipmentBonus.seller_cost),
+      shipping_raw_seller_cost_total_orden: round2(rawSellerCost),
       shipment_costs_raw: shipmentCosts || null,
       creditos_ml: round2(itemDescuentos + itemBonificaciones),
       impuestos: itemImpuestos,
@@ -577,7 +606,7 @@ function construirFilasPorItem(data) {
       mp_net_received_amount: prorratear(mp.mp_net_received_amount, item, precioTotal, cantidadItemsDistintos),
       mp_shipping_amount: prorratear(mp.mp_shipping_amount, item, precioTotal, cantidadItemsDistintos),
 
-      es_flex: esFlex,
+      es_flex: isFlex,
       envio_id: shipping.id || null,
       localidad,
       partido,
@@ -701,8 +730,6 @@ function normalizarPaquetesCompartidos(rows) {
     splitSharedField(group, 'descuentos', ['descuentos_total_orden', 'descuentos_total_pedido']);
     splitSharedField(group, 'cargo_financiacion', ['cargo_financiacion_total_orden', 'cargo_financiacion_total_pedido']);
     splitSharedField(group, 'otros_gastos', ['otros_gastos_total_orden', 'otros_gastos_total_pedido']);
-
-    // Impuestos: normalmente vienen por orden. Sólo se prorratean si están duplicados idénticos.
     splitSharedField(group, 'impuestos', ['impuestos_total_orden', 'impuestos_total_pedido']);
 
     group.forEach(recalcularRowCobro);
