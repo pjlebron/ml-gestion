@@ -232,6 +232,7 @@ function clasificarBillingFees(billingInfo) {
 function resumirMercadoPago(mpPayments) {
   const result = {
     mp_fee_details_total: 0,
+    mp_charges_fee_total: 0,
     mp_taxes_total: 0,
     mp_net_received_amount: 0,
     mp_shipping_amount: 0,
@@ -248,6 +249,14 @@ function resumirMercadoPago(mpPayments) {
     (payment.taxes || []).forEach(tax => {
       result.mp_taxes_total += absNumber(tax.value || tax.amount);
     });
+
+    (payment.charges_details || []).forEach(charge => {
+      const amount = absNumber(charge.amounts?.original || charge.amount || charge.value);
+      const type = String(charge.type || '').toLowerCase();
+
+      if (type === 'tax') result.mp_taxes_total += amount;
+      if (type === 'fee') result.mp_charges_fee_total += amount;
+    });
   });
 
   return result;
@@ -263,6 +272,38 @@ function detectarFlex(shipData) {
     tags.includes('self_service');
 }
 
+function flattenNumericFields(input, prefix = '', output = []) {
+  if (!input || typeof input !== 'object') return output;
+
+  Object.entries(input).forEach(([key, value]) => {
+    const path = prefix ? `${prefix}.${key}` : key;
+
+    if (typeof value === 'number') {
+      output.push({ path, value });
+      return;
+    }
+
+    if (typeof value === 'string') {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed) && value.trim() !== '') {
+        output.push({ path, value: parsed });
+      }
+      return;
+    }
+
+    if (value && typeof value === 'object') {
+      flattenNumericFields(value, path, output);
+    }
+  });
+
+  return output;
+}
+
+function pathHasAny(path, words) {
+  const clean = String(path || '').toLowerCase();
+  return words.some(word => clean.includes(word));
+}
+
 function getFirstNumber(...values) {
   for (const value of values) {
     const parsed = toNumber(value);
@@ -271,98 +312,77 @@ function getFirstNumber(...values) {
   return 0;
 }
 
-function getShipmentCost(shipData) {
-  if (!shipData) return 0;
+function getShipmentCost(shipData, shipmentCosts) {
+  if (shipmentCosts) {
+    const costFields = flattenNumericFields(shipmentCosts)
+      .filter(field => field.value > 0)
+      .filter(field => pathHasAny(field.path, ['sender', 'seller', 'cost']))
+      .filter(field => !pathHasAny(field.path, ['discount', 'bonus', 'bonification', 'compensation', 'subsidy', 'promoted', 'list_cost', 'gross']));
 
-  // Costo real que paga el vendedor.
-  // Si ML bonifica casi todo el envío, este valor puede venir como $1.
+    const bestCost = costFields.sort((a, b) => a.value - b.value)[0]?.value;
+    if (bestCost !== undefined) return absNumber(bestCost);
+  }
+
   return absNumber(
     getFirstNumber(
-      shipData.base_cost,
-      shipData.cost,
-      shipData.shipping_option?.cost,
-      shipData.shipping_option?.base_cost,
-      shipData.cost_components?.seller_cost,
-      shipData.shipping_option?.cost_components?.seller_cost,
+      shipData?.base_cost,
+      shipData?.cost,
+      shipData?.shipping_option?.cost,
+      shipData?.shipping_option?.base_cost,
+      shipData?.cost_components?.seller_cost,
+      shipData?.shipping_option?.cost_components?.seller_cost,
       0
     )
   );
 }
 
-function getShipmentListCost(shipData) {
-  if (!shipData) return 0;
+function getShipmentListCost(shipData, shipmentCosts) {
+  const fields = flattenNumericFields({ shipData, shipmentCosts })
+    .filter(field => field.value > 0)
+    .filter(field => pathHasAny(field.path, ['list_cost', 'gross_amount', 'gross_cost', 'shipping_cost_before_discount']));
 
-  // Costo de lista del envío. En ventas con bonificación, suele ser el monto que ML muestra
-  // en "Descuentos y bonificaciones" mientras al vendedor le cobra $0/$1.
-  return absNumber(
-    getFirstNumber(
-      shipData.shipping_option?.list_cost,
-      shipData.list_cost,
-      shipData.cost_components?.list_cost,
-      shipData.shipping_option?.cost_components?.list_cost,
-      shipData.shipping_option?.estimated_delivery_time?.cost,
-      0
-    )
-  );
+  return absNumber(Math.max(0, ...fields.map(field => field.value)));
 }
 
-function collectShipmentCreditsFromObject(obj, path = '') {
-  if (!obj || typeof obj !== 'object') return [];
+function getShipmentBonusFromCosts(shipmentCosts) {
+  if (!shipmentCosts) return { total: 0, detail: [] };
 
-  const credits = [];
-  const creditKeyPattern = /(discount|bonification|bonus|compensation|subsidy|subsidized|loyal|promotion|promoted|gap)/i;
+  const creditWords = ['discount', 'bonification', 'bonus', 'compensation', 'subsidy', 'subsidized', 'promoted', 'promotion', 'loyal', 'gap'];
+  const ignoredWords = ['id', 'date', 'time', 'zip', 'quantity', 'rate', 'ratio', 'order_id', 'shipment_id'];
 
-  Object.entries(obj).forEach(([key, value]) => {
-    const fullPath = path ? `${path}.${key}` : key;
+  const candidates = flattenNumericFields(shipmentCosts)
+    .filter(field => field.value > 0)
+    .filter(field => pathHasAny(field.path, creditWords))
+    .filter(field => !pathHasAny(field.path, ignoredWords));
 
-    if (typeof value === 'number' || typeof value === 'string') {
-      const numeric = absNumber(value);
-      if (!numeric) return;
+  if (!candidates.length) return { total: 0, detail: [] };
 
-      if (creditKeyPattern.test(key) || creditKeyPattern.test(fullPath)) {
-        credits.push({ key: fullPath, amount: numeric });
-      }
-      return;
-    }
-
-    if (value && typeof value === 'object') {
-      credits.push(...collectShipmentCreditsFromObject(value, fullPath));
-    }
+  const byPath = new Map();
+  candidates.forEach(field => {
+    if (!byPath.has(field.path)) byPath.set(field.path, field.value);
   });
 
-  return credits;
+  const detail = Array.from(byPath.entries()).map(([key, amount]) => ({ key, amount }));
+
+  // En /shipments/{id}/costs suele venir un único promoted_amount/discount.
+  // Si vinieran varios descuentos explícitos distintos, los sumamos; si hay duplicados raros,
+  // el debug los va a mostrar en detalle.
+  const total = detail.reduce((sum, item) => sum + absNumber(item.amount), 0);
+
+  return { total, detail };
 }
 
-function getShipmentCredits(shipData, cargoEnvioMl = 0) {
-  if (!shipData) return { total: 0, detail: [] };
+function getShipmentBonus({ shipData, shipmentCosts, cargoEnvioMl }) {
+  const fromCosts = getShipmentBonusFromCosts(shipmentCosts);
+  const listCost = getShipmentListCost(shipData, shipmentCosts);
+  const sellerCost = absNumber(cargoEnvioMl || getShipmentCost(shipData, shipmentCosts));
 
-  const candidates = [
-    shipData.cost_components,
-    shipData.shipping_option?.cost_components,
-    shipData.shipping_option,
-    shipData,
-  ];
+  let total = fromCosts.total;
+  const detail = [...fromCosts.detail];
 
-  const byKey = new Map();
-
-  candidates.forEach(candidate => {
-    collectShipmentCreditsFromObject(candidate).forEach(item => {
-      if (!byKey.has(item.key)) byKey.set(item.key, item.amount);
-    });
-  });
-
-  const detail = Array.from(byKey.entries()).map(([key, amount]) => ({ key, amount }));
-  let total = detail.reduce((sum, item) => sum + item.amount, 0);
-
-  const listCost = getShipmentListCost(shipData);
-  const sellerCost = absNumber(cargoEnvioMl || getShipmentCost(shipData));
-
-  // Fallback clave: si no aparece un campo explícito de descuento, pero ML informa list_cost alto
-  // y al vendedor le cobra $0/$1, usamos list_cost como bonificación. Es el caso de la venta Épico:
-  // list_cost $6.490, cargo real $1, bonificación ML mostrada $6.490.
   if (!total && listCost > 0 && sellerCost <= 10) {
     total = listCost;
-    detail.push({ key: 'shipping_option.list_cost_as_bonus_fallback', amount: listCost });
+    detail.push({ key: 'list_cost_as_bonus_fallback', amount: listCost });
   }
 
   return { total, detail, list_cost: listCost, seller_cost: sellerCost };
@@ -478,11 +498,13 @@ async function normalizarOrden(order, token, account) {
 
   const billingInfoPromise = fetchJsonSafe(`${ML_API}/orders/${order.id}/billing_info`, token);
   const shipmentPromise = shipping.id ? fetchJsonSafe(`${ML_API}/shipments/${shipping.id}`, token) : Promise.resolve(null);
+  const shipmentCostsPromise = shipping.id ? fetchJsonSafe(`${ML_API}/shipments/${shipping.id}/costs`, token) : Promise.resolve(null);
   const mpPromises = payments.payment_ids.map(paymentId => fetchJsonSafe(`${MP_API}/v1/payments/${paymentId}`, token));
 
-  const [billingInfo, shipData, ...mpPayments] = await Promise.all([
+  const [billingInfo, shipData, shipmentCosts, ...mpPayments] = await Promise.all([
     billingInfoPromise,
     shipmentPromise,
+    shipmentCostsPromise,
     ...mpPromises,
   ]);
 
@@ -491,12 +513,12 @@ async function normalizarOrden(order, token, account) {
 
   const precioTotal = toNumber(order.total_amount) || orderItems.precio_items || payments.transaction_amount;
 
-  const cargoVenta = billing.cargo_venta || payments.marketplace_fee || orderItems.sale_fee || mp.mp_fee_details_total || 0;
-  const cargoEnvioMl = billing.cargo_envio_ml || getShipmentCost(shipData) || 0;
-  const shipmentCredits = getShipmentCredits(shipData, cargoEnvioMl);
+  const cargoVenta = billing.cargo_venta || payments.marketplace_fee || orderItems.sale_fee || mp.mp_charges_fee_total || mp.mp_fee_details_total || 0;
+  const cargoEnvioMl = billing.cargo_envio_ml || getShipmentCost(shipData, shipmentCosts) || 0;
+  const shipmentBonus = getShipmentBonus({ shipData, shipmentCosts, cargoEnvioMl });
   const cargoFinanciacion = billing.cargo_financiacion || 0;
   const descuentos = billing.descuentos || payments.coupon_amount || 0;
-  const bonificacionesEnvioMl = shipmentCredits.total;
+  const bonificacionesEnvioMl = shipmentBonus.total;
   const bonificaciones = billing.bonificaciones || bonificacionesEnvioMl || 0;
   const impuestos = billing.impuestos || payments.taxes_amount || mp.mp_taxes_total || 0;
   const retenciones = billing.retenciones || 0;
@@ -529,6 +551,7 @@ async function normalizarOrden(order, token, account) {
   return {
     id: order.id,
     order_id: order.id,
+    pack_id: order.pack_id || null,
     seller_id: sellerId,
     fecha: order.date_created?.slice(0, 10),
     producto: productoDisplay,
@@ -552,9 +575,10 @@ async function normalizarOrden(order, token, account) {
     descuentos,
     bonificaciones,
     bonificaciones_envio_ml: bonificacionesEnvioMl,
-    bonificaciones_envio_ml_detalle: shipmentCredits.detail,
-    shipping_list_cost: shipmentCredits.list_cost,
-    shipping_seller_cost: shipmentCredits.seller_cost,
+    bonificaciones_envio_ml_detalle: shipmentBonus.detail,
+    shipping_list_cost: shipmentBonus.list_cost,
+    shipping_seller_cost: shipmentBonus.seller_cost,
+    shipment_costs_raw: shipmentCosts || null,
     creditos_ml: cobro.creditosMl,
     impuestos,
     retenciones,
@@ -564,6 +588,7 @@ async function normalizarOrden(order, token, account) {
     cobro_neto_fuente: cobro.fuente,
 
     mp_fee_details_total: mp.mp_fee_details_total,
+    mp_charges_fee_total: mp.mp_charges_fee_total,
     mp_net_received_amount: mp.mp_net_received_amount,
     mp_shipping_amount: mp.mp_shipping_amount,
 
