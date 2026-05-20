@@ -1,4 +1,5 @@
 import {
+  getAccountKeys,
   getAccountLabel,
   getValidToken,
   normalizeAccount,
@@ -6,6 +7,9 @@ import {
 
 const ML_API = 'https://api.mercadolibre.com';
 const MP_API = 'https://api.mercadopago.com';
+const DEFAULT_DATE_FROM = '2026-01-01';
+const PAGE_LIMIT = 50;
+const MAX_PAGES = 30;
 
 function num(value) {
   const parsed = Number(value ?? 0);
@@ -14,6 +18,21 @@ function num(value) {
 
 function abs(value) {
   return Math.abs(num(value));
+}
+
+function buildDateFrom(desde) {
+  const date = desde || DEFAULT_DATE_FROM;
+  return `${date}T00:00:00.000-03:00`;
+}
+
+function buildDateTo(hasta) {
+  if (hasta) return `${hasta}T23:59:59.000-03:00`;
+  return new Date().toISOString();
+}
+
+function getRequestedAccounts(accountQuery) {
+  if (!accountQuery || accountQuery === 'all') return getAccountKeys();
+  return [normalizeAccount(accountQuery)];
 }
 
 async function fetchJson(url, token) {
@@ -31,6 +50,146 @@ async function fetchJson(url, token) {
     url,
     data,
     error: response.ok ? null : (data.message || data.error || `HTTP ${response.status}`),
+  };
+}
+
+async function directOrderLookup(orderId, token) {
+  return fetchJson(`${ML_API}/orders/${encodeURIComponent(orderId)}`, token);
+}
+
+function orderMatches(order, lookupId) {
+  const wanted = String(lookupId || '').trim();
+  if (!wanted) return false;
+
+  const candidates = [
+    order.id,
+    order.pack_id,
+    order.shipping?.id,
+    order.shipping?.shipment_id,
+  ]
+    .filter(value => value !== null && value !== undefined)
+    .map(value => String(value));
+
+  return candidates.includes(wanted);
+}
+
+async function searchOrderByVisibleId({ lookupId, token, desde, hasta }) {
+  const dateFrom = buildDateFrom(desde);
+  const dateTo = buildDateTo(hasta);
+  let offset = 0;
+  let page = 0;
+  let total = 0;
+  const inspected = [];
+
+  while (page < MAX_PAGES) {
+    const url = `${ML_API}/orders/search?seller=${token.user_id}&order.status=paid&order.date_created.from=${encodeURIComponent(dateFrom)}&order.date_created.to=${encodeURIComponent(dateTo)}&offset=${offset}&limit=${PAGE_LIMIT}&sort=date_desc`;
+    const response = await fetchJson(url, token);
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        error: response.error,
+        status: response.status,
+        inspected,
+      };
+    }
+
+    const results = response.data.results || [];
+    total = response.data.paging?.total || total;
+
+    for (const order of results) {
+      inspected.push({
+        id: order.id,
+        pack_id: order.pack_id,
+        shipping_id: order.shipping?.id,
+        date_created: order.date_created,
+        total_amount: order.total_amount,
+        title: order.order_items?.[0]?.item?.title,
+      });
+
+      if (orderMatches(order, lookupId)) {
+        return {
+          ok: true,
+          order,
+          matched_by_search: true,
+          date_from: dateFrom,
+          date_to: dateTo,
+          inspected_count: inspected.length,
+          total,
+        };
+      }
+    }
+
+    if (!results.length) break;
+    if (offset + PAGE_LIMIT >= total) break;
+
+    offset += PAGE_LIMIT;
+    page += 1;
+  }
+
+  return {
+    ok: false,
+    error: 'No se encontró la venta en orders/search para esa cuenta y rango de fechas.',
+    date_from: dateFrom,
+    date_to: dateTo,
+    inspected_count: inspected.length,
+    total,
+    inspected: inspected.slice(0, 30),
+  };
+}
+
+async function resolveOrderForAccount({ lookupId, token, account, desde, hasta }) {
+  const direct = await directOrderLookup(lookupId, token);
+
+  if (direct.ok) {
+    return {
+      ok: true,
+      account,
+      cuenta: getAccountLabel(account),
+      token_user_id: token.user_id,
+      source: 'direct_order_id',
+      order: direct.data,
+      direct_status: direct.status,
+    };
+  }
+
+  const searched = await searchOrderByVisibleId({ lookupId, token, desde, hasta });
+
+  if (searched.ok) {
+    return {
+      ok: true,
+      account,
+      cuenta: getAccountLabel(account),
+      token_user_id: token.user_id,
+      source: 'orders_search_match_id_pack_or_shipping',
+      order: searched.order,
+      direct_error: direct.error,
+      direct_status: direct.status,
+      search_meta: {
+        date_from: searched.date_from,
+        date_to: searched.date_to,
+        inspected_count: searched.inspected_count,
+        total: searched.total,
+      },
+    };
+  }
+
+  return {
+    ok: false,
+    account,
+    cuenta: getAccountLabel(account),
+    token_user_id: token.user_id,
+    direct_error: direct.error,
+    direct_status: direct.status,
+    search_error: searched.error,
+    search_status: searched.status || null,
+    search_meta: {
+      date_from: searched.date_from,
+      date_to: searched.date_to,
+      inspected_count: searched.inspected_count,
+      total: searched.total,
+      inspected_sample: searched.inspected || [],
+    },
   };
 }
 
@@ -95,6 +254,7 @@ function redactOrder(order) {
 
   return {
     id: order.id,
+    pack_id: order.pack_id,
     status: order.status,
     date_created: order.date_created,
     total_amount: order.total_amount,
@@ -246,21 +406,8 @@ function calcPaymentSummary(mpPayments) {
   });
 }
 
-function buildCalculations({ order, shipment, billingInfo, mpPayments }) {
-  const items = calcOrderItems(order);
-  const billingFees = calcBillingFees(billingInfo);
-  const paymentSummary = calcPaymentSummary(mpPayments);
-
-  const shipmentFields = flattenNumericFields(shipment || {});
-  const shipmentCreditCandidates = detectCandidateCredits(shipmentFields);
-  const shipmentListCost = abs(
-    shipment?.shipping_option?.list_cost ||
-    shipment?.list_cost ||
-    shipment?.cost_components?.list_cost ||
-    shipment?.shipping_option?.cost_components?.list_cost ||
-    0
-  );
-  const shipmentSellerCost = abs(
+function getShipmentCost(shipment) {
+  return abs(
     shipment?.base_cost ||
     shipment?.cost ||
     shipment?.shipping_option?.cost ||
@@ -269,6 +416,27 @@ function buildCalculations({ order, shipment, billingInfo, mpPayments }) {
     shipment?.shipping_option?.cost_components?.seller_cost ||
     0
   );
+}
+
+function getShipmentListCost(shipment) {
+  return abs(
+    shipment?.shipping_option?.list_cost ||
+    shipment?.list_cost ||
+    shipment?.cost_components?.list_cost ||
+    shipment?.shipping_option?.cost_components?.list_cost ||
+    0
+  );
+}
+
+function buildCalculations({ order, shipment, billingInfo, mpPayments }) {
+  const items = calcOrderItems(order);
+  const billingFees = calcBillingFees(billingInfo);
+  const paymentSummary = calcPaymentSummary(mpPayments);
+
+  const shipmentFields = flattenNumericFields(shipment || {});
+  const shipmentCreditCandidates = detectCandidateCredits(shipmentFields);
+  const shipmentListCost = getShipmentListCost(shipment);
+  const shipmentSellerCost = getShipmentCost(shipment);
 
   const orderTotal = num(order?.total_amount) || items.total_items;
   const saleFee = billingFees
@@ -295,8 +463,8 @@ function buildCalculations({ order, shipment, billingInfo, mpPayments }) {
     items,
     billing_fees_detected: billingFees,
     payment_summary: paymentSummary,
-    shipment_numeric_fields: shipmentFields.sort((a, b) => b.value - a.value).slice(0, 80),
-    shipment_credit_candidates: shipmentCreditCandidates.slice(0, 30),
+    shipment_numeric_fields: shipmentFields.sort((a, b) => b.value - a.value).slice(0, 100),
+    shipment_credit_candidates: shipmentCreditCandidates.slice(0, 40),
     shipment_list_cost: shipmentListCost,
     shipment_seller_cost: shipmentSellerCost,
     explicit_credits_from_billing: explicitCredits,
@@ -316,93 +484,135 @@ function buildCalculations({ order, shipment, billingInfo, mpPayments }) {
   };
 }
 
+async function buildDebugResponse({ account, token, resolved }) {
+  const order = resolved.order;
+  const orderId = order.id;
+  const shippingId = order.shipping?.id;
+  const paymentIds = (order.payments || []).map(payment => payment.id).filter(Boolean);
+
+  const [billingResponse, shipmentResponse, ...paymentResponses] = await Promise.all([
+    fetchJson(`${ML_API}/orders/${encodeURIComponent(orderId)}/billing_info`, token),
+    shippingId
+      ? fetchJson(`${ML_API}/shipments/${encodeURIComponent(shippingId)}`, token)
+      : Promise.resolve({ ok: false, status: 404, data: null, error: 'Orden sin shipping.id' }),
+    ...paymentIds.map(paymentId => fetchJson(`${MP_API}/v1/payments/${encodeURIComponent(paymentId)}`, token)),
+  ]);
+
+  const shipment = shipmentResponse.ok ? shipmentResponse.data : null;
+  const billingInfo = billingResponse.ok ? billingResponse.data : null;
+  const mpPayments = paymentResponses.filter(response => response.ok);
+
+  const calculations = buildCalculations({
+    order,
+    shipment,
+    billingInfo,
+    mpPayments,
+  });
+
+  return {
+    ok: true,
+    account,
+    cuenta: getAccountLabel(account),
+    token_user_id: token.user_id,
+    lookup_source: resolved.source,
+    direct_error: resolved.direct_error || null,
+    search_meta: resolved.search_meta || null,
+    order_id: String(orderId),
+    original_lookup_id: String(orderId),
+    pack_id: order.pack_id || null,
+    shipping_id: shippingId || null,
+    payment_ids: paymentIds,
+    nota: 'Debug sanitizado. No devuelve dirección completa ni datos sensibles del comprador. Sirve para ubicar dónde ML esconde descuentos/bonificaciones.',
+    calculations,
+    order: redactOrder(order),
+    billing_info_status: {
+      ok: billingResponse.ok,
+      status: billingResponse.status,
+      error: billingResponse.error,
+    },
+    billing_info: billingInfo,
+    shipment_status: {
+      ok: shipmentResponse.ok,
+      status: shipmentResponse.status,
+      error: shipmentResponse.error,
+    },
+    shipment: redactShipment(shipment),
+    payments: summarizePayments(paymentResponses),
+  };
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
 
-  const account = normalizeAccount(req.query.account || 'lebron');
-  const orderId = req.query.order_id || req.query.id;
+  const accountQuery = req.query.account || 'all';
+  const lookupId = req.query.order_id || req.query.id || req.query.venta_id || req.query.sale_id;
+  const desde = req.query.desde || DEFAULT_DATE_FROM;
+  const hasta = req.query.hasta;
 
-  if (!orderId) {
+  if (!lookupId) {
     res.status(400).json({
       ok: false,
-      error: 'Falta order_id. Ejemplo: /api/venta-debug?account=lebron&order_id=2000013072192145',
+      error: 'Falta order_id. Ejemplo: /api/venta-debug?account=all&order_id=2000013072192145&desde=2026-01-01',
     });
     return;
   }
 
   try {
-    const token = await getValidToken(req, res, account);
+    const requestedAccounts = getRequestedAccounts(accountQuery);
+    const attempts = [];
 
-    if (!token) {
-      res.status(401).json({
-        ok: false,
-        error: `La cuenta ${account} no está conectada`,
-      });
-      return;
-    }
+    for (const account of requestedAccounts) {
+      const token = await getValidToken(req, res, account);
 
-    const orderResponse = await fetchJson(`${ML_API}/orders/${encodeURIComponent(orderId)}`, token);
+      if (!token) {
+        attempts.push({
+          ok: false,
+          account,
+          cuenta: getAccountLabel(account),
+          error: 'Cuenta no conectada',
+        });
+        continue;
+      }
 
-    if (!orderResponse.ok) {
-      res.status(orderResponse.status).json({
-        ok: false,
+      const resolved = await resolveOrderForAccount({
+        lookupId,
+        token,
         account,
-        cuenta: getAccountLabel(account),
-        error: orderResponse.error,
-        order_response: orderResponse.data,
+        desde,
+        hasta,
       });
-      return;
+
+      if (resolved.ok) {
+        const debug = await buildDebugResponse({
+          account,
+          token,
+          resolved,
+        });
+
+        res.status(200).json({
+          ...debug,
+          requested_account: accountQuery,
+          requested_lookup_id: String(lookupId),
+          attempts,
+        });
+        return;
+      }
+
+      attempts.push(resolved);
     }
 
-    const order = orderResponse.data;
-    const shippingId = order.shipping?.id;
-    const paymentIds = (order.payments || []).map(payment => payment.id).filter(Boolean);
-
-    const [billingResponse, shipmentResponse, ...paymentResponses] = await Promise.all([
-      fetchJson(`${ML_API}/orders/${encodeURIComponent(orderId)}/billing_info`, token),
-      shippingId
-        ? fetchJson(`${ML_API}/shipments/${encodeURIComponent(shippingId)}`, token)
-        : Promise.resolve({ ok: false, status: 404, data: null, error: 'Orden sin shipping.id' }),
-      ...paymentIds.map(paymentId => fetchJson(`${MP_API}/v1/payments/${encodeURIComponent(paymentId)}`, token)),
-    ]);
-
-    const shipment = shipmentResponse.ok ? shipmentResponse.data : null;
-    const billingInfo = billingResponse.ok ? billingResponse.data : null;
-    const mpPayments = paymentResponses.filter(response => response.ok);
-
-    const calculations = buildCalculations({
-      order,
-      shipment,
-      billingInfo,
-      mpPayments,
-    });
-
-    res.status(200).json({
-      ok: true,
-      account,
-      cuenta: getAccountLabel(account),
-      order_id: orderId,
-      shipping_id: shippingId || null,
-      payment_ids: paymentIds,
-      nota: 'Debug sanitizado. No devuelve dirección completa ni datos sensibles del comprador. Usar para encontrar dónde ML esconde descuentos/bonificaciones.',
-      calculations,
-      order: redactOrder(order),
-      billing_info_status: {
-        ok: billingResponse.ok,
-        status: billingResponse.status,
-        error: billingResponse.error,
-      },
-      billing_info: billingInfo,
-      shipment_status: {
-        ok: shipmentResponse.ok,
-        status: shipmentResponse.status,
-        error: shipmentResponse.error,
-      },
-      shipment: redactShipment(shipment),
-      payments: summarizePayments(paymentResponses),
+    res.status(404).json({
+      ok: false,
+      error: 'No se encontró la venta en ninguna cuenta consultada.',
+      requested_account: accountQuery,
+      requested_lookup_id: String(lookupId),
+      desde: buildDateFrom(desde),
+      hasta: buildDateTo(hasta),
+      attempts,
+      sugerencia: 'Probá usar account=all y un rango desde/hasta que incluya la fecha de la venta. El ID de la URL de Mercado Libre a veces puede ser pack_id o shipment_id, no order_id directo. Sí, porque hacerlo simple aparentemente era ilegal.',
     });
   } catch (error) {
     res.status(500).json({
