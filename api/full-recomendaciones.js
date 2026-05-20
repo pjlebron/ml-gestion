@@ -588,6 +588,10 @@ function tieneProblemasFull(producto) {
   return detalles.some(detail => problemStatuses.includes(String(detail.status || '').trim()));
 }
 
+function estaPublicacionActiva(producto) {
+  return !producto.estado_publicacion || producto.estado_publicacion === 'active';
+}
+
 function clasificarProductoFull(producto, opciones) {
   const alertas = [];
 
@@ -618,6 +622,17 @@ function clasificarProductoFull(producto, opciones) {
     producto.alertas = [...alertas, 'Falta costo'];
     producto.unidades_sugeridas_full = 0;
     return 'falta_datos';
+  }
+
+  // Regla clave: si la publicación no está activa, no debe aparecer como acción directa.
+  // Puede ser una oportunidad, pero primero hay que reactivar/resolver revisión.
+  if (!estaPublicacionActiva(producto)) {
+    producto.recomendacion_sistema = 'Revisar publicación';
+    producto.prioridad = round(producto.ganancia_pre_full + producto.unidades_vendidas * 300 + producto.margen_pre_full * 50, 2);
+    producto.motivo_sistema = `Tiene señales comerciales, pero la publicación está ${producto.estado_publicacion}. Primero resolver estado de publicación antes de mandar o reponer Full.`;
+    producto.alertas = alertas;
+    producto.unidades_sugeridas_full = 0;
+    return 'revisar_publicacion';
   }
 
   if (producto.estado_full_ml === 'ya_esta_en_full') {
@@ -759,12 +774,13 @@ function limpiarProducto(producto) {
   };
 }
 
-function resumenTexto({ enviarAhora, testearFull, reponerFull, noEnviar, yaFull, faltaDatos }) {
+function resumenTexto({ enviarAhora, testearFull, reponerFull, revisarPublicacion, noEnviar, yaFull, faltaDatos }) {
   const partes = [];
 
   if (enviarAhora.length) partes.push(`${enviarAhora.length} producto${enviarAhora.length === 1 ? '' : 's'} aparecen fuertes para enviar a Full.`);
   if (testearFull.length) partes.push(`${testearFull.length} producto${testearFull.length === 1 ? '' : 's'} conviene probar con pocas unidades.`);
   if (reponerFull.length) partes.push(`${reponerFull.length} producto${reponerFull.length === 1 ? '' : 's'} ya están en Full y parecen necesitar reposición.`);
+  if (revisarPublicacion.length) partes.push(`${revisarPublicacion.length} producto${revisarPublicacion.length === 1 ? '' : 's'} tienen oportunidad, pero primero hay que revisar la publicación.`);
   if (yaFull.length) partes.push(`${yaFull.length} producto${yaFull.length === 1 ? '' : 's'} ya están en Full con stock aparentemente suficiente.`);
   if (faltaDatos.length) partes.push(`${faltaDatos.length} producto${faltaDatos.length === 1 ? '' : 's'} no se pueden evaluar por falta de costo/datos.`);
   if (noEnviar.length) partes.push(`${noEnviar.length} producto${noEnviar.length === 1 ? '' : 's'} no conviene enviar todavía.`);
@@ -811,6 +827,7 @@ export default async function handler(req, res) {
       enviar_ahora: [],
       testear_full: [],
       reponer_full: [],
+      revisar_publicacion: [],
       no_enviar: [],
       ya_full: [],
       falta_datos: [],
@@ -831,6 +848,7 @@ export default async function handler(req, res) {
     const enviarAhora = ordenarPorPrioridad(buckets.enviar_ahora).map(limpiarProducto);
     const testearFull = ordenarPorPrioridad(buckets.testear_full).map(limpiarProducto);
     const reponerFull = ordenarPorPrioridad(buckets.reponer_full).map(limpiarProducto);
+    const revisarPublicacion = ordenarPorPrioridad(buckets.revisar_publicacion).map(limpiarProducto);
     const noEnviar = ordenarPorPrioridad(buckets.no_enviar).map(limpiarProducto);
     const yaFull = ordenarPorPrioridad(buckets.ya_full).map(limpiarProducto);
     const faltaDatos = ordenarPorPrioridad(buckets.falta_datos).map(limpiarProducto);
@@ -856,11 +874,12 @@ export default async function handler(req, res) {
         max_unidades: maxUnidades,
         operaciones_full_max_dias: MAX_OPERATIONS_DAYS,
       },
-      nota: 'Este módulo ahora usa inventory_id desde /items, consulta stock real en /inventories/{inventory_id}/stock/fulfillment y operaciones recientes en /stock/fulfillment/operations/search. Para productos que aún no tienen inventory_id, el sistema recomienda con ventas/margen/stock de publicación.',
+      nota: 'Este módulo usa inventory_id desde /items, consulta stock real en /inventories/{inventory_id}/stock/fulfillment y operaciones recientes en /stock/fulfillment/operations/search. Si la publicación no está activa, se separa como Revisar publicación y no como acción directa.',
       resumen_ia: resumenTexto({
         enviarAhora,
         testearFull,
         reponerFull,
+        revisarPublicacion,
         noEnviar,
         yaFull,
         faltaDatos,
@@ -870,6 +889,7 @@ export default async function handler(req, res) {
         enviar_ahora: enviarAhora.length,
         testear_full: testearFull.length,
         reponer_full: reponerFull.length,
+        revisar_publicacion: revisarPublicacion.length,
         ya_full: yaFull.length,
         no_enviar: noEnviar.length,
         falta_datos: faltaDatos.length,
@@ -879,6 +899,7 @@ export default async function handler(req, res) {
       enviar_ahora: enviarAhora.slice(0, 50),
       testear_full: testearFull.slice(0, 50),
       reponer_full: reponerFull.slice(0, 50),
+      revisar_publicacion: revisarPublicacion.slice(0, 80),
       ya_full: yaFull.slice(0, 80),
       no_enviar: noEnviar.slice(0, 100),
       falta_datos: faltaDatos.slice(0, 100),
