@@ -56,20 +56,51 @@ function getSkuFromOrderItem(orderItem = {}) {
   ).trim();
 }
 
-function sumarOrderItems(order) {
-  const items = order.order_items || [];
-
-  return items.reduce((acc, orderItem) => {
+function normalizeOrderItems(order) {
+  const rawItems = order.order_items || [];
+  const precioItems = rawItems.reduce((sum, orderItem) => {
     const cantidad = toNumber(orderItem.quantity) || 1;
     const unitPrice = toNumber(orderItem.unit_price);
-    const fullUnitPrice = toNumber(orderItem.full_unit_price) || unitPrice;
-    const saleFee = absNumber(orderItem.sale_fee);
+    return sum + unitPrice * cantidad;
+  }, 0);
 
-    acc.cantidad += cantidad;
-    acc.precio_items += unitPrice * cantidad;
-    acc.precio_lista += fullUnitPrice * cantidad;
-    acc.sale_fee += saleFee * cantidad;
+  return rawItems.map((orderItem, index) => {
+    const cantidad = toNumber(orderItem.quantity) || 1;
+    const precioUnitario = toNumber(orderItem.unit_price);
+    const precioListaUnitario = toNumber(orderItem.full_unit_price) || precioUnitario;
+    const precioTotalItem = precioUnitario * cantidad;
+    const precioListaItem = precioListaUnitario * cantidad;
+    const saleFee = absNumber(orderItem.sale_fee) * cantidad;
+    const itemId = orderItem.item?.id || null;
+    const sku = getSkuFromOrderItem(orderItem);
 
+    return {
+      index,
+      item_id: itemId,
+      item_id_ml: itemId,
+      sku,
+      producto: orderItem.item?.title || '—',
+      cantidad,
+      precio_unitario: precioUnitario,
+      precio_total_item: precioTotalItem,
+      precio_lista_unitario: precioListaUnitario,
+      precio_lista_item: precioListaItem,
+      sale_fee: saleFee,
+      porcentaje_sobre_orden: precioItems > 0 ? precioTotalItem / precioItems : 0,
+      variation_id: orderItem.item?.variation_id || null,
+      category_id: orderItem.item?.category_id || null,
+    };
+  });
+}
+
+function sumarOrderItems(order) {
+  const items = normalizeOrderItems(order);
+
+  return items.reduce((acc, item) => {
+    acc.cantidad += item.cantidad;
+    acc.precio_items += item.precio_total_item;
+    acc.precio_lista += item.precio_lista_item;
+    acc.sale_fee += item.sale_fee;
     return acc;
   }, {
     cantidad: 0,
@@ -267,7 +298,9 @@ async function buscarOrdenesPaginadas(token, dateFrom, dateTo) {
 }
 
 async function normalizarOrden(order, token, account) {
+  const items = normalizeOrderItems(order);
   const firstItem = order.order_items?.[0] || {};
+  const firstNormalizedItem = items[0] || null;
   const shipping = order.shipping || {};
 
   const orderItems = sumarOrderItems(order);
@@ -312,19 +345,28 @@ async function normalizarOrden(order, token, account) {
   const localidad = shipData?.receiver_address?.city?.name || '—';
   const partido = shipData?.receiver_address?.state?.name || '—';
   const esFlex = detectarFlex(shipData);
-  const sku = getSkuFromOrderItem(firstItem);
   const sellerId = order.seller?.id || token.user_id || null;
+  const cantidadItemsDistintos = items.length;
+  const esOrdenMultiItem = cantidadItemsDistintos > 1;
+  const productoDisplay = esOrdenMultiItem
+    ? `${firstNormalizedItem?.producto || firstItem.item?.title || '—'} + ${cantidadItemsDistintos - 1} producto${cantidadItemsDistintos - 1 === 1 ? '' : 's'}`
+    : (firstNormalizedItem?.producto || firstItem.item?.title || '—');
 
   return {
     id: order.id,
     order_id: order.id,
     seller_id: sellerId,
     fecha: order.date_created?.slice(0, 10),
-    producto: firstItem.item?.title || '—',
-    item_id: firstItem.item?.id || null,
-    item_id_ml: firstItem.item?.id || null,
-    sku,
-    cantidad: firstItem.quantity || orderItems.cantidad || 1,
+    producto: productoDisplay,
+    producto_principal: firstNormalizedItem?.producto || firstItem.item?.title || '—',
+    item_id: firstNormalizedItem?.item_id || firstItem.item?.id || null,
+    item_id_ml: firstNormalizedItem?.item_id || firstItem.item?.id || null,
+    sku: firstNormalizedItem?.sku || getSkuFromOrderItem(firstItem),
+    cantidad: orderItems.cantidad || firstItem.quantity || 1,
+    cantidad_items_distintos: cantidadItemsDistintos,
+    cantidad_unidades_total: orderItems.cantidad || 1,
+    es_orden_multi_item: esOrdenMultiItem,
+    items,
     precio_unitario: toNumber(firstItem.unit_price),
     precio_total: precioTotal,
     precio_lista: orderItems.precio_lista,
@@ -386,9 +428,6 @@ function deduplicarOrdenes(orders) {
       fecha: order.fecha,
     });
 
-    // Si el duplicado viene marcado como Fragantify y el anterior como Lebron,
-    // dejamos Fragantify porque fue el caso detectado en producción.
-    // Si aparece otro caso, queda auditado en duplicados_eliminados.
     if (existente.cuenta_key === 'lebron' && order.cuenta_key === 'fragantify') {
       byId.set(key, order);
     }
