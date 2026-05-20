@@ -26,6 +26,21 @@ function round2(value) {
   return Math.round(toNumber(value) * 100) / 100;
 }
 
+function normalizarCodigo(value) {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ');
+}
+
+function getBaseUrl(req) {
+  const proto = req.headers['x-forwarded-proto'] || 'https';
+  const host = req.headers['x-forwarded-host'] || req.headers.host;
+  return `${proto}://${host}`;
+}
+
 async function fetchJson(url, token) {
   const response = await fetch(url, {
     headers: { Authorization: `Bearer ${token.access_token}` },
@@ -46,6 +61,25 @@ async function fetchJsonSafe(url, token) {
   } catch (error) {
     return null;
   }
+}
+
+async function fetchInternalJson(url, req) {
+  const response = await fetch(url, {
+    cache: 'no-store',
+    headers: {
+      cookie: req.headers.cookie || '',
+      'Cache-Control': 'no-cache',
+      Pragma: 'no-cache',
+    },
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok || data.error || data.ok === false) {
+    throw new Error(data.detail || data.message || data.error || `Error HTTP ${response.status}`);
+  }
+
+  return data;
 }
 
 function getSkuFromOrderItem(orderItem = {}) {
@@ -308,10 +342,6 @@ function getShipmentSellerCostRaw(shipData, shipmentCosts) {
 }
 
 function getShipmentSellerCost({ shipData, shipmentCosts, isFlex }) {
-  // Regla clave:
-  // En Flex/self_service, el costo operativo lo pagás por mensajería propia/manual.
-  // Mercado Libre NO lo muestra como "Envíos" en el detalle de cobro.
-  // Por eso NO debemos restar senders[0].cost como cargo_envio_ml.
   if (isFlex) return 0;
   return getShipmentSellerCostRaw(shipData, shipmentCosts);
 }
@@ -343,16 +373,11 @@ function getShipmentBonus({ shipData, shipmentCosts, sellerCost, rawSellerCost, 
   let total = 0;
   const detail = [];
 
-  // En Flex, si ML muestra "Descuentos y bonificaciones" por el tramo del vendedor,
-  // suele venir como senders[0].discounts.promoted_amount. Ejemplo Garín: $849.
   if (isFlex && senderDiscount > 0) {
     total += senderDiscount;
     detail.push({ key: 'senders.discounts.promoted_amount_flex', amount: senderDiscount });
   }
 
-  // Si el vendedor no paga envío real y no hay descuento del sender, ML puede exponer la
-  // bonificación completa como receiver.discounts. Ejemplo Épico: $6.490.
-  // Pero si rawSellerCost > 0, receiver.discounts es beneficio del comprador y NO ganancia tuya.
   if (rawSellerCost === 0 && senderDiscount === 0 && receiverDiscount > 0 && grossCost > 0) {
     total += receiverDiscount;
     detail.push({ key: 'receiver.discounts.promoted_amount_seller_cost_zero', amount: receiverDiscount });
@@ -545,6 +570,7 @@ function construirFilasPorItem(data) {
     const itemImpuestos = prorratear(impuestos, item, precioTotal, cantidadItemsDistintos);
     const itemRetenciones = prorratear(retenciones, item, precioTotal, cantidadItemsDistintos);
     const itemOtrosGastos = prorratear(otrosGastos, item, precioTotal, cantidadItemsDistintos);
+
     const itemCobroNeto = calcularCobroNeto({
       precioTotal: item.precio_total_item,
       cargoVenta: itemCargoVenta,
@@ -624,6 +650,182 @@ function construirFilasPorItem(data) {
   });
 }
 
+function buildCostosMap(costosCrudos = {}) {
+  const map = {};
+
+  Object.entries(costosCrudos).forEach(([codigo, costo]) => {
+    const keyOriginal = String(codigo ?? '').trim();
+    const keyNormalizada = normalizarCodigo(codigo);
+    const valor = toNumber(costo);
+
+    if (keyOriginal) map[keyOriginal] = valor;
+    if (keyNormalizada) map[keyNormalizada] = valor;
+  });
+
+  return map;
+}
+
+function buscarCosto(costosMap, codigos = []) {
+  for (const codigo of codigos) {
+    const keyOriginal = String(codigo ?? '').trim();
+    const keyNormalizada = normalizarCodigo(codigo);
+
+    if (keyOriginal && Object.prototype.hasOwnProperty.call(costosMap, keyOriginal)) {
+      return {
+        costo: toNumber(costosMap[keyOriginal]),
+        tieneCosto: true,
+        codigo_usado: keyOriginal,
+      };
+    }
+
+    if (keyNormalizada && Object.prototype.hasOwnProperty.call(costosMap, keyNormalizada)) {
+      return {
+        costo: toNumber(costosMap[keyNormalizada]),
+        tieneCosto: true,
+        codigo_usado: keyNormalizada,
+      };
+    }
+  }
+
+  return {
+    costo: 0,
+    tieneCosto: false,
+    codigo_usado: null,
+  };
+}
+
+function getCostoProducto(row, costosMap) {
+  const items = Array.isArray(row.items) && row.items.length
+    ? row.items
+    : [{
+        sku: row.sku,
+        item_id: row.item_id || row.item_id_ml,
+        item_id_ml: row.item_id || row.item_id_ml,
+        producto: row.producto,
+        cantidad: row.cantidad || 1,
+      }];
+
+  let costoTotal = 0;
+  const faltantes = [];
+  const encontrados = [];
+
+  items.forEach(item => {
+    const cantidad = toNumber(item.cantidad) || 1;
+    const costoInfo = buscarCosto(costosMap, [
+      item.sku,
+      item.item_id,
+      item.item_id_ml,
+    ]);
+
+    if (!costoInfo.tieneCosto) {
+      faltantes.push({
+        producto: item.producto || row.producto || '—',
+        sku: item.sku || row.sku || '—',
+        item_id: item.item_id || item.item_id_ml || row.item_id || '—',
+        cantidad,
+      });
+      return;
+    }
+
+    const costoItem = costoInfo.costo * cantidad;
+    costoTotal += costoItem;
+
+    encontrados.push({
+      producto: item.producto || row.producto || '—',
+      sku: item.sku || row.sku || '—',
+      item_id: item.item_id || item.item_id_ml || row.item_id || '—',
+      cantidad,
+      costo_unitario: costoInfo.costo,
+      costo_total: round2(costoItem),
+    });
+  });
+
+  return {
+    costo: round2(costoTotal),
+    tieneCosto: faltantes.length === 0,
+    faltantes,
+    encontrados,
+  };
+}
+
+function buildLocalidadesMap(localidadesData = {}) {
+  const rows = Array.isArray(localidadesData.localidades_activas)
+    ? localidadesData.localidades_activas
+    : Array.isArray(localidadesData.localidades)
+      ? localidadesData.localidades.filter(l => l.activo !== false)
+      : [];
+
+  const byLocalidad = {};
+  const byPartido = {};
+
+  rows.forEach(row => {
+    const localidad = row.localidad || row.nombre || '';
+    const partido = row.partido || '';
+    const tarifa = toNumber(row.tarifa);
+
+    const localidadKey = normalizarCodigo(localidad);
+    const partidoKey = normalizarCodigo(partido);
+
+    if (localidadKey) byLocalidad[localidadKey] = tarifa;
+
+    if (partidoKey && !Object.prototype.hasOwnProperty.call(byPartido, partidoKey)) {
+      byPartido[partidoKey] = tarifa;
+    }
+  });
+
+  return {
+    rows,
+    byLocalidad,
+    byPartido,
+  };
+}
+
+function getMensajeriaFlex(row, localidadesMap) {
+  if (!row.es_flex) return 0;
+
+  const localidadKey = normalizarCodigo(row.localidad);
+  const partidoKey = normalizarCodigo(row.partido);
+
+  if (localidadKey && Object.prototype.hasOwnProperty.call(localidadesMap.byLocalidad, localidadKey)) {
+    return toNumber(localidadesMap.byLocalidad[localidadKey]);
+  }
+
+  if (partidoKey && Object.prototype.hasOwnProperty.call(localidadesMap.byPartido, partidoKey)) {
+    return toNumber(localidadesMap.byPartido[partidoKey]);
+  }
+
+  return 0;
+}
+
+function aplicarRentabilidadSupabase(rows, costosMap, localidadesMap) {
+  return rows.map(row => {
+    const costoInfo = getCostoProducto(row, costosMap);
+    const mensajeria = row.es_flex ? getMensajeriaFlex(row, localidadesMap) : 0;
+    const flexSinMensajeria = !!row.es_flex && mensajeria === 0;
+    const ganancia = round2(toNumber(row.cobro_neto) - costoInfo.costo - mensajeria);
+    const margen = toNumber(row.precio_total) > 0 ? round2(ganancia / toNumber(row.precio_total) * 100) : 0;
+
+    return {
+      ...row,
+      costo: costoInfo.costo,
+      tiene_costo: costoInfo.tieneCosto,
+      costo_faltantes: costoInfo.faltantes,
+      costo_encontrados: costoInfo.encontrados,
+      sin_costo: !costoInfo.tieneCosto,
+      bonificado: costoInfo.tieneCosto && costoInfo.costo === 0,
+
+      mensajeria,
+      envio_flex_manual: mensajeria,
+      envio_costo: round2(toNumber(row.cargo_envio_ml) + mensajeria),
+      flex_sin_mensajeria: flexSinMensajeria,
+
+      ganancia,
+      margen,
+      rentabilidad_fuente: 'api_ventas_costos_y_mensajeria_supabase',
+    };
+  });
+}
+
 function getPackageKey(row) {
   const account = row.cuenta_key || row.account || 'account';
   if (row.envio_id) return `${account}:shipment:${row.envio_id}`;
@@ -687,6 +889,7 @@ function recalcularRowCobro(row) {
     retenciones: toNumber(row.retenciones),
     otrosGastos: toNumber(row.otros_gastos),
   });
+
   row.cobro_neto_calculado = row.cobro_neto;
   row.cobro_neto_fuente = row.cargo_compartido_prorrateado
     ? 'calculado_detalle_ml_pack_prorrateado'
@@ -796,6 +999,23 @@ export default async function handler(req, res) {
   const requestedAccounts = getRequestedAccounts(account);
 
   try {
+    const baseUrl = getBaseUrl(req);
+
+    const [costosData, localidadesData] = await Promise.all([
+      fetchInternalJson(`${baseUrl}/api/costos?cb=${Date.now()}`, req).catch(error => ({
+        error: error.message,
+        costos: {},
+      })),
+      fetchInternalJson(`${baseUrl}/api/costos?modulo=localidades&cb=${Date.now()}`, req).catch(error => ({
+        error: error.message,
+        localidades: [],
+        localidades_activas: [],
+      })),
+    ]);
+
+    const costosMap = buildCostosMap(costosData.costos || {});
+    const localidadesMap = buildLocalidadesMap(localidadesData || {});
+
     const accounts = {};
     const allRowsRaw = [];
 
@@ -838,7 +1058,8 @@ export default async function handler(req, res) {
     }
 
     const rowsWithSharedPackagesFixed = normalizarPaquetesCompartidos(allRowsRaw);
-    const dedupeResult = deduplicarOrdenes(rowsWithSharedPackagesFixed);
+    const rowsWithRentabilidad = aplicarRentabilidadSupabase(rowsWithSharedPackagesFixed, costosMap, localidadesMap);
+    const dedupeResult = deduplicarOrdenes(rowsWithRentabilidad);
     const allOrders = dedupeResult.orders;
 
     allOrders.sort((a, b) => {
@@ -852,6 +1073,11 @@ export default async function handler(req, res) {
       accounts[accountKey].returned = rowsForAccount.length;
       accounts[accountKey].returned_orders = new Set(rowsForAccount.map(order => String(order.order_id))).size;
     }
+
+    const flexSinMensajeria = allOrders.filter(row => row.flex_sin_mensajeria).length;
+    const mensajeriaTotal = round2(allOrders.reduce((sum, row) => sum + toNumber(row.mensajeria), 0));
+    const gananciaTotal = round2(allOrders.reduce((sum, row) => sum + toNumber(row.ganancia), 0));
+    const sinCosto = allOrders.filter(row => row.sin_costo).length;
 
     res.status(200).json({
       desde: dateFrom,
@@ -868,6 +1094,18 @@ export default async function handler(req, res) {
       duplicated_removed: dedupeResult.duplicados.length,
       duplicados_eliminados: dedupeResult.duplicados,
       truncated: Object.values(accounts).some(a => a.truncated),
+      rentabilidad: {
+        fuente: 'api_ventas_costos_y_mensajeria_supabase',
+        costos_cargados: Object.keys(costosData.costos || {}).length,
+        localidades_cargadas: localidadesMap.rows.length,
+        costos_error: costosData.error || null,
+        localidades_error: localidadesData.error || null,
+        sin_costo: sinCosto,
+        flex_sin_mensajeria: flexSinMensajeria,
+        mensajeria_total: mensajeriaTotal,
+        ganancia_total: gananciaTotal,
+        regla: 'Venta Flex descuenta mensajería Supabase. Venta no Flex no descuenta mensajería manual.',
+      },
       orders: allOrders,
     });
   } catch (err) {
