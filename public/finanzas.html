@@ -70,6 +70,7 @@ tr:last-child td{border-bottom:none}
 .row-ok td{background:#fbfffb}
 .money-input{max-width:140px;text-align:right}
 .inline-actions{display:flex;gap:6px;justify-content:flex-end}
+.sync-box{font-size:12px;color:#555;background:#fafafa;border:1px solid #eee;border-radius:12px;padding:10px;margin-bottom:14px;line-height:1.45}
 @media(max-width:980px){
   .wrap{padding:14px}
   .hero,.two,.form-grid,.form-grid-2{grid-template-columns:1fr}
@@ -84,23 +85,25 @@ tr:last-child td{border-bottom:none}
       <div class="title">💰 War Room financiero</div>
       <div class="sub">
         Vista simple de caja: dinero disponible, plata a cobrar, pagos pendientes y caja proyectada.
-        Nada de tablero aeroespacial para pagarle al proveedor de perfumes, porque aparentemente la humanidad aún necesita botones grandes.
+        Acá mandan pocos números, porque cuando un tablero necesita manual de 80 páginas ya dejó de ser tablero y pasó a ser castigo administrativo.
       </div>
     </div>
     <div class="actions">
       <a class="btn secondary" href="/">← Dashboard</a>
       <button onclick="loadData()">Actualizar</button>
+      <button class="blue" onclick="syncMercadoPago()">Sincronizar MP</button>
     </div>
   </div>
 
   <div id="msg"></div>
+  <div id="sync-status"></div>
 
   <div class="hero">
     <div>
       <div class="hero-title">Caja proyectada</div>
       <div class="hero-copy">
         Fórmula base: <b>dinero disponible + dinero a cobrar - dinero a pagar</b>.
-        Primero se carga manual. Después conectamos liquidaciones reales de Mercado Pago y dejamos de jugar al Excel con esteroides.
+        El saldo de Mercado Pago intenta sincronizarse automático. Lo que está “a liquidar” todavía se carga como ingreso pendiente.
       </div>
     </div>
     <div class="hero-result">
@@ -119,9 +122,49 @@ tr:last-child td{border-bottom:none}
       <div class="card">
         <div class="section-title">Cuentas / dinero disponible</div>
         <div class="muted" style="margin-bottom:10px">
-          Acá cargás saldos actuales: Mercado Pago, banco, efectivo, caja local, reserva. Esto alimenta “dinero disponible”.
+          Acá cargás saldos actuales: banco, efectivo, caja local, reserva. Mercado Pago se intenta sincronizar automáticamente por cuenta.
         </div>
         <div id="cuentas-box"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Categorías financieras</div>
+        <div class="muted" style="margin-bottom:10px">
+          Agregá o editá categorías para clasificar gastos, deudas, proveedores, impuestos, reposición e ingresos.
+        </div>
+
+        <div class="form-grid-2">
+          <div>
+            <label>Nombre categoría</label>
+            <input id="cat-nombre" placeholder="Ej: Proveedor Yves Dorgeval">
+            <input type="hidden" id="cat-id">
+          </div>
+          <div>
+            <label>Tipo</label>
+            <select id="cat-tipo">
+              <option value="ingreso">Ingreso</option>
+              <option value="egreso">Gasto</option>
+              <option value="deuda">Deuda</option>
+              <option value="proveedor">Proveedor</option>
+              <option value="impuesto">Impuesto</option>
+              <option value="reposicion">Reposición</option>
+              <option value="transferencia">Transferencia</option>
+              <option value="ajuste">Ajuste</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          <div>
+            <label>Orden</label>
+            <input id="cat-orden" type="number" step="1" placeholder="0">
+          </div>
+          <button class="green" onclick="saveCategoria()" id="btn-cat">Guardar categoría</button>
+        </div>
+
+        <div style="margin-top:10px">
+          <button class="secondary small" onclick="clearCategoriaForm()">Limpiar</button>
+        </div>
+
+        <div id="categorias-box" style="margin-top:12px"></div>
       </div>
 
       <div class="card">
@@ -286,7 +329,8 @@ const STATE = {
   cuentas: [],
   categorias: [],
   movimientos: [],
-  tab: 'pendientes'
+  tab: 'pendientes',
+  mercadoPagoSync: null
 };
 
 const today = () => new Date().toISOString().slice(0,10);
@@ -320,7 +364,7 @@ function showMsg(text, type = 'ok') {
   }, 4500);
 }
 
-async function apiRequest(method = 'GET', body = null) {
+async function apiRequest(method = 'GET', body = null, syncMp = true) {
   const options = {
     method,
     headers: { 'Content-Type': 'application/json' },
@@ -329,7 +373,8 @@ async function apiRequest(method = 'GET', body = null) {
 
   if (body) options.body = JSON.stringify(body);
 
-  const r = await fetch(`${API_URL}&cb=${Date.now()}`, options);
+  const syncParam = syncMp ? '1' : '0';
+  const r = await fetch(`${API_URL}&sync_mp=${syncParam}&cb=${Date.now()}`, options);
   const data = await r.json().catch(() => ({}));
 
   if (!r.ok || data.ok === false) {
@@ -339,14 +384,15 @@ async function apiRequest(method = 'GET', body = null) {
   return data;
 }
 
-async function loadData() {
+async function loadData(syncMp = true) {
   try {
-    const data = await apiRequest('GET');
+    const data = await apiRequest('GET', null, syncMp);
 
     STATE.resumen = data.resumen || {};
     STATE.cuentas = data.cuentas || [];
     STATE.categorias = data.categorias || [];
     STATE.movimientos = data.movimientos || [];
+    STATE.mercadoPagoSync = data.mercado_pago_sync || data.extra?.mercado_pago_sync || null;
 
     renderAll();
   } catch (error) {
@@ -355,10 +401,49 @@ async function loadData() {
 }
 
 function renderAll() {
+  renderSyncStatus();
   renderResumen();
   renderCuentas();
+  renderCategorias();
   renderSelects();
   renderMovimientos();
+}
+
+function renderSyncStatus() {
+  const box = document.getElementById('sync-status');
+  const sync = STATE.mercadoPagoSync;
+
+  if (!sync) {
+    box.innerHTML = '';
+    return;
+  }
+
+  const accounts = sync.accounts || [];
+  const okAccounts = accounts.filter(a => a.ok);
+  const badAccounts = accounts.filter(a => !a.ok);
+
+  if (!accounts.length) {
+    box.innerHTML = '';
+    return;
+  }
+
+  const rows = accounts.map(a => {
+    if (a.ok) {
+      return `${esc(a.label)}: <b>${fmt(a.saldo)}</b>`;
+    }
+
+    return `${esc(a.label)}: <b style="color:#a32d2d">${esc(a.error || 'No sincronizó')}</b>`;
+  }).join(' · ');
+
+  const cls = badAccounts.length ? 'sync-box' : 'sync-box ok-alert';
+
+  box.innerHTML = `
+    <div class="${cls}">
+      <b>Sincronización Mercado Pago:</b> ${okAccounts.length} cuenta${okAccounts.length === 1 ? '' : 's'} actualizada${okAccounts.length === 1 ? '' : 's'}.
+      <div style="margin-top:4px">${rows}</div>
+      ${badAccounts.length ? '<div class="muted" style="margin-top:4px">Si alguna cuenta falla, revisar el JSON de /api/costos?modulo=finanzas para ver attempts. Sí, hasta el saldo ahora necesita diagnóstico, qué civilización tan práctica.</div>' : ''}
+    </div>
+  `;
 }
 
 function renderResumen() {
@@ -368,8 +453,8 @@ function renderResumen() {
   document.getElementById('hero-caja').textContent = fmt(caja);
   document.getElementById('hero-caja').className = caja >= 0 ? 'green-text' : 'red-text';
   document.getElementById('hero-note').textContent = caja >= 0
-    ? 'Caja proyectada positiva. No festejes tanto, todavía faltan los proveedores.'
-    : 'Caja proyectada negativa. Hay que mirar pagos, cobros o saldos antes de seguir comprando stock como si no existiera mañana.';
+    ? 'Caja proyectada positiva. Bien, sin descorchar: todavía hay proveedores esperando.'
+    : 'Caja proyectada negativa. Hay que mirar pagos, cobros o saldos antes de comprar más stock como si la realidad no emitiera factura.';
 
   const metrics = [
     {
@@ -441,7 +526,10 @@ function renderCuentas() {
         <tbody>
           ${cuentas.map(c => `
             <tr>
-              <td><b>${esc(c.nombre)}</b></td>
+              <td>
+                <b>${esc(c.nombre)}</b>
+                ${c.notas ? `<div class="muted">${esc(String(c.notas).substring(0, 80))}</div>` : ''}
+              </td>
               <td><span class="badge neutral">${esc(c.tipo)}</span></td>
               <td class="num">
                 <input class="money-input" type="number" step="0.01" id="saldo-${esc(c.id)}" value="${num(c.saldo_actual)}">
@@ -450,6 +538,50 @@ function renderCuentas() {
                 <div class="inline-actions">
                   <button class="secondary small" onclick="editCuenta('${esc(c.id)}')">Editar</button>
                   <button class="green small" onclick="updateSaldoCuenta('${esc(c.id)}')">Guardar saldo</button>
+                </div>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderCategorias() {
+  const categorias = STATE.categorias
+    .filter(c => c.activo !== false)
+    .sort((a, b) => {
+      if (a.tipo !== b.tipo) return String(a.tipo).localeCompare(String(b.tipo), 'es');
+      return num(a.orden) - num(b.orden) || String(a.nombre).localeCompare(String(b.nombre), 'es');
+    });
+
+  if (!categorias.length) {
+    document.getElementById('categorias-box').innerHTML = '<div class="empty">No hay categorías cargadas.</div>';
+    return;
+  }
+
+  document.getElementById('categorias-box').innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Tipo</th>
+            <th>Categoría</th>
+            <th class="num">Orden</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${categorias.map(c => `
+            <tr>
+              <td>${tipoBadge(c.tipo)}</td>
+              <td><b>${esc(c.nombre)}</b></td>
+              <td class="num">${num(c.orden)}</td>
+              <td>
+                <div class="inline-actions">
+                  <button class="secondary small" onclick="editCategoria('${esc(c.id)}')">Editar</button>
+                  <button class="red small" onclick="disableCategoria('${esc(c.id)}')">Borrar</button>
                 </div>
               </td>
             </tr>
@@ -473,9 +605,7 @@ function renderSelects() {
 function filterCategorias() {
   const tipo = document.getElementById('mov-tipo').value;
   const categorias = STATE.categorias.filter(c => c.activo !== false && c.tipo === tipo);
-
   const fallback = STATE.categorias.filter(c => c.activo !== false);
-
   const rows = categorias.length ? categorias : fallback;
 
   document.getElementById('mov-categoria').innerHTML = ['<option value="">Sin categoría</option>']
@@ -584,6 +714,87 @@ function setTab(btn, tab) {
   renderMovimientos();
 }
 
+async function saveCategoria() {
+  const id = document.getElementById('cat-id').value;
+  const nombre = document.getElementById('cat-nombre').value.trim();
+  const tipo = document.getElementById('cat-tipo').value;
+  const orden = Math.trunc(num(document.getElementById('cat-orden').value));
+
+  if (!nombre) {
+    showMsg('Cargá el nombre de la categoría.', 'warn');
+    return;
+  }
+
+  try {
+    if (id) {
+      await apiRequest('PUT', {
+        type: 'categoria',
+        id,
+        nombre,
+        tipo,
+        orden,
+        activo: true
+      }, false);
+      showMsg('Categoría actualizada.');
+    } else {
+      await apiRequest('POST', {
+        type: 'categoria',
+        nombre,
+        tipo,
+        orden,
+        activo: true
+      }, false);
+      showMsg('Categoría creada.');
+    }
+
+    clearCategoriaForm();
+    await loadData(false);
+  } catch (error) {
+    showMsg('Error guardando categoría: ' + error.message, 'bad');
+  }
+}
+
+function editCategoria(id) {
+  const c = STATE.categorias.find(x => x.id === id);
+  if (!c) return;
+
+  document.getElementById('cat-id').value = c.id;
+  document.getElementById('cat-nombre').value = c.nombre;
+  document.getElementById('cat-tipo').value = c.tipo;
+  document.getElementById('cat-orden').value = num(c.orden);
+  document.getElementById('btn-cat').textContent = 'Actualizar categoría';
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function clearCategoriaForm() {
+  document.getElementById('cat-id').value = '';
+  document.getElementById('cat-nombre').value = '';
+  document.getElementById('cat-tipo').value = 'egreso';
+  document.getElementById('cat-orden').value = '';
+  document.getElementById('btn-cat').textContent = 'Guardar categoría';
+}
+
+async function disableCategoria(id) {
+  const c = STATE.categorias.find(x => x.id === id);
+  if (!c) return;
+
+  const ok = confirm(`¿Borrar/desactivar la categoría "${c.nombre}"?`);
+  if (!ok) return;
+
+  try {
+    await apiRequest('DELETE', {
+      type: 'categoria',
+      id
+    }, false);
+
+    showMsg('Categoría desactivada.');
+    await loadData(false);
+  } catch (error) {
+    showMsg('Error borrando categoría: ' + error.message, 'bad');
+  }
+}
+
 async function saveCuenta() {
   const id = document.getElementById('cuenta-id').value;
   const nombre = document.getElementById('cuenta-nombre').value.trim();
@@ -604,7 +815,7 @@ async function saveCuenta() {
         tipo,
         saldo_actual: saldo,
         activo: true
-      });
+      }, false);
       showMsg('Cuenta actualizada.');
     } else {
       await apiRequest('POST', {
@@ -613,12 +824,12 @@ async function saveCuenta() {
         tipo,
         saldo_actual: saldo,
         activo: true
-      });
+      }, false);
       showMsg('Cuenta creada.');
     }
 
     clearCuentaForm();
-    await loadData();
+    await loadData(false);
   } catch (error) {
     showMsg('Error guardando cuenta: ' + error.message, 'bad');
   }
@@ -653,10 +864,10 @@ async function updateSaldoCuenta(id) {
       type: 'cuenta',
       id,
       saldo_actual: saldo
-    });
+    }, false);
 
     showMsg('Saldo actualizado.');
-    await loadData();
+    await loadData(false);
   } catch (error) {
     showMsg('Error actualizando saldo: ' + error.message, 'bad');
   }
@@ -701,15 +912,15 @@ async function saveMovimiento() {
       await apiRequest('PUT', {
         ...payload,
         id
-      });
+      }, false);
       showMsg('Movimiento actualizado.');
     } else {
-      await apiRequest('POST', payload);
+      await apiRequest('POST', payload, false);
       showMsg('Movimiento creado.');
     }
 
     clearMovimientoForm();
-    await loadData();
+    await loadData(false);
   } catch (error) {
     showMsg('Error guardando movimiento: ' + error.message, 'bad');
   }
@@ -760,10 +971,10 @@ async function markMovimiento(id, estado) {
       id,
       estado,
       fecha_pago: today()
-    });
+    }, false);
 
     showMsg(estado === 'cobrado' ? 'Movimiento marcado como cobrado.' : 'Movimiento marcado como pagado.');
-    await loadData();
+    await loadData(false);
   } catch (error) {
     showMsg('Error actualizando movimiento: ' + error.message, 'bad');
   }
@@ -777,10 +988,10 @@ async function disableMovimiento(id) {
     await apiRequest('DELETE', {
       type: 'movimiento',
       id
-    });
+    }, false);
 
     showMsg('Movimiento desactivado.');
-    await loadData();
+    await loadData(false);
   } catch (error) {
     showMsg('Error borrando movimiento: ' + error.message, 'bad');
   }
@@ -805,9 +1016,37 @@ function quickProveedor() {
   document.getElementById('mov-fecha').value = today();
 }
 
+async function syncMercadoPago() {
+  try {
+    showMsg('Sincronizando saldo disponible de Mercado Pago...', 'warn');
+    await loadData(true);
+
+    const sync = STATE.mercadoPagoSync;
+
+    if (!sync) {
+      showMsg('La API no devolvió mercado_pago_sync. Revisá deploy de api/costos.js.', 'warn');
+      return;
+    }
+
+    const okAccounts = (sync.accounts || []).filter(a => a.ok);
+    const badAccounts = (sync.accounts || []).filter(a => !a.ok);
+
+    if (okAccounts.length) {
+      showMsg(`Mercado Pago sincronizado. Cuentas actualizadas: ${okAccounts.length}.`);
+    }
+
+    if (!okAccounts.length && badAccounts.length) {
+      const detail = badAccounts.map(a => `${a.label}: ${a.error}`).join(' | ');
+      showMsg('No se pudo sincronizar Mercado Pago: ' + detail, 'bad');
+    }
+  } catch (error) {
+    showMsg('Error sincronizando Mercado Pago: ' + error.message, 'bad');
+  }
+}
+
 document.getElementById('mov-fecha').value = today();
 
-loadData();
+loadData(true);
 </script>
 </body>
 </html>
