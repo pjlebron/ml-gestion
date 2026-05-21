@@ -81,7 +81,6 @@ tr:last-child td{border-bottom:none}
 .priority-week{border-color:#f3d8a8;background:#fffaf0}
 .priority-ok{border-color:#c9e5c5;background:#f8fff7}
 .quick-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-.account-warning{font-size:11px;color:#8a5400;margin-top:3px}
 .partial-box{border:1px solid #e7d7ff;background:#fbf8ff;border-radius:14px;padding:12px;margin-bottom:14px}
 .partial-title{font-weight:950;margin-bottom:5px}
 .partial-info{font-size:12px;color:#555;margin-bottom:10px;line-height:1.45}
@@ -98,8 +97,8 @@ tr:last-child td{border-bottom:none}
     <div>
       <div class="title">💰 War Room financiero</div>
       <div class="sub">
-        Caja real para decidir: saldo disponible, liquidaciones futuras, ingresos manuales, pagos pendientes, gastos fijos y pagos parciales.
-        Ahora si a un proveedor le pagás de a partes, el sistema calcula el saldo real. Al fin una pantalla que entiende que la vida no se paga toda de una.
+        Caja real para decidir: saldo disponible, liquidaciones futuras, ingresos manuales, pagos pendientes, gastos fijos, pagos parciales e impactos automáticos en cuentas.
+        Si pagás desde una cuenta, esa cuenta baja. Si cobrás, sube. Revolucionario, como usar números para administrar plata.
       </div>
     </div>
     <div class="actions">
@@ -118,7 +117,7 @@ tr:last-child td{border-bottom:none}
       <div class="hero-title">Caja proyectada útil</div>
       <div class="hero-copy">
         Fórmula: <b>dinero disponible + liquidaciones futuras MP + ingresos manuales - saldos pendientes reales</b>.
-        Los pagos parciales descuentan deuda automáticamente.
+        Los pagos parciales, pagos totales, cobros y transferencias ahora impactan en cuentas.
       </div>
     </div>
     <div class="hero-result">
@@ -148,7 +147,7 @@ tr:last-child td{border-bottom:none}
         <input id="pp-fecha" type="date">
       </div>
       <div>
-        <label>Cuenta usada</label>
+        <label>Cuenta usada *</label>
         <select id="pp-cuenta"></select>
       </div>
       <button class="green" onclick="savePagoParcial()">Guardar parcial</button>
@@ -348,12 +347,43 @@ tr:last-child td{border-bottom:none}
     </div>
   </div>
 
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+      <div>
+        <div class="section-title" style="margin:0">Impactos en cuentas</div>
+        <div class="muted">
+          Historial anti-duplicado de débitos y créditos. Sirve para auditar por qué subió o bajó cada cuenta.
+        </div>
+      </div>
+      <span class="badge neutral" id="impactos-count">0 impactos</span>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Cuenta</th>
+            <th>Tipo</th>
+            <th>Descripción</th>
+            <th>Origen</th>
+            <th class="num">Monto</th>
+            <th>Referencia</th>
+          </tr>
+        </thead>
+        <tbody id="impactos-body">
+          <tr><td colspan="7" class="empty">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <div class="two">
     <div>
       <div class="card">
         <div class="section-title">Cuentas / dinero disponible</div>
         <div class="muted" style="margin-bottom:10px">
-          Acá va la plata disponible ahora. Las liquidaciones futuras se calculan aparte.
+          Los saldos se actualizan cuando registrás pagos, cobros o transferencias. Si corregís un saldo manualmente, hacelo con criterio, que el Excel interno de la realidad no perdona.
         </div>
         <div id="cuentas-box"></div>
       </div>
@@ -437,7 +467,7 @@ tr:last-child td{border-bottom:none}
           </div>
           <div>
             <label>Tipo</label>
-            <select id="mov-tipo" onchange="filterCategorias()">
+            <select id="mov-tipo" onchange="onMovimientoTipoChange()">
               <option value="egreso">Gasto</option>
               <option value="deuda">Deuda</option>
               <option value="proveedor">Proveedor</option>
@@ -474,8 +504,12 @@ tr:last-child td{border-bottom:none}
 
         <div class="form-grid" style="margin-top:10px">
           <div>
-            <label>Cuenta</label>
+            <label>Cuenta origen / cuenta usada *</label>
             <select id="mov-cuenta"></select>
+          </div>
+          <div>
+            <label>Cuenta destino</label>
+            <select id="mov-cuenta-destino"></select>
           </div>
           <div>
             <label>Proveedor / origen</label>
@@ -490,17 +524,22 @@ tr:last-child td{border-bottom:none}
             <input id="mov-fecha-pago" type="date">
           </div>
           <div>
-            <label>Notas</label>
-            <input id="mov-notas" placeholder="Opcional">
-          </div>
-          <div>
             <label>&nbsp;</label>
             <button class="green" onclick="saveMovimiento()" id="btn-mov">Guardar movimiento</button>
           </div>
         </div>
 
+        <div class="form-grid-2" style="margin-top:10px">
+          <div>
+            <label>Notas</label>
+            <input id="mov-notas" placeholder="Opcional">
+          </div>
+          <div></div>
+          <div></div>
+          <button class="secondary" onclick="clearMovimientoForm()">Limpiar</button>
+        </div>
+
         <div class="quick-actions">
-          <button class="secondary small" onclick="clearMovimientoForm()">Limpiar</button>
           <button class="purple-btn small" onclick="quickMovimiento('proveedor','Pago proveedor')">Proveedor</button>
           <button class="red small" onclick="quickMovimiento('impuesto','Pago impuesto')">Impuesto</button>
           <button class="amber small" onclick="quickMovimiento('egreso','Sueldo / jornal')">Sueldo/Jornal</button>
@@ -508,6 +547,7 @@ tr:last-child td{border-bottom:none}
           <button class="amber small" onclick="quickMovimiento('egreso','Gasto fijo')">Gasto fijo</button>
           <button class="secondary small" onclick="quickMovimiento('otro','Otro gasto')">Otro gasto</button>
           <button class="green small" onclick="quickIngresoManual()">Ingreso manual</button>
+          <button class="blue small" onclick="quickTransferencia()">Transferencia</button>
         </div>
       </div>
 
@@ -515,7 +555,7 @@ tr:last-child td{border-bottom:none}
         <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:10px">
           <div>
             <div class="section-title" style="margin:0">Movimientos manuales y generados</div>
-            <div class="muted">Los pagos parciales se descuentan del saldo pendiente real.</div>
+            <div class="muted">Los pagos, cobros y pagos parciales impactan saldos de cuentas.</div>
           </div>
           <div>
             <label>Buscar</label>
@@ -568,6 +608,7 @@ const STATE = {
   movimientos: [],
   gastosFijos: [],
   pagosParciales: [],
+  impactosCuenta: [],
   liquidacionesMp: null,
   gastosFijosSync: null,
   tab: 'pendientes'
@@ -601,7 +642,7 @@ function showMsg(text, type = 'ok') {
   document.getElementById('msg').innerHTML = `<div class="alert ${cls}">${esc(text)}</div>`;
   setTimeout(() => {
     document.getElementById('msg').innerHTML = '';
-  }, 4500);
+  }, 5000);
 }
 
 async function apiRequest(method = 'GET', body = null, options = {}) {
@@ -639,6 +680,7 @@ async function loadData(options = {}) {
     STATE.movimientos = data.movimientos || [];
     STATE.gastosFijos = data.gastos_fijos || [];
     STATE.pagosParciales = data.pagos_parciales || [];
+    STATE.impactosCuenta = data.impactos_cuenta || [];
     STATE.liquidacionesMp = data.liquidaciones_mp || null;
     STATE.gastosFijosSync = data.gastos_fijos_sync || null;
 
@@ -670,6 +712,7 @@ function renderAll() {
   renderGastosFijos();
   renderPagosOperativos();
   renderLiquidaciones();
+  renderImpactos();
   renderCuentas();
   renderCategorias();
   renderSelects();
@@ -687,11 +730,11 @@ function renderSyncStatus() {
 
   document.getElementById('sync-status').innerHTML = `
     <div class="sync-box">
-      <b>Saldo disponible Mercado Pago:</b> cargar manualmente en cuentas hasta conectar saldo real.
+      <b>Saldo disponible:</b> se calcula desde las cuentas activas.
+      <br>
+      <b>Impactos automáticos:</b> pago parcial descuenta cuenta, pago total descuenta cuenta, cobro suma cuenta y transferencia mueve saldo entre cuentas.
       <br>
       <b>Liquidaciones futuras Mercado Pago:</b> automáticas desde pagos y fechas de liberación.
-      <br>
-      <b>Pagos parciales:</b> descuentan deuda real de proveedores/deudas/gastos.
       <br>
       <b>${esc(syncText)}</b>
     </div>
@@ -714,6 +757,9 @@ function renderResumen() {
   const pagosParcialesActivos = STATE.pagosParciales.filter(p => p.activo !== false);
   const totalParciales = pagosParcialesActivos.reduce((sum, p) => sum + num(p.monto), 0);
 
+  const impactosActivos = STATE.impactosCuenta.filter(i => i.activo !== false);
+  const totalImpactos = impactosActivos.reduce((sum, i) => sum + num(i.delta ?? (num(i.monto) * num(i.signo))), 0);
+
   const metrics = [
     ['Dinero disponible', fmt(r.dinero_disponible), 'suma de cuentas activas', 'green-text'],
     ['Liquidaciones futuras MP', fmt(r.liquidaciones_mp_pendientes), 'automático desde pagos', 'blue-text'],
@@ -721,6 +767,7 @@ function renderResumen() {
     ['A pagar real', fmt(r.dinero_a_pagar), 'saldo pendiente real', 'red-text'],
     ['Caja proyectada', fmt(r.caja_proyectada), 'disponible + entra - sale', caja >= 0 ? 'green-text' : 'red-text'],
     ['Pagos parciales', fmt(totalParciales), `${pagosParcialesActivos.length} pago${pagosParcialesActivos.length === 1 ? '' : 's'}`, 'purple-text'],
+    ['Impactos cuentas', fmt(totalImpactos), `${impactosActivos.length} impacto${impactosActivos.length === 1 ? '' : 's'}`, totalImpactos >= 0 ? 'green-text' : 'red-text'],
     ['Gastos fijos activos', fmt(totalGastosFijos), `${gastosFijosActivos.length} recurrente${gastosFijosActivos.length === 1 ? '' : 's'}`, 'amber-text'],
     ['Pagos vencidos', fmt(r.pagos_vencidos), 'saldo vencido real', num(r.pagos_vencidos) > 0 ? 'red-text' : 'green-text']
   ];
@@ -843,6 +890,7 @@ function renderPagosOperativos() {
           <td>
             <b>${esc(m.descripcion || '—')}</b>
             <div class="muted">${esc(m.categoria || 'Sin categoría')} · ${esc(m.proveedor || 'Sin proveedor')}</div>
+            ${!m.cuenta_id ? '<div class="muted red-text">Sin cuenta asignada. Editalo antes de pagar.</div>' : ''}
           </td>
           <td class="num">${fmt(m.monto_original ?? m.monto)}</td>
           <td class="num">${fmt(m.total_pagado_parcial || 0)}</td>
@@ -931,6 +979,38 @@ function renderLiquidaciones() {
     : '<tr><td colspan="5" class="empty">No hay liquidaciones por cuenta.</td></tr>';
 }
 
+function renderImpactos() {
+  const rows = [...STATE.impactosCuenta]
+    .filter(i => i.activo !== false)
+    .sort((a,b) => String(b.fecha || '').localeCompare(String(a.fecha || '')) || String(b.created_at || '').localeCompare(String(a.created_at || '')))
+    .slice(0, 80);
+
+  document.getElementById('impactos-count').textContent = `${rows.length} impacto${rows.length === 1 ? '' : 's'}`;
+
+  if (!rows.length) {
+    document.getElementById('impactos-body').innerHTML = '<tr><td colspan="7" class="empty">Todavía no hay impactos en cuentas.</td></tr>';
+    return;
+  }
+
+  document.getElementById('impactos-body').innerHTML = rows.map(i => {
+    const delta = num(i.delta ?? (num(i.monto) * num(i.signo)));
+    const cls = delta >= 0 ? 'green-text' : 'red-text';
+    const tipo = delta >= 0 ? 'Crédito' : 'Débito';
+
+    return `
+      <tr>
+        <td>${esc(i.fecha || '—')}</td>
+        <td><b>${esc(i.cuenta || 'Sin cuenta')}</b></td>
+        <td><span class="badge ${delta >= 0 ? 'ok' : 'bad'}">${tipo}</span></td>
+        <td>${esc(i.descripcion || '—')}</td>
+        <td>${esc(i.origen || 'sistema')}</td>
+        <td class="num"><b class="${cls}">${delta >= 0 ? '+' : '-'}${fmt(Math.abs(delta))}</b></td>
+        <td><span class="muted">${esc(i.referencia || '—')}</span></td>
+      </tr>
+    `;
+  }).join('');
+}
+
 function renderCuentas() {
   const cuentas = STATE.cuentas.filter(c => c.activo !== false);
 
@@ -959,7 +1039,7 @@ function renderCuentas() {
               <tr>
                 <td>
                   <b>${esc(c.nombre)}</b>
-                  ${isMp ? '<div class="muted">Mercado Pago disponible: cargar manual hasta conectar saldo real.</div>' : ''}
+                  ${isMp ? '<div class="muted">Mercado Pago disponible. Las liquidaciones futuras van aparte.</div>' : ''}
                 </td>
                 <td><span class="badge ${isMp ? 'info' : 'neutral'}">${esc(c.tipo)}</span></td>
                 <td class="num">
@@ -968,7 +1048,7 @@ function renderCuentas() {
                 <td>
                   <div class="inline-actions">
                     <button class="secondary small" onclick="editCuenta('${esc(c.id)}')">Editar</button>
-                    <button class="green small" onclick="updateSaldoCuenta('${esc(c.id)}')">Guardar saldo</button>
+                    <button class="green small" onclick="updateSaldoCuenta('${esc(c.id)}')">Ajustar saldo</button>
                   </div>
                 </td>
               </tr>
@@ -1026,11 +1106,15 @@ function renderCategorias() {
 
 function renderSelects() {
   const cuentas = STATE.cuentas.filter(c => c.activo !== false);
-  const cuentaOptions = ['<option value="">Sin cuenta</option>']
+  const cuentaOptions = ['<option value="">Seleccionar cuenta</option>']
+    .concat(cuentas.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)}</option>`));
+
+  const cuentaOptionalOptions = ['<option value="">Sin cuenta</option>']
     .concat(cuentas.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)}</option>`));
 
   document.getElementById('mov-cuenta').innerHTML = cuentaOptions.join('');
-  document.getElementById('gf-cuenta').innerHTML = cuentaOptions.join('');
+  document.getElementById('mov-cuenta-destino').innerHTML = cuentaOptionalOptions.join('');
+  document.getElementById('gf-cuenta').innerHTML = cuentaOptionalOptions.join('');
   document.getElementById('pp-cuenta').innerHTML = cuentaOptions.join('');
 
   filterCategorias();
@@ -1059,6 +1143,19 @@ function filterGastoFijoCategorias() {
     .join('');
 }
 
+function onMovimientoTipoChange() {
+  filterCategorias();
+  const tipo = document.getElementById('mov-tipo').value;
+
+  if (tipo === 'transferencia') {
+    document.getElementById('mov-estado').value = 'pagado';
+  }
+
+  if (tipo === 'ingreso') {
+    document.getElementById('mov-estado').value = 'pendiente';
+  }
+}
+
 function estadoBadge(estado) {
   if (estado === 'parcial') return '<span class="badge purple">Parcial</span>';
   if (estado === 'pendiente') return '<span class="badge warn">Pendiente</span>';
@@ -1076,7 +1173,7 @@ function tipoBadge(tipo) {
     proveedor: 'purple',
     impuesto: 'bad',
     reposicion: 'warn',
-    transferencia: 'neutral',
+    transferencia: 'info',
     ajuste: 'neutral',
     otro: 'neutral'
   };
@@ -1137,6 +1234,8 @@ function renderMovimientos() {
 
   document.getElementById('movimientos-body').innerHTML = rows.map(m => {
     const visual = estadoVisual(m);
+    const requiereCuenta = ['egreso','deuda','proveedor','impuesto','reposicion','otro','ingreso','transferencia'].includes(m.tipo);
+    const faltaCuenta = requiereCuenta && !m.cuenta_id;
 
     return `
       <tr class="${movimientoRowClass(m)}">
@@ -1145,6 +1244,7 @@ function renderMovimientos() {
         <td>
           <b>${esc(m.descripcion)}</b>
           <div class="muted">${esc(m.categoria || 'Sin categoría')} · ${esc(m.cuenta || 'Sin cuenta')}</div>
+          ${faltaCuenta ? '<div class="muted red-text">Falta cuenta para impactar saldo.</div>' : ''}
         </td>
         <td>${esc(m.proveedor || '—')}</td>
         <td>${esc(m.fecha_vencimiento || '—')}</td>
@@ -1188,6 +1288,7 @@ function openPagoParcial(movimientoId) {
     Original: <b>${fmt(m.monto_original ?? m.monto)}</b> ·
     Pagado: <b>${fmt(m.total_pagado_parcial || 0)}</b> ·
     Saldo: <b>${fmt(saldoMovimiento(m))}</b>
+    ${!m.cuenta_id ? '<br><span class="red-text">Elegí una cuenta para que el saldo baje correctamente.</span>' : ''}
   `;
 
   document.getElementById('pp-monto').focus();
@@ -1202,6 +1303,7 @@ function cancelPagoParcial() {
 async function savePagoParcial() {
   const movimientoId = document.getElementById('pp-movimiento-id').value;
   const monto = num(document.getElementById('pp-monto').value);
+  const cuentaId = document.getElementById('pp-cuenta').value;
 
   if (!movimientoId) {
     showMsg('Seleccioná un movimiento para pagar parcialmente.', 'warn');
@@ -1213,17 +1315,22 @@ async function savePagoParcial() {
     return;
   }
 
+  if (!cuentaId) {
+    showMsg('Elegí la cuenta usada para pagar. Sin cuenta no hay impacto de saldo.', 'warn');
+    return;
+  }
+
   try {
     await apiRequest('POST', {
       type: 'pago_parcial',
       movimiento_id: movimientoId,
       monto,
       fecha_pago: document.getElementById('pp-fecha').value || today(),
-      cuenta_id: document.getElementById('pp-cuenta').value || null,
+      cuenta_id: cuentaId,
       notas: document.getElementById('pp-notas').value.trim() || null
     }, { syncLiquidaciones: false, syncGastosFijos: false });
 
-    showMsg('Pago parcial registrado.');
+    showMsg('Pago parcial registrado e impactado en cuenta.');
     cancelPagoParcial();
     await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
   } catch (error) {
@@ -1460,13 +1567,30 @@ async function updateSaldoCuenta(id) {
   const input = document.getElementById(`saldo-${id}`);
   const saldo = num(input.value);
 
+  const ok = confirm('¿Ajustar saldo manualmente? Usalo solo para corregir caja real.');
+  if (!ok) return;
+
   try {
     await apiRequest('PUT', { type: 'cuenta', id, saldo_actual: saldo }, { syncLiquidaciones: false, syncGastosFijos: false });
-    showMsg('Saldo actualizado.');
+    showMsg('Saldo ajustado manualmente.');
     await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
   } catch (error) {
     showMsg('Error actualizando saldo: ' + error.message, 'bad');
   }
+}
+
+function validarMovimientoAntesDeGuardar({ tipo, estado, cuentaId, cuentaDestinoId }) {
+  if (tipo === 'transferencia') {
+    if (!cuentaId) return 'Elegí la cuenta origen de la transferencia.';
+    if (!cuentaDestinoId) return 'Elegí la cuenta destino de la transferencia.';
+    if (cuentaId === cuentaDestinoId) return 'La cuenta origen y destino no pueden ser la misma.';
+  }
+
+  if ((estado === 'pagado' || estado === 'cobrado') && ['egreso','deuda','proveedor','impuesto','reposicion','otro','ingreso'].includes(tipo) && !cuentaId) {
+    return 'Elegí una cuenta para impactar el saldo.';
+  }
+
+  return null;
 }
 
 async function saveMovimiento() {
@@ -1475,6 +1599,8 @@ async function saveMovimiento() {
   const tipo = document.getElementById('mov-tipo').value;
   const estado = document.getElementById('mov-estado').value;
   const monto = num(document.getElementById('mov-monto').value);
+  const cuentaId = document.getElementById('mov-cuenta').value || null;
+  const cuentaDestinoId = document.getElementById('mov-cuenta-destino').value || null;
 
   if (!descripcion) {
     showMsg('Cargá una descripción.', 'warn');
@@ -1486,6 +1612,12 @@ async function saveMovimiento() {
     return;
   }
 
+  const errorValidacion = validarMovimientoAntesDeGuardar({ tipo, estado, cuentaId, cuentaDestinoId });
+  if (errorValidacion) {
+    showMsg(errorValidacion, 'warn');
+    return;
+  }
+
   const payload = {
     type: 'movimiento',
     descripcion,
@@ -1493,7 +1625,8 @@ async function saveMovimiento() {
     estado,
     monto,
     categoria_id: document.getElementById('mov-categoria').value || null,
-    cuenta_id: document.getElementById('mov-cuenta').value || null,
+    cuenta_id: cuentaId,
+    cuenta_destino_id: cuentaDestinoId,
     proveedor: document.getElementById('mov-proveedor').value.trim() || null,
     fecha: document.getElementById('mov-fecha').value || today(),
     fecha_vencimiento: document.getElementById('mov-vencimiento').value || null,
@@ -1532,6 +1665,7 @@ function editMovimiento(id) {
   document.getElementById('mov-vencimiento').value = m.fecha_vencimiento || '';
   document.getElementById('mov-categoria').value = m.categoria_id || '';
   document.getElementById('mov-cuenta').value = m.cuenta_id || '';
+  document.getElementById('mov-cuenta-destino').value = m.cuenta_destino_id || '';
   document.getElementById('mov-proveedor').value = m.proveedor || '';
   document.getElementById('mov-fecha').value = m.fecha || today();
   document.getElementById('mov-fecha-pago').value = m.fecha_pago || '';
@@ -1549,6 +1683,7 @@ function clearMovimientoForm() {
   document.getElementById('mov-monto').value = '';
   document.getElementById('mov-vencimiento').value = '';
   document.getElementById('mov-cuenta').value = '';
+  document.getElementById('mov-cuenta-destino').value = '';
   document.getElementById('mov-proveedor').value = '';
   document.getElementById('mov-fecha').value = today();
   document.getElementById('mov-fecha-pago').value = '';
@@ -1558,6 +1693,21 @@ function clearMovimientoForm() {
 }
 
 async function markMovimiento(id, estado) {
+  const m = STATE.movimientos.find(x => x.id === id);
+  if (!m) return;
+
+  if ((estado === 'pagado' || estado === 'cobrado') && !m.cuenta_id) {
+    showMsg('Este movimiento no tiene cuenta asignada. Editalo, elegí cuenta y después pagalo/cobralo.', 'warn');
+    editMovimiento(id);
+    return;
+  }
+
+  if (m.tipo === 'transferencia' && (!m.cuenta_id || !m.cuenta_destino_id)) {
+    showMsg('La transferencia necesita cuenta origen y cuenta destino.', 'warn');
+    editMovimiento(id);
+    return;
+  }
+
   try {
     await apiRequest('PUT', {
       type: 'movimiento',
@@ -1566,7 +1716,7 @@ async function markMovimiento(id, estado) {
       fecha_pago: today()
     }, { syncLiquidaciones: false, syncGastosFijos: false });
 
-    showMsg(estado === 'cobrado' ? 'Movimiento marcado como cobrado.' : 'Movimiento marcado como pagado.');
+    showMsg(estado === 'cobrado' ? 'Movimiento cobrado e impactado en cuenta.' : 'Movimiento pagado e impactado en cuenta.');
     await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
   } catch (error) {
     showMsg('Error actualizando movimiento: ' + error.message, 'bad');
@@ -1574,12 +1724,12 @@ async function markMovimiento(id, estado) {
 }
 
 async function disableMovimiento(id) {
-  const ok = confirm('¿Borrar/desactivar este movimiento?');
+  const ok = confirm('¿Borrar/desactivar este movimiento? Si tenía impacto en cuenta, se revierte.');
   if (!ok) return;
 
   try {
     await apiRequest('DELETE', { type: 'movimiento', id }, { syncLiquidaciones: false, syncGastosFijos: false });
-    showMsg('Movimiento desactivado.');
+    showMsg('Movimiento desactivado. Si tenía impacto en cuenta, fue revertido.');
     await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
   } catch (error) {
     showMsg('Error borrando movimiento: ' + error.message, 'bad');
@@ -1609,6 +1759,19 @@ function quickIngresoManual() {
   document.getElementById('mov-descripcion').value = 'Ingreso manual pendiente';
   document.getElementById('mov-proveedor').value = '';
   document.getElementById('mov-fecha').value = today();
+  document.getElementById('mov-monto').focus();
+}
+
+function quickTransferencia() {
+  clearMovimientoForm();
+
+  document.getElementById('mov-tipo').value = 'transferencia';
+  filterCategorias();
+
+  document.getElementById('mov-estado').value = 'pagado';
+  document.getElementById('mov-descripcion').value = 'Transferencia entre cuentas';
+  document.getElementById('mov-fecha').value = today();
+  document.getElementById('mov-fecha-pago').value = today();
   document.getElementById('mov-monto').focus();
 }
 
