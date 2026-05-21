@@ -39,9 +39,9 @@ button:hover,.btn:hover{opacity:.88}
 .ok-alert{background:#edf8ec;border-color:#c9e5c5;color:#245a22}
 .bad-alert{background:#fff0f0;border-color:#f0bcbc;color:#8b1e1e}
 .info-alert{background:#eef6ff;border-color:#c9e0f8;color:#0c447c}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
-.form-grid{display:grid;grid-template-columns:1fr .8fr .8fr .8fr .8fr .8fr;gap:10px;align-items:end}
+.form-grid{display:grid;grid-template-columns:1fr .75fr .75fr .75fr .75fr .75fr;gap:10px;align-items:end}
 .form-grid-2{display:grid;grid-template-columns:1fr .8fr .8fr auto;gap:10px;align-items:end}
+.form-grid-3{display:grid;grid-template-columns:1fr .7fr .7fr .7fr .7fr auto;gap:10px;align-items:end}
 label{display:block;font-size:11px;color:#777;margin-bottom:5px}
 input,select,textarea{width:100%;border:1px solid #ddd;border-radius:10px;padding:8px 10px;font-size:13px;background:#fff}
 textarea{min-height:38px;resize:vertical}
@@ -73,22 +73,18 @@ tr:last-child td{border-bottom:none}
 .money-input{max-width:140px;text-align:right}
 .inline-actions{display:flex;gap:6px;justify-content:flex-end}
 .sync-box{font-size:12px;color:#555;background:#fafafa;border:1px solid #eee;border-radius:12px;padding:10px;margin-bottom:14px;line-height:1.45}
-.liq-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px}
-.liq-mini{background:#fafafa;border:1px solid #eee;border-radius:12px;padding:10px}
-.liq-mini span{display:block;font-size:10px;color:#777;margin-bottom:3px}
-.liq-mini b{font-size:17px}
-.account-warning{font-size:11px;color:#8a5400;margin-top:3px}
-.quick-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-.priority-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px}
-.priority-mini{background:#fafafa;border:1px solid #eee;border-radius:12px;padding:10px}
-.priority-mini span{display:block;font-size:10px;color:#777;margin-bottom:3px}
-.priority-mini b{font-size:17px}
+.liq-grid,.priority-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px}
+.liq-mini,.priority-mini{background:#fafafa;border:1px solid #eee;border-radius:12px;padding:10px}
+.liq-mini span,.priority-mini span{display:block;font-size:10px;color:#777;margin-bottom:3px}
+.liq-mini b,.priority-mini b{font-size:17px}
 .priority-high{border-color:#f0bcbc;background:#fff5f5}
 .priority-week{border-color:#f3d8a8;background:#fffaf0}
 .priority-ok{border-color:#c9e5c5;background:#f8fff7}
+.quick-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.account-warning{font-size:11px;color:#8a5400;margin-top:3px}
 @media(max-width:980px){
   .wrap{padding:14px}
-  .hero,.two,.form-grid,.form-grid-2{grid-template-columns:1fr}
+  .hero,.two,.form-grid,.form-grid-2,.form-grid-3{grid-template-columns:1fr}
   .hero-result b{font-size:22px}
 }
 </style>
@@ -99,14 +95,15 @@ tr:last-child td{border-bottom:none}
     <div>
       <div class="title">💰 War Room financiero</div>
       <div class="sub">
-        Caja real para decidir: saldo disponible cargado en cuentas, liquidaciones futuras de Mercado Pago, ingresos manuales y pagos pendientes.
-        Ahora suma vista operativa de pagos, porque mirar un número grande sin saber a quién hay que pagarle es contabilidad decorativa.
+        Caja real para decidir: saldo disponible, liquidaciones futuras, ingresos manuales, pagos pendientes y gastos fijos.
+        Ahora el contador se carga una vez y aparece todos los meses, porque repetir tareas tontas no es gestión: es castigo con teclado.
       </div>
     </div>
     <div class="actions">
       <a class="btn secondary" href="/">← Dashboard</a>
       <button onclick="loadData()">Actualizar</button>
       <button class="blue" onclick="actualizarLiquidaciones()">Actualizar liquidaciones MP</button>
+      <button class="purple-btn" onclick="generarGastosFijos()">Generar gastos fijos del mes</button>
     </div>
   </div>
 
@@ -118,7 +115,7 @@ tr:last-child td{border-bottom:none}
       <div class="hero-title">Caja proyectada útil</div>
       <div class="hero-copy">
         Fórmula: <b>dinero disponible + liquidaciones futuras MP + ingresos manuales - dinero a pagar</b>.
-        El foco es simple: saber qué entra, qué sale y qué podés pagar sin hacer malabares con fuego.
+        Los gastos fijos del mes se generan automáticamente sin duplicarse.
       </div>
     </div>
     <div class="hero-result">
@@ -133,12 +130,86 @@ tr:last-child td{border-bottom:none}
   </div>
 
   <div class="card">
+    <div class="section-title">Gastos fijos recurrentes</div>
+    <div class="muted" style="margin-bottom:10px">
+      Cargalos una sola vez. El sistema genera el movimiento pendiente del mes actual con referencia interna para no duplicarlo.
+      Ejemplo: Contador, alquiler, internet, jornales fijos, servicios.
+    </div>
+
+    <div class="form-grid-3">
+      <div>
+        <label>Nombre</label>
+        <input id="gf-nombre" placeholder="Ej: Contador">
+        <input type="hidden" id="gf-id">
+      </div>
+      <div>
+        <label>Tipo</label>
+        <select id="gf-tipo" onchange="filterGastoFijoCategorias()">
+          <option value="egreso">Gasto</option>
+          <option value="proveedor">Proveedor</option>
+          <option value="impuesto">Impuesto</option>
+          <option value="deuda">Deuda</option>
+          <option value="reposicion">Reposición</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+      <div>
+        <label>Monto</label>
+        <input id="gf-monto" type="number" step="0.01" placeholder="0">
+      </div>
+      <div>
+        <label>Día vence</label>
+        <input id="gf-dia" type="number" min="1" max="31" value="10">
+      </div>
+      <div>
+        <label>Categoría</label>
+        <select id="gf-categoria"></select>
+      </div>
+      <button class="green" onclick="saveGastoFijo()" id="btn-gf">Guardar fijo</button>
+    </div>
+
+    <div class="form-grid-2" style="margin-top:10px">
+      <div>
+        <label>Proveedor / origen</label>
+        <input id="gf-proveedor" placeholder="Ej: Estudio contable">
+      </div>
+      <div>
+        <label>Cuenta sugerida</label>
+        <select id="gf-cuenta"></select>
+      </div>
+      <div>
+        <label>Notas</label>
+        <input id="gf-notas" placeholder="Opcional">
+      </div>
+      <button class="secondary" onclick="clearGastoFijoForm()">Limpiar</button>
+    </div>
+
+    <div style="margin-top:12px" class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Activo</th>
+            <th>Gasto fijo</th>
+            <th>Tipo</th>
+            <th>Categoría</th>
+            <th>Vence</th>
+            <th class="num">Monto</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="gastos-fijos-body">
+          <tr><td colspan="7" class="empty">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:10px">
       <div>
         <div class="section-title" style="margin:0">Qué tengo que pagar</div>
         <div class="muted">
           Vista operativa de egresos pendientes: vencidos, esta semana, este mes y sin vencimiento.
-          Esto es lo que sirve cuando abrís la caja y el mundo decide cobrarte todo junto, como suele hacer.
         </div>
       </div>
       <span class="badge warn" id="pagos-count">0 pendientes</span>
@@ -192,9 +263,7 @@ tr:last-child td{border-bottom:none}
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:10px">
       <div>
         <div class="section-title" style="margin:0">Liquidaciones futuras Mercado Pago</div>
-        <div class="muted">
-          Muestra solo plata futura útil para caja: hoy, mañana, próximos 7 días, próximos 30 días y total pendiente futuro.
-        </div>
+        <div class="muted">Plata futura útil para caja: hoy, mañana, 7 días, 30 días y total pendiente futuro.</div>
       </div>
       <span class="badge info" id="liq-count">0 pagos válidos</span>
     </div>
@@ -247,22 +316,18 @@ tr:last-child td{border-bottom:none}
       <div class="card">
         <div class="section-title">Cuentas / dinero disponible</div>
         <div class="muted" style="margin-bottom:10px">
-          Acá va la plata disponible ahora: banco, efectivo, caja local, reserva y Mercado Pago disponible.
-          Las liquidaciones futuras se calculan aparte.
+          Acá va la plata disponible ahora. Las liquidaciones futuras se calculan aparte.
         </div>
         <div id="cuentas-box"></div>
       </div>
 
       <div class="card">
         <div class="section-title">Categorías financieras</div>
-        <div class="muted" style="margin-bottom:10px">
-          Agregá o editá categorías para clasificar gastos, deudas, proveedores, impuestos, reposición e ingresos.
-        </div>
 
         <div class="form-grid-2">
           <div>
             <label>Nombre categoría</label>
-            <input id="cat-nombre" placeholder="Ej: Proveedor Yves Dorgeval">
+            <input id="cat-nombre" placeholder="Ej: Contador">
             <input type="hidden" id="cat-id">
           </div>
           <div>
@@ -326,11 +391,11 @@ tr:last-child td{border-bottom:none}
 
     <div>
       <div class="card">
-        <div class="section-title">Nuevo movimiento</div>
+        <div class="section-title">Nuevo movimiento manual</div>
         <div class="form-grid">
           <div>
             <label>Descripción</label>
-            <input id="mov-descripcion" placeholder="Ej: Pago proveedor Yves Dorgeval">
+            <input id="mov-descripcion" placeholder="Ej: Pago proveedor">
             <input type="hidden" id="mov-id">
           </div>
           <div>
@@ -412,8 +477,8 @@ tr:last-child td{border-bottom:none}
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:10px">
           <div>
-            <div class="section-title" style="margin:0">Movimientos manuales</div>
-            <div class="muted">Pendientes, pagados, cobrados y cancelados. No dupliques Mercado Pago a liquidar: eso ya se calcula automático.</div>
+            <div class="section-title" style="margin:0">Movimientos manuales y generados</div>
+            <div class="muted">Los gastos fijos generados aparecen acá como movimientos pendientes del mes.</div>
           </div>
           <div>
             <label>Buscar</label>
@@ -450,6 +515,7 @@ tr:last-child td{border-bottom:none}
       </div>
     </div>
   </div>
+
 </div>
 
 <script>
@@ -460,9 +526,10 @@ const STATE = {
   cuentas: [],
   categorias: [],
   movimientos: [],
+  gastosFijos: [],
   liquidacionesMp: null,
-  tab: 'pendientes',
-  mercadoPagoSync: null
+  gastosFijosSync: null,
+  tab: 'pendientes'
 };
 
 const today = () => new Date().toISOString().slice(0,10);
@@ -497,8 +564,8 @@ function showMsg(text, type = 'ok') {
 }
 
 async function apiRequest(method = 'GET', body = null, options = {}) {
-  const syncMp = options.syncMp === true ? '1' : '0';
   const syncLiquidaciones = options.syncLiquidaciones === false ? '0' : '1';
+  const syncGastosFijos = options.syncGastosFijos === false ? '0' : '1';
 
   const requestOptions = {
     method,
@@ -508,7 +575,7 @@ async function apiRequest(method = 'GET', body = null, options = {}) {
 
   if (body) requestOptions.body = JSON.stringify(body);
 
-  const r = await fetch(`${API_URL}&sync_mp=${syncMp}&sync_liquidaciones=${syncLiquidaciones}&cb=${Date.now()}`, requestOptions);
+  const r = await fetch(`${API_URL}&sync_liquidaciones=${syncLiquidaciones}&sync_gastos_fijos=${syncGastosFijos}&cb=${Date.now()}`, requestOptions);
   const data = await r.json().catch(() => ({}));
 
   if (!r.ok || data.ok === false) {
@@ -521,16 +588,17 @@ async function apiRequest(method = 'GET', body = null, options = {}) {
 async function loadData(options = {}) {
   try {
     const data = await apiRequest('GET', null, {
-      syncMp: false,
-      syncLiquidaciones: options.syncLiquidaciones !== false
+      syncLiquidaciones: options.syncLiquidaciones !== false,
+      syncGastosFijos: options.syncGastosFijos !== false
     });
 
     STATE.resumen = data.resumen || {};
     STATE.cuentas = data.cuentas || [];
     STATE.categorias = data.categorias || [];
     STATE.movimientos = data.movimientos || [];
+    STATE.gastosFijos = data.gastos_fijos || [];
     STATE.liquidacionesMp = data.liquidaciones_mp || null;
-    STATE.mercadoPagoSync = data.mercado_pago_sync || data.extra?.mercado_pago_sync || null;
+    STATE.gastosFijosSync = data.gastos_fijos_sync || null;
 
     renderAll();
   } catch (error) {
@@ -541,6 +609,7 @@ async function loadData(options = {}) {
 function renderAll() {
   renderSyncStatus();
   renderResumen();
+  renderGastosFijos();
   renderPagosOperativos();
   renderLiquidaciones();
   renderCuentas();
@@ -550,13 +619,21 @@ function renderAll() {
 }
 
 function renderSyncStatus() {
-  const box = document.getElementById('sync-status');
+  const sync = STATE.gastosFijosSync;
 
-  box.innerHTML = `
+  let syncText = 'Gastos fijos del mes: se generan automáticamente y no se duplican.';
+
+  if (sync) {
+    syncText = `Gastos fijos del mes ${sync.periodo}: ${sync.creados || 0} creados, ${sync.actualizados || 0} actualizados, ${sync.omitidos || 0} omitidos.`;
+  }
+
+  document.getElementById('sync-status').innerHTML = `
     <div class="sync-box">
-      <b>Saldo disponible Mercado Pago:</b> cargar manualmente en cuentas hasta que conectemos saldo real sin romper producción.
+      <b>Saldo disponible Mercado Pago:</b> cargar manualmente en cuentas hasta conectar saldo real.
       <br>
-      <b>Liquidaciones futuras Mercado Pago:</b> se calculan automáticamente desde pagos y fechas de liberación.
+      <b>Liquidaciones futuras Mercado Pago:</b> automáticas desde pagos y fechas de liberación.
+      <br>
+      <b>${esc(syncText)}</b>
     </div>
   `;
 }
@@ -569,65 +646,69 @@ function renderResumen() {
   document.getElementById('hero-caja').className = caja >= 0 ? 'green-text' : 'red-text';
   document.getElementById('hero-note').textContent = caja >= 0
     ? 'Caja proyectada positiva. Sirve para decidir pagos, compras y reposición.'
-    : 'Caja proyectada negativa. Frená compras, revisá pagos o cargá saldos disponibles antes de que el tablero te mire con decepción.';
+    : 'Caja proyectada negativa. Frená compras o revisá pagos antes de que el tablero te cobre intereses emocionales.';
+
+  const gastosFijosActivos = STATE.gastosFijos.filter(g => g.activo !== false);
+  const totalGastosFijos = gastosFijosActivos.reduce((sum, g) => sum + num(g.monto), 0);
 
   const metrics = [
-    {
-      l: 'Dinero disponible',
-      v: fmt(r.dinero_disponible),
-      s: 'suma de cuentas activas',
-      cls: 'green-text'
-    },
-    {
-      l: 'Liquidaciones futuras MP',
-      v: fmt(r.liquidaciones_mp_pendientes),
-      s: 'automático desde pagos',
-      cls: 'blue-text'
-    },
-    {
-      l: 'Ingresos manuales',
-      v: fmt(r.dinero_a_cobrar_manual),
-      s: 'sin duplicar Mercado Pago',
-      cls: 'blue-text'
-    },
-    {
-      l: 'A pagar',
-      v: fmt(r.dinero_a_pagar),
-      s: 'gastos/deudas pendientes',
-      cls: 'red-text'
-    },
-    {
-      l: 'Caja proyectada',
-      v: fmt(r.caja_proyectada),
-      s: 'disponible + entra - sale',
-      cls: caja >= 0 ? 'green-text' : 'red-text'
-    },
-    {
-      l: 'MP manual excluido',
-      v: fmt(r.ingresos_mp_manuales_excluidos),
-      s: 'evita duplicar liquidaciones',
-      cls: 'amber-text'
-    },
-    {
-      l: 'Pagos vencidos',
-      v: fmt(r.pagos_vencidos),
-      s: 'requiere atención',
-      cls: num(r.pagos_vencidos) > 0 ? 'red-text' : 'green-text'
-    },
-    {
-      l: 'Pagos próximos 7 días',
-      v: fmt(r.pagos_7_dias),
-      s: 'semana operativa',
-      cls: 'amber-text'
-    }
+    ['Dinero disponible', fmt(r.dinero_disponible), 'suma de cuentas activas', 'green-text'],
+    ['Liquidaciones futuras MP', fmt(r.liquidaciones_mp_pendientes), 'automático desde pagos', 'blue-text'],
+    ['Ingresos manuales', fmt(r.dinero_a_cobrar_manual), 'sin duplicar Mercado Pago', 'blue-text'],
+    ['A pagar', fmt(r.dinero_a_pagar), 'gastos/deudas pendientes', 'red-text'],
+    ['Caja proyectada', fmt(r.caja_proyectada), 'disponible + entra - sale', caja >= 0 ? 'green-text' : 'red-text'],
+    ['Gastos fijos activos', fmt(totalGastosFijos), `${gastosFijosActivos.length} recurrente${gastosFijosActivos.length === 1 ? '' : 's'}`, 'amber-text'],
+    ['Pagos vencidos', fmt(r.pagos_vencidos), 'requiere atención', num(r.pagos_vencidos) > 0 ? 'red-text' : 'green-text'],
+    ['Pagos próximos 7 días', fmt(r.pagos_7_dias), 'semana operativa', 'amber-text']
   ];
 
-  document.getElementById('metrics').innerHTML = metrics.map(m => `
+  document.getElementById('metrics').innerHTML = metrics.map(([l,v,s,cls]) => `
     <div class="metric">
-      <div class="l">${m.l}</div>
-      <div class="v ${m.cls}">${m.v}</div>
-      <div class="s">${m.s}</div>
+      <div class="l">${l}</div>
+      <div class="v ${cls}">${v}</div>
+      <div class="s">${s}</div>
     </div>
+  `).join('');
+}
+
+function getCategoriaNombre(id) {
+  return STATE.categorias.find(c => c.id === id)?.nombre || 'Sin categoría';
+}
+
+function getCuentaNombre(id) {
+  return STATE.cuentas.find(c => c.id === id)?.nombre || 'Sin cuenta';
+}
+
+function renderGastosFijos() {
+  const rows = [...STATE.gastosFijos].sort((a,b) => {
+    if ((a.activo !== false) !== (b.activo !== false)) return a.activo === false ? 1 : -1;
+    return num(a.dia_vencimiento) - num(b.dia_vencimiento) || String(a.nombre).localeCompare(String(b.nombre), 'es');
+  });
+
+  if (!rows.length) {
+    document.getElementById('gastos-fijos-body').innerHTML = '<tr><td colspan="7" class="empty">No hay gastos fijos cargados. Cargá “Contador” y dejá de repetirlo todos los meses como ritual contable.</td></tr>';
+    return;
+  }
+
+  document.getElementById('gastos-fijos-body').innerHTML = rows.map(g => `
+    <tr>
+      <td>${g.activo === false ? '<span class="badge bad">Inactivo</span>' : '<span class="badge ok">Activo</span>'}</td>
+      <td>
+        <b>${esc(g.nombre)}</b>
+        <div class="muted">${esc(g.proveedor || '')}</div>
+      </td>
+      <td>${tipoBadge(g.tipo)}</td>
+      <td>${esc(g.categoria || getCategoriaNombre(g.categoria_id))}</td>
+      <td>Día ${num(g.dia_vencimiento)}</td>
+      <td class="num"><b>${fmt(g.monto)}</b></td>
+      <td>
+        <div class="inline-actions">
+          <button class="secondary small" onclick="editGastoFijo('${esc(g.id)}')">Editar</button>
+          <button class="blue small" onclick="generarGastosFijos('${esc(g.id)}')">Generar mes</button>
+          <button class="red small" onclick="disableGastoFijo('${esc(g.id)}')">Borrar</button>
+        </div>
+      </td>
+    </tr>
   `).join('');
 }
 
@@ -707,7 +788,7 @@ function renderPagosOperativos() {
         </tr>
       `;
     }).join('')
-    : '<tr><td colspan="6" class="empty">No hay pagos pendientes. Disfrutá estos cinco minutos de paz fiscal.</td></tr>';
+    : '<tr><td colspan="6" class="empty">No hay pagos pendientes. Raro, sospechoso, pero hermoso.</td></tr>';
 
   const byCategoria = new Map();
 
@@ -719,8 +800,7 @@ function renderPagosOperativos() {
     byCategoria.set(key, row);
   });
 
-  const categorias = Array.from(byCategoria.values())
-    .sort((a,b) => b.monto - a.monto);
+  const categorias = Array.from(byCategoria.values()).sort((a,b) => b.monto - a.monto);
 
   document.getElementById('pagos-categorias-body').innerHTML = categorias.length
     ? categorias.map(row => `
@@ -810,8 +890,7 @@ function renderCuentas() {
               <tr>
                 <td>
                   <b>${esc(c.nombre)}</b>
-                  ${isMp ? '<div class="account-warning">Saldo disponible MP: cargar manual hasta conectar saldo real.</div>' : ''}
-                  ${c.notas && !isMp ? `<div class="muted">${esc(String(c.notas).substring(0, 80))}</div>` : ''}
+                  ${isMp ? '<div class="muted">Mercado Pago disponible: cargar manual hasta conectar saldo real.</div>' : ''}
                 </td>
                 <td><span class="badge ${isMp ? 'info' : 'neutral'}">${esc(c.tipo)}</span></td>
                 <td class="num">
@@ -882,8 +961,10 @@ function renderSelects() {
     .concat(cuentas.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)}</option>`));
 
   document.getElementById('mov-cuenta').innerHTML = cuentaOptions.join('');
+  document.getElementById('gf-cuenta').innerHTML = cuentaOptions.join('');
 
   filterCategorias();
+  filterGastoFijoCategorias();
 }
 
 function filterCategorias() {
@@ -893,6 +974,17 @@ function filterCategorias() {
   const rows = categorias.length ? categorias : fallback;
 
   document.getElementById('mov-categoria').innerHTML = ['<option value="">Sin categoría</option>']
+    .concat(rows.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)} (${esc(c.tipo)})</option>`))
+    .join('');
+}
+
+function filterGastoFijoCategorias() {
+  const tipo = document.getElementById('gf-tipo').value;
+  const categorias = STATE.categorias.filter(c => c.activo !== false && c.tipo === tipo);
+  const fallback = STATE.categorias.filter(c => c.activo !== false);
+  const rows = categorias.length ? categorias : fallback;
+
+  document.getElementById('gf-categoria').innerHTML = ['<option value="">Sin categoría</option>']
     .concat(rows.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)} (${esc(c.tipo)})</option>`))
     .join('');
 }
@@ -998,6 +1090,128 @@ function setTab(btn, tab) {
   renderMovimientos();
 }
 
+/* ========================
+   GUARDADO GASTOS FIJOS
+======================== */
+
+async function saveGastoFijo() {
+  const id = document.getElementById('gf-id').value;
+  const nombre = document.getElementById('gf-nombre').value.trim();
+  const tipo = document.getElementById('gf-tipo').value;
+  const monto = num(document.getElementById('gf-monto').value);
+
+  if (!nombre) {
+    showMsg('Cargá el nombre del gasto fijo.', 'warn');
+    return;
+  }
+
+  if (monto <= 0) {
+    showMsg('El monto del gasto fijo tiene que ser mayor a cero.', 'warn');
+    return;
+  }
+
+  const payload = {
+    type: 'gasto_fijo',
+    nombre,
+    tipo,
+    monto,
+    dia_vencimiento: num(document.getElementById('gf-dia').value || 10),
+    categoria_id: document.getElementById('gf-categoria').value || null,
+    cuenta_id: document.getElementById('gf-cuenta').value || null,
+    proveedor: document.getElementById('gf-proveedor').value.trim() || null,
+    notas: document.getElementById('gf-notas').value.trim() || null,
+    activo: true
+  };
+
+  try {
+    if (id) {
+      await apiRequest('PUT', { ...payload, id }, { syncLiquidaciones: false, syncGastosFijos: false });
+      showMsg('Gasto fijo actualizado.');
+    } else {
+      await apiRequest('POST', payload, { syncLiquidaciones: false, syncGastosFijos: false });
+      showMsg('Gasto fijo creado.');
+    }
+
+    clearGastoFijoForm();
+    await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
+  } catch (error) {
+    showMsg('Error guardando gasto fijo: ' + error.message, 'bad');
+  }
+}
+
+function editGastoFijo(id) {
+  const g = STATE.gastosFijos.find(x => x.id === id);
+  if (!g) return;
+
+  document.getElementById('gf-id').value = g.id;
+  document.getElementById('gf-nombre').value = g.nombre || '';
+  document.getElementById('gf-tipo').value = g.tipo || 'egreso';
+  filterGastoFijoCategorias();
+  document.getElementById('gf-monto').value = num(g.monto);
+  document.getElementById('gf-dia').value = num(g.dia_vencimiento || 10);
+  document.getElementById('gf-categoria').value = g.categoria_id || '';
+  document.getElementById('gf-cuenta').value = g.cuenta_id || '';
+  document.getElementById('gf-proveedor').value = g.proveedor || '';
+  document.getElementById('gf-notas').value = g.notas || '';
+  document.getElementById('btn-gf').textContent = 'Actualizar fijo';
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function clearGastoFijoForm() {
+  document.getElementById('gf-id').value = '';
+  document.getElementById('gf-nombre').value = '';
+  document.getElementById('gf-tipo').value = 'egreso';
+  document.getElementById('gf-monto').value = '';
+  document.getElementById('gf-dia').value = 10;
+  document.getElementById('gf-categoria').value = '';
+  document.getElementById('gf-cuenta').value = '';
+  document.getElementById('gf-proveedor').value = '';
+  document.getElementById('gf-notas').value = '';
+  document.getElementById('btn-gf').textContent = 'Guardar fijo';
+  filterGastoFijoCategorias();
+}
+
+async function disableGastoFijo(id) {
+  const g = STATE.gastosFijos.find(x => x.id === id);
+  if (!g) return;
+
+  const ok = confirm(`¿Borrar/desactivar el gasto fijo "${g.nombre}"?`);
+  if (!ok) return;
+
+  try {
+    await apiRequest('DELETE', {
+      type: 'gasto_fijo',
+      id
+    }, { syncLiquidaciones: false, syncGastosFijos: false });
+
+    showMsg('Gasto fijo desactivado.');
+    await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
+  } catch (error) {
+    showMsg('Error borrando gasto fijo: ' + error.message, 'bad');
+  }
+}
+
+async function generarGastosFijos(gastoFijoId = null) {
+  try {
+    showMsg('Generando gastos fijos del mes...', 'warn');
+
+    await apiRequest('POST', {
+      type: 'gastos_fijos_generar',
+      gasto_fijo_id: gastoFijoId || null
+    }, { syncLiquidaciones: false, syncGastosFijos: false });
+
+    showMsg('Gastos fijos del mes generados/actualizados.');
+    await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
+  } catch (error) {
+    showMsg('Error generando gastos fijos: ' + error.message, 'bad');
+  }
+}
+
+/* ========================
+   CUENTAS / CATEGORÍAS / MOVIMIENTOS
+======================== */
+
 async function saveCategoria() {
   const id = document.getElementById('cat-id').value;
   const nombre = document.getElementById('cat-nombre').value.trim();
@@ -1011,28 +1225,15 @@ async function saveCategoria() {
 
   try {
     if (id) {
-      await apiRequest('PUT', {
-        type: 'categoria',
-        id,
-        nombre,
-        tipo,
-        orden,
-        activo: true
-      }, { syncLiquidaciones: false });
+      await apiRequest('PUT', { type: 'categoria', id, nombre, tipo, orden, activo: true }, { syncLiquidaciones: false, syncGastosFijos: false });
       showMsg('Categoría actualizada.');
     } else {
-      await apiRequest('POST', {
-        type: 'categoria',
-        nombre,
-        tipo,
-        orden,
-        activo: true
-      }, { syncLiquidaciones: false });
+      await apiRequest('POST', { type: 'categoria', nombre, tipo, orden, activo: true }, { syncLiquidaciones: false, syncGastosFijos: false });
       showMsg('Categoría creada.');
     }
 
     clearCategoriaForm();
-    await loadData({ syncLiquidaciones: true });
+    await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
   } catch (error) {
     showMsg('Error guardando categoría: ' + error.message, 'bad');
   }
@@ -1067,13 +1268,9 @@ async function disableCategoria(id) {
   if (!ok) return;
 
   try {
-    await apiRequest('DELETE', {
-      type: 'categoria',
-      id
-    }, { syncLiquidaciones: false });
-
+    await apiRequest('DELETE', { type: 'categoria', id }, { syncLiquidaciones: false, syncGastosFijos: false });
     showMsg('Categoría desactivada.');
-    await loadData({ syncLiquidaciones: true });
+    await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
   } catch (error) {
     showMsg('Error borrando categoría: ' + error.message, 'bad');
   }
@@ -1092,28 +1289,15 @@ async function saveCuenta() {
 
   try {
     if (id) {
-      await apiRequest('PUT', {
-        type: 'cuenta',
-        id,
-        nombre,
-        tipo,
-        saldo_actual: saldo,
-        activo: true
-      }, { syncLiquidaciones: false });
+      await apiRequest('PUT', { type: 'cuenta', id, nombre, tipo, saldo_actual: saldo, activo: true }, { syncLiquidaciones: false, syncGastosFijos: false });
       showMsg('Cuenta actualizada.');
     } else {
-      await apiRequest('POST', {
-        type: 'cuenta',
-        nombre,
-        tipo,
-        saldo_actual: saldo,
-        activo: true
-      }, { syncLiquidaciones: false });
+      await apiRequest('POST', { type: 'cuenta', nombre, tipo, saldo_actual: saldo, activo: true }, { syncLiquidaciones: false, syncGastosFijos: false });
       showMsg('Cuenta creada.');
     }
 
     clearCuentaForm();
-    await loadData({ syncLiquidaciones: true });
+    await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
   } catch (error) {
     showMsg('Error guardando cuenta: ' + error.message, 'bad');
   }
@@ -1144,14 +1328,9 @@ async function updateSaldoCuenta(id) {
   const saldo = num(input.value);
 
   try {
-    await apiRequest('PUT', {
-      type: 'cuenta',
-      id,
-      saldo_actual: saldo
-    }, { syncLiquidaciones: false });
-
+    await apiRequest('PUT', { type: 'cuenta', id, saldo_actual: saldo }, { syncLiquidaciones: false, syncGastosFijos: false });
     showMsg('Saldo actualizado.');
-    await loadData({ syncLiquidaciones: true });
+    await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
   } catch (error) {
     showMsg('Error actualizando saldo: ' + error.message, 'bad');
   }
@@ -1193,18 +1372,15 @@ async function saveMovimiento() {
 
   try {
     if (id) {
-      await apiRequest('PUT', {
-        ...payload,
-        id
-      }, { syncLiquidaciones: false });
+      await apiRequest('PUT', { ...payload, id }, { syncLiquidaciones: false, syncGastosFijos: false });
       showMsg('Movimiento actualizado.');
     } else {
-      await apiRequest('POST', payload, { syncLiquidaciones: false });
+      await apiRequest('POST', payload, { syncLiquidaciones: false, syncGastosFijos: false });
       showMsg('Movimiento creado.');
     }
 
     clearMovimientoForm();
-    await loadData({ syncLiquidaciones: true });
+    await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
   } catch (error) {
     showMsg('Error guardando movimiento: ' + error.message, 'bad');
   }
@@ -1255,10 +1431,10 @@ async function markMovimiento(id, estado) {
       id,
       estado,
       fecha_pago: today()
-    }, { syncLiquidaciones: false });
+    }, { syncLiquidaciones: false, syncGastosFijos: false });
 
     showMsg(estado === 'cobrado' ? 'Movimiento marcado como cobrado.' : 'Movimiento marcado como pagado.');
-    await loadData({ syncLiquidaciones: true });
+    await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
   } catch (error) {
     showMsg('Error actualizando movimiento: ' + error.message, 'bad');
   }
@@ -1269,13 +1445,9 @@ async function disableMovimiento(id) {
   if (!ok) return;
 
   try {
-    await apiRequest('DELETE', {
-      type: 'movimiento',
-      id
-    }, { syncLiquidaciones: false });
-
+    await apiRequest('DELETE', { type: 'movimiento', id }, { syncLiquidaciones: false, syncGastosFijos: false });
     showMsg('Movimiento desactivado.');
-    await loadData({ syncLiquidaciones: true });
+    await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
   } catch (error) {
     showMsg('Error borrando movimiento: ' + error.message, 'bad');
   }
@@ -1307,14 +1479,10 @@ function quickIngresoManual() {
   document.getElementById('mov-monto').focus();
 }
 
-function quickProveedor() {
-  quickMovimiento('proveedor', 'Pago proveedor');
-}
-
 async function actualizarLiquidaciones() {
   try {
     showMsg('Actualizando liquidaciones futuras de Mercado Pago...', 'warn');
-    await loadData({ syncLiquidaciones: true });
+    await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
     showMsg('Liquidaciones futuras actualizadas.');
   } catch (error) {
     showMsg('Error actualizando liquidaciones: ' + error.message, 'bad');
@@ -1323,7 +1491,7 @@ async function actualizarLiquidaciones() {
 
 document.getElementById('mov-fecha').value = today();
 
-loadData({ syncLiquidaciones: true });
+loadData({ syncLiquidaciones: true, syncGastosFijos: true });
 </script>
 </body>
 </html>
