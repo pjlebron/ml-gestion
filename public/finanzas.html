@@ -10,7 +10,7 @@ body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-seri
 .wrap{max-width:1320px;margin:0 auto;padding:22px}
 .top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:16px}
 .title{font-size:24px;font-weight:950;letter-spacing:-.04em}
-.sub{font-size:13px;color:#666;margin-top:5px;line-height:1.45;max-width:860px}
+.sub{font-size:13px;color:#666;margin-top:5px;line-height:1.45;max-width:900px}
 .actions{display:flex;gap:8px;flex-wrap:wrap}
 button,.btn{border:none;border-radius:10px;background:#111;color:#fff;padding:9px 13px;font-size:12px;font-weight:850;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}
 button:hover,.btn:hover{opacity:.88}
@@ -37,6 +37,7 @@ button:hover,.btn:hover{opacity:.88}
 .alert{padding:12px;border-radius:13px;background:#fff8ea;border:1px solid #f3d8a8;color:#633806;font-size:13px;line-height:1.45;margin-bottom:14px}
 .ok-alert{background:#edf8ec;border-color:#c9e5c5;color:#245a22}
 .bad-alert{background:#fff0f0;border-color:#f0bcbc;color:#8b1e1e}
+.info-alert{background:#eef6ff;border-color:#c9e0f8;color:#0c447c}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
 .form-grid{display:grid;grid-template-columns:1fr .8fr .8fr .8fr .8fr .8fr;gap:10px;align-items:end}
 .form-grid-2{display:grid;grid-template-columns:1fr .8fr .8fr auto;gap:10px;align-items:end}
@@ -75,6 +76,7 @@ tr:last-child td{border-bottom:none}
 .liq-mini{background:#fafafa;border:1px solid #eee;border-radius:12px;padding:10px}
 .liq-mini span{display:block;font-size:10px;color:#777;margin-bottom:3px}
 .liq-mini b{font-size:17px}
+.account-warning{font-size:11px;color:#8a5400;margin-top:3px}
 @media(max-width:980px){
   .wrap{padding:14px}
   .hero,.two,.form-grid,.form-grid-2{grid-template-columns:1fr}
@@ -88,8 +90,8 @@ tr:last-child td{border-bottom:none}
     <div>
       <div class="title">💰 War Room financiero</div>
       <div class="sub">
-        Vista simple de caja: dinero disponible, liquidaciones de Mercado Pago, ingresos manuales, pagos pendientes y caja proyectada.
-        Las liquidaciones se calculan en vivo; cargarlas a mano sería criar un Excel con dependencia emocional.
+        Caja real para decidir: saldo disponible cargado en cuentas, liquidaciones futuras de Mercado Pago, ingresos manuales y pagos pendientes.
+        Se eliminó “ya debería estar liberado” porque no sirve para operar caja. Era un número histórico inflado, una deuda moral con forma de tarjeta.
       </div>
     </div>
     <div class="actions">
@@ -104,10 +106,10 @@ tr:last-child td{border-bottom:none}
 
   <div class="hero">
     <div>
-      <div class="hero-title">Caja proyectada</div>
+      <div class="hero-title">Caja proyectada útil</div>
       <div class="hero-copy">
-        Fórmula base: <b>dinero disponible + liquidaciones MP + ingresos manuales - dinero a pagar</b>.
-        El saldo disponible se carga manual. Las liquidaciones pendientes se actualizan desde Mercado Pago.
+        Fórmula: <b>dinero disponible + liquidaciones futuras MP + ingresos manuales - dinero a pagar</b>.
+        El saldo disponible de Mercado Pago requiere conexión propia de Mercado Pago para completarse solo. Mientras tanto, se puede cargar manualmente.
       </div>
     </div>
     <div class="hero-result">
@@ -124,19 +126,20 @@ tr:last-child td{border-bottom:none}
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:10px">
       <div>
-        <div class="section-title" style="margin:0">Liquidaciones Mercado Pago</div>
+        <div class="section-title" style="margin:0">Liquidaciones futuras Mercado Pago</div>
         <div class="muted">
-          Se calcula dinámicamente desde los pagos y la fecha de liberación. No se guarda como movimiento para que no quede viejo cada 15 minutos, porque ya bastante tenemos.
+          Muestra solo plata futura útil para caja: hoy, mañana, próximos 7 días, próximos 30 días y total pendiente futuro.
+          No muestra histórico ya liberado porque eso no sirve para decidir qué pagás hoy.
         </div>
       </div>
-      <span class="badge info" id="liq-count">0 pagos</span>
+      <span class="badge info" id="liq-count">0 pagos válidos</span>
     </div>
 
     <div class="liq-grid" id="liq-metrics"></div>
 
     <div class="two">
       <div>
-        <div class="section-title">Por fecha</div>
+        <div class="section-title">Por fecha de liberación</div>
         <div class="table-wrap">
           <table>
             <thead>
@@ -154,19 +157,20 @@ tr:last-child td{border-bottom:none}
       </div>
 
       <div>
-        <div class="section-title">Próximos pagos</div>
+        <div class="section-title">Por cuenta</div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Fecha</th>
                 <th>Cuenta</th>
-                <th>Comprador</th>
-                <th class="num">Neto</th>
+                <th class="num">Hoy</th>
+                <th class="num">7 días</th>
+                <th class="num">30 días</th>
+                <th class="num">Total</th>
               </tr>
             </thead>
-            <tbody id="liq-pagos-body">
-              <tr><td colspan="4" class="empty">Cargando...</td></tr>
+            <tbody id="liq-cuentas-body">
+              <tr><td colspan="5" class="empty">Cargando...</td></tr>
             </tbody>
           </table>
         </div>
@@ -179,7 +183,8 @@ tr:last-child td{border-bottom:none}
       <div class="card">
         <div class="section-title">Cuentas / dinero disponible</div>
         <div class="muted" style="margin-bottom:10px">
-          Acá cargás saldos actuales: banco, efectivo, caja local, reserva y Mercado Pago disponible. Las liquidaciones pendientes se calculan aparte, automáticamente.
+          Acá va la plata disponible ahora: banco, efectivo, caja local, reserva y Mercado Pago disponible.
+          El saldo real automático de Mercado Pago requiere conectar Mercado Pago con OAuth propio. Las liquidaciones futuras ya se calculan aparte.
         </div>
         <div id="cuentas-box"></div>
       </div>
@@ -338,8 +343,8 @@ tr:last-child td{border-bottom:none}
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:10px">
           <div>
-            <div class="section-title" style="margin:0">Movimientos</div>
-            <div class="muted">Pendientes, pagados, cobrados y cancelados. La caja proyectada se calcula arriba.</div>
+            <div class="section-title" style="margin:0">Movimientos manuales</div>
+            <div class="muted">Pendientes, pagados, cobrados y cancelados. No dupliques Mercado Pago a liquidar: eso ya se calcula automático.</div>
           </div>
           <div>
             <label>Buscar</label>
@@ -415,7 +420,7 @@ const norm = v => String(v ?? '')
   .replace(/\s+/g, ' ');
 
 function showMsg(text, type = 'ok') {
-  const cls = type === 'bad' ? 'bad-alert' : type === 'warn' ? 'alert' : 'ok-alert';
+  const cls = type === 'bad' ? 'bad-alert' : type === 'warn' ? 'alert' : type === 'info' ? 'info-alert' : 'ok-alert';
   document.getElementById('msg').innerHTML = `<div class="alert ${cls}">${esc(text)}</div>`;
   setTimeout(() => {
     document.getElementById('msg').innerHTML = '';
@@ -447,7 +452,7 @@ async function apiRequest(method = 'GET', body = null, options = {}) {
 async function loadData(options = {}) {
   try {
     const data = await apiRequest('GET', null, {
-      syncMp: options.syncMp === true,
+      syncMp: false,
       syncLiquidaciones: options.syncLiquidaciones !== false
     });
 
@@ -476,40 +481,12 @@ function renderAll() {
 
 function renderSyncStatus() {
   const box = document.getElementById('sync-status');
-  const sync = STATE.mercadoPagoSync;
-
-  if (!sync) {
-    box.innerHTML = `
-      <div class="sync-box">
-        <b>Saldo disponible Mercado Pago:</b> por ahora se carga manualmente en cuentas.
-        <br>
-        <b>Liquidaciones Mercado Pago:</b> se calculan automáticamente desde pagos y fechas de liberación.
-      </div>
-    `;
-    return;
-  }
-
-  const accounts = sync.accounts || [];
-  const okAccounts = accounts.filter(a => a.ok);
-  const badAccounts = accounts.filter(a => !a.ok);
-
-  if (!accounts.length) {
-    box.innerHTML = '';
-    return;
-  }
-
-  const rows = accounts.map(a => {
-    if (a.ok) return `${esc(a.label)}: <b>${fmt(a.saldo)}</b>`;
-    return `${esc(a.label)}: <b style="color:#a32d2d">${esc(a.error || 'No sincronizó')}</b>`;
-  }).join(' · ');
-
-  const cls = badAccounts.length ? 'sync-box' : 'sync-box ok-alert';
 
   box.innerHTML = `
-    <div class="${cls}">
-      <b>Sincronización saldo Mercado Pago:</b> ${okAccounts.length} cuenta${okAccounts.length === 1 ? '' : 's'} actualizada${okAccounts.length === 1 ? '' : 's'}.
-      <div style="margin-top:4px">${rows}</div>
-      ${badAccounts.length ? '<div class="muted" style="margin-top:4px">Si falla, no afecta liquidaciones automáticas. El saldo disponible se puede cargar manualmente.</div>' : ''}
+    <div class="sync-box">
+      <b>Saldo disponible Mercado Pago:</b> requiere conexión propia de Mercado Pago para completarse automático. Por ahora se carga manualmente en cuentas.
+      <br>
+      <b>Liquidaciones futuras Mercado Pago:</b> se calculan automáticamente desde pagos y fechas de liberación.
     </div>
   `;
 }
@@ -521,8 +498,8 @@ function renderResumen() {
   document.getElementById('hero-caja').textContent = fmt(caja);
   document.getElementById('hero-caja').className = caja >= 0 ? 'green-text' : 'red-text';
   document.getElementById('hero-note').textContent = caja >= 0
-    ? 'Caja proyectada positiva. Bien, sin descorchar: todavía hay proveedores esperando.'
-    : 'Caja proyectada negativa. Hay que mirar pagos, cobros o saldos antes de comprar más stock como si la realidad no emitiera factura.';
+    ? 'Caja proyectada positiva. Sirve para decidir pagos, compras y reposición.'
+    : 'Caja proyectada negativa. Frená compras, revisá pagos o cargá saldos disponibles antes de que el tablero te mire con decepción.';
 
   const metrics = [
     {
@@ -532,7 +509,7 @@ function renderResumen() {
       cls: 'green-text'
     },
     {
-      l: 'Liquidaciones MP',
+      l: 'Liquidaciones futuras MP',
       v: fmt(r.liquidaciones_mp_pendientes),
       s: 'automático desde pagos',
       cls: 'blue-text'
@@ -548,6 +525,12 @@ function renderResumen() {
       v: fmt(r.dinero_a_pagar),
       s: 'gastos/deudas pendientes',
       cls: 'red-text'
+    },
+    {
+      l: 'Caja proyectada',
+      v: fmt(r.caja_proyectada),
+      s: 'disponible + entra - sale',
+      cls: caja >= 0 ? 'green-text' : 'red-text'
     },
     {
       l: 'MP manual excluido',
@@ -566,12 +549,6 @@ function renderResumen() {
       v: fmt(r.pagos_7_dias),
       s: 'semana operativa',
       cls: 'amber-text'
-    },
-    {
-      l: 'Pagos próximos 30 días',
-      v: fmt(r.pagos_30_dias),
-      s: 'mes operativo',
-      cls: 'amber-text'
     }
   ];
 
@@ -587,15 +564,14 @@ function renderResumen() {
 function renderLiquidaciones() {
   const liq = STATE.liquidacionesMp || {};
 
-  document.getElementById('liq-count').textContent = `${liq.pagos_validos || 0} pagos válidos`;
+  document.getElementById('liq-count').textContent = `${liq.pagos_validos || 0} pagos futuros válidos`;
 
   const metrics = [
     ['Hoy', liq.hoy || 0, 'green-text'],
     ['Mañana', liq.manana || 0, 'blue-text'],
     ['Próximos 7 días', liq.proximos_7_dias || 0, 'blue-text'],
     ['Próximos 30 días', liq.proximos_30_dias || 0, 'blue-text'],
-    ['Total pendiente', liq.total_pendiente || 0, 'green-text'],
-    ['Ya debería estar liberado', liq.vencidas_o_ya_liberadas || 0, 'amber-text'],
+    ['Total futuro pendiente', liq.total_pendiente || 0, 'green-text'],
     ['Sin fecha', liq.sin_fecha || 0, 'amber-text'],
     ['Errores', liq.pagos_con_error || 0, (liq.pagos_con_error || 0) > 0 ? 'red-text' : 'green-text']
   ];
@@ -619,18 +595,19 @@ function renderLiquidaciones() {
     `).join('')
     : '<tr><td colspan="3" class="empty">No hay liquidaciones futuras detectadas.</td></tr>';
 
-  const pagos = Array.isArray(liq.pagos) ? liq.pagos : [];
+  const cuentas = Array.isArray(liq.por_cuenta) ? liq.por_cuenta : [];
 
-  document.getElementById('liq-pagos-body').innerHTML = pagos.length
-    ? pagos.slice(0, 60).map(p => `
+  document.getElementById('liq-cuentas-body').innerHTML = cuentas.length
+    ? cuentas.map(row => `
       <tr>
-        <td>${esc(p.money_release_date || '—')}</td>
-        <td>${esc(p.cuenta || '—')}</td>
-        <td>${esc(p.comprador || '—')}</td>
-        <td class="num"><b>${fmt(p.monto_neto)}</b></td>
+        <td><b>${esc(row.cuenta || row.cuenta_key || '—')}</b></td>
+        <td class="num">${fmt(row.hoy || 0)}</td>
+        <td class="num">${fmt(row.proximos_7_dias || 0)}</td>
+        <td class="num">${fmt(row.proximos_30_dias || 0)}</td>
+        <td class="num"><b>${fmt(row.monto || 0)}</b></td>
       </tr>
     `).join('')
-    : '<tr><td colspan="4" class="empty">No hay pagos próximos para mostrar.</td></tr>';
+    : '<tr><td colspan="5" class="empty">No hay liquidaciones por cuenta.</td></tr>';
 }
 
 function renderCuentas() {
@@ -648,29 +625,35 @@ function renderCuentas() {
           <tr>
             <th>Cuenta</th>
             <th>Tipo</th>
-            <th class="num">Saldo</th>
+            <th class="num">Saldo disponible</th>
             <th></th>
           </tr>
         </thead>
         <tbody>
-          ${cuentas.map(c => `
-            <tr>
-              <td>
-                <b>${esc(c.nombre)}</b>
-                ${c.notas ? `<div class="muted">${esc(String(c.notas).substring(0, 80))}</div>` : ''}
-              </td>
-              <td><span class="badge neutral">${esc(c.tipo)}</span></td>
-              <td class="num">
-                <input class="money-input" type="number" step="0.01" id="saldo-${esc(c.id)}" value="${num(c.saldo_actual)}">
-              </td>
-              <td>
-                <div class="inline-actions">
-                  <button class="secondary small" onclick="editCuenta('${esc(c.id)}')">Editar</button>
-                  <button class="green small" onclick="updateSaldoCuenta('${esc(c.id)}')">Guardar saldo</button>
-                </div>
-              </td>
-            </tr>
-          `).join('')}
+          ${cuentas.map(c => {
+            const isMp = c.tipo === 'mercado_pago';
+            const saldo = num(c.saldo_actual);
+
+            return `
+              <tr>
+                <td>
+                  <b>${esc(c.nombre)}</b>
+                  ${isMp ? '<div class="account-warning">Saldo disponible MP: cargar manual hasta conectar OAuth Mercado Pago.</div>' : ''}
+                  ${c.notas && !isMp ? `<div class="muted">${esc(String(c.notas).substring(0, 80))}</div>` : ''}
+                </td>
+                <td><span class="badge ${isMp ? 'info' : 'neutral'}">${esc(c.tipo)}</span></td>
+                <td class="num">
+                  <input class="money-input" type="number" step="0.01" id="saldo-${esc(c.id)}" value="${saldo}">
+                </td>
+                <td>
+                  <div class="inline-actions">
+                    <button class="secondary small" onclick="editCuenta('${esc(c.id)}')">Editar</button>
+                    <button class="green small" onclick="updateSaldoCuenta('${esc(c.id)}')">Guardar saldo</button>
+                  </div>
+                </td>
+              </tr>
+            `;
+          }).join('')}
         </tbody>
       </table>
     </div>
@@ -1147,9 +1130,9 @@ function quickProveedor() {
 
 async function actualizarLiquidaciones() {
   try {
-    showMsg('Actualizando liquidaciones de Mercado Pago...', 'warn');
+    showMsg('Actualizando liquidaciones futuras de Mercado Pago...', 'warn');
     await loadData({ syncLiquidaciones: true });
-    showMsg('Liquidaciones actualizadas.');
+    showMsg('Liquidaciones futuras actualizadas.');
   } catch (error) {
     showMsg('Error actualizando liquidaciones: ' + error.message, 'bad');
   }
