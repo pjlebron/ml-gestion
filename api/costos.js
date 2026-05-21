@@ -1,18 +1,18 @@
-// COMMIT 18B CORREGIDO
+// COMMIT 19B
 // Nombre del commit:
-// Integra localidades dentro de API costos
+// Integra API Finanzas en costos
 //
 // Archivo:
 // api/costos.js
 //
 // Motivo:
 // Vercel Hobby permite hasta 12 Serverless Functions.
-// No podemos crear api/localidades.js porque suma una función nueva.
-// Por eso integramos Localidades dentro de api/costos.js, que ya existía.
+// No creamos /api/finanzas.js para no sumar otra función.
+// Integramos Finanzas dentro de /api/costos?modulo=finanzas.
 //
 // Rutas:
 // GET /api/costos
-//   Mantiene el comportamiento actual: lee costos desde Google Sheets.
+//   Lee costos desde Google Sheets.
 //
 // GET /api/costos?modulo=localidades
 //   Lista partidos y localidades desde Supabase.
@@ -24,7 +24,19 @@
 //   Edita partido, localidad o tarifa.
 //
 // DELETE /api/costos?modulo=localidades
-//   Desactiva o borra partido/localidad.
+//   Desactiva partido/localidad.
+//
+// GET /api/costos?modulo=finanzas
+//   Devuelve resumen, cuentas, categorías y movimientos.
+//
+// POST /api/costos?modulo=finanzas
+//   Crea cuenta, categoría o movimiento.
+//
+// PUT /api/costos?modulo=finanzas
+//   Edita cuenta, categoría o movimiento.
+//
+// DELETE /api/costos?modulo=finanzas
+//   Desactiva cuenta, categoría o movimiento.
 
 const SHEET_ID = '1AJRDGujWNkam2cWrH050zjTTz0Gmuo_niK_nMTTzKIM';
 const SHEET_NAME = 'PRODUCTOS';
@@ -136,6 +148,12 @@ function toBool(value, fallback = true) {
   return ['true', '1', 'si', 'sí', 'yes'].includes(String(value).trim().toLowerCase());
 }
 
+function emptyToNull(value) {
+  if (value === undefined || value === null) return null;
+  const clean = String(value).trim();
+  return clean === '' ? null : clean;
+}
+
 function getBody(req) {
   if (!req.body) return {};
 
@@ -180,6 +198,10 @@ async function supabaseRequest(path, options = {}) {
 
   return data;
 }
+
+/* =========================================================
+   LOCALIDADES / MENSAJERÍA
+========================================================= */
 
 async function getPartidos() {
   const rows = await supabaseRequest('envio_partidos?select=*&order=nombre.asc');
@@ -567,6 +589,447 @@ async function handleLocalidades(req, res) {
   }
 }
 
+/* =========================================================
+   FINANZAS / WAR ROOM
+========================================================= */
+
+async function getFinanzasCuentas() {
+  const rows = await supabaseRequest('finanzas_cuentas?select=*&order=orden.asc,nombre.asc');
+  return Array.isArray(rows) ? rows : [];
+}
+
+async function getFinanzasCategorias() {
+  const rows = await supabaseRequest('finanzas_categorias?select=*&order=orden.asc,nombre.asc');
+  return Array.isArray(rows) ? rows : [];
+}
+
+async function getFinanzasMovimientos() {
+  const rows = await supabaseRequest('v_finanzas_movimientos?select=*&order=fecha_vencimiento.asc.nullslast,fecha.desc,created_at.desc');
+  return Array.isArray(rows) ? rows : [];
+}
+
+async function getFinanzasResumen() {
+  const rows = await supabaseRequest('v_finanzas_resumen?select=*');
+  return Array.isArray(rows) ? rows[0] || {} : {};
+}
+
+function cleanFinanzasTipo(value, fallback = 'egreso') {
+  const allowed = new Set([
+    'ingreso',
+    'egreso',
+    'deuda',
+    'proveedor',
+    'impuesto',
+    'reposicion',
+    'transferencia',
+    'ajuste',
+    'otro',
+  ]);
+
+  const tipo = cleanText(value || fallback).toLowerCase();
+  return allowed.has(tipo) ? tipo : fallback;
+}
+
+function cleanFinanzasEstado(value, fallback = 'pendiente') {
+  const allowed = new Set(['pendiente', 'pagado', 'cobrado', 'cancelado']);
+  const estado = cleanText(value || fallback).toLowerCase();
+  return allowed.has(estado) ? estado : fallback;
+}
+
+function cleanCuentaTipo(value, fallback = 'otro') {
+  const allowed = new Set(['mercado_pago', 'banco', 'efectivo', 'caja', 'reserva', 'otro']);
+  const tipo = cleanText(value || fallback).toLowerCase();
+  return allowed.has(tipo) ? tipo : fallback;
+}
+
+function buildFinanzasResponse({ resumen, cuentas, categorias, movimientos, extra = {} }) {
+  const cuentasActivas = cuentas.filter(c => c.activo !== false);
+  const categoriasActivas = categorias.filter(c => c.activo !== false);
+  const movimientosActivos = movimientos.filter(m => m.activo !== false);
+
+  const pendientes = movimientosActivos.filter(m => m.estado === 'pendiente');
+  const pagados = movimientosActivos.filter(m => m.estado === 'pagado' || m.estado === 'cobrado');
+  const vencidos = pendientes.filter(m => m.vencido);
+  const vence7Dias = pendientes.filter(m => m.vence_7_dias);
+  const vence30Dias = pendientes.filter(m => m.vence_30_dias);
+
+  return {
+    ok: true,
+    modulo: 'finanzas',
+    resumen: {
+      dinero_disponible: toNumber(resumen.dinero_disponible),
+      dinero_a_cobrar: toNumber(resumen.dinero_a_cobrar),
+      dinero_a_pagar: toNumber(resumen.dinero_a_pagar),
+      pagos_vencidos: toNumber(resumen.pagos_vencidos),
+      pagos_7_dias: toNumber(resumen.pagos_7_dias),
+      pagos_30_dias: toNumber(resumen.pagos_30_dias),
+      caja_proyectada: toNumber(resumen.caja_proyectada),
+    },
+    cuentas,
+    categorias,
+    movimientos,
+    cuentas_activas: cuentasActivas,
+    categorias_activas: categoriasActivas,
+    movimientos_activos: movimientosActivos,
+    pendientes,
+    pagados,
+    vencidos,
+    vence_7_dias: vence7Dias,
+    vence_30_dias: vence30Dias,
+    total_cuentas: cuentas.length,
+    total_categorias: categorias.length,
+    total_movimientos: movimientos.length,
+    total_pendientes: pendientes.length,
+    total_pagados: pagados.length,
+    total_vencidos: vencidos.length,
+    nota: 'War Room financiero simple: disponible + a cobrar - a pagar = caja proyectada.',
+    ...extra,
+  };
+}
+
+async function loadFinanzasResponse(extra = {}) {
+  const [resumen, cuentas, categorias, movimientos] = await Promise.all([
+    getFinanzasResumen(),
+    getFinanzasCuentas(),
+    getFinanzasCategorias(),
+    getFinanzasMovimientos(),
+  ]);
+
+  return buildFinanzasResponse({
+    resumen,
+    cuentas,
+    categorias,
+    movimientos,
+    extra,
+  });
+}
+
+async function createFinanzasCuenta(body) {
+  const nombre = cleanText(body.nombre);
+  if (!nombre) throw new Error('El nombre de la cuenta es obligatorio');
+
+  const payload = {
+    nombre,
+    tipo: cleanCuentaTipo(body.tipo, 'otro'),
+    saldo_actual: toNumber(body.saldo_actual ?? body.saldo ?? 0),
+    moneda: cleanText(body.moneda || 'ARS'),
+    activo: toBool(body.activo, true),
+    orden: Math.trunc(toNumber(body.orden || 0)),
+    notas: emptyToNull(body.notas),
+  };
+
+  const created = await supabaseRequest('finanzas_cuentas', {
+    method: 'POST',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify(payload),
+  });
+
+  return Array.isArray(created) ? created[0] : created;
+}
+
+async function updateFinanzasCuenta(body) {
+  const id = body.id || body.cuenta_id;
+  if (!id) throw new Error('Falta id de la cuenta');
+
+  const payload = {};
+
+  if (body.nombre !== undefined) payload.nombre = cleanText(body.nombre);
+  if (body.tipo !== undefined) payload.tipo = cleanCuentaTipo(body.tipo, 'otro');
+  if (body.saldo_actual !== undefined || body.saldo !== undefined) payload.saldo_actual = toNumber(body.saldo_actual ?? body.saldo);
+  if (body.moneda !== undefined) payload.moneda = cleanText(body.moneda || 'ARS');
+  if (body.activo !== undefined) payload.activo = toBool(body.activo, true);
+  if (body.orden !== undefined) payload.orden = Math.trunc(toNumber(body.orden));
+  if (body.notas !== undefined) payload.notas = emptyToNull(body.notas);
+
+  const updated = await supabaseRequest(
+    `finanzas_cuentas?id=eq.${encodeURIComponent(id)}`,
+    {
+      method: 'PATCH',
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify(payload),
+    }
+  );
+
+  return Array.isArray(updated) ? updated[0] : updated;
+}
+
+async function createFinanzasCategoria(body) {
+  const nombre = cleanText(body.nombre);
+  if (!nombre) throw new Error('El nombre de la categoría es obligatorio');
+
+  const payload = {
+    nombre,
+    tipo: cleanFinanzasTipo(body.tipo, 'egreso'),
+    activo: toBool(body.activo, true),
+    orden: Math.trunc(toNumber(body.orden || 0)),
+  };
+
+  const created = await supabaseRequest('finanzas_categorias', {
+    method: 'POST',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify(payload),
+  });
+
+  return Array.isArray(created) ? created[0] : created;
+}
+
+async function updateFinanzasCategoria(body) {
+  const id = body.id || body.categoria_id;
+  if (!id) throw new Error('Falta id de la categoría');
+
+  const payload = {};
+
+  if (body.nombre !== undefined) payload.nombre = cleanText(body.nombre);
+  if (body.tipo !== undefined) payload.tipo = cleanFinanzasTipo(body.tipo, 'egreso');
+  if (body.activo !== undefined) payload.activo = toBool(body.activo, true);
+  if (body.orden !== undefined) payload.orden = Math.trunc(toNumber(body.orden));
+
+  const updated = await supabaseRequest(
+    `finanzas_categorias?id=eq.${encodeURIComponent(id)}`,
+    {
+      method: 'PATCH',
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify(payload),
+    }
+  );
+
+  return Array.isArray(updated) ? updated[0] : updated;
+}
+
+function buildMovimientoPayload(body, partial = false) {
+  const payload = {};
+
+  const set = (key, value) => {
+    if (!partial || value !== undefined) payload[key] = value;
+  };
+
+  set('tipo', body.tipo !== undefined ? cleanFinanzasTipo(body.tipo, 'egreso') : undefined);
+  set('estado', body.estado !== undefined ? cleanFinanzasEstado(body.estado, 'pendiente') : undefined);
+  set('descripcion', body.descripcion !== undefined ? cleanText(body.descripcion) : undefined);
+  set('monto', body.monto !== undefined ? toNumber(body.monto) : undefined);
+  set('moneda', body.moneda !== undefined ? cleanText(body.moneda || 'ARS') : undefined);
+  set('cuenta_id', body.cuenta_id !== undefined ? emptyToNull(body.cuenta_id) : undefined);
+  set('cuenta_destino_id', body.cuenta_destino_id !== undefined ? emptyToNull(body.cuenta_destino_id) : undefined);
+  set('categoria_id', body.categoria_id !== undefined ? emptyToNull(body.categoria_id) : undefined);
+  set('fecha', body.fecha !== undefined ? emptyToNull(body.fecha) : undefined);
+  set('fecha_vencimiento', body.fecha_vencimiento !== undefined ? emptyToNull(body.fecha_vencimiento) : undefined);
+  set('fecha_pago', body.fecha_pago !== undefined ? emptyToNull(body.fecha_pago) : undefined);
+  set('proveedor', body.proveedor !== undefined ? emptyToNull(body.proveedor) : undefined);
+  set('comprobante_url', body.comprobante_url !== undefined ? emptyToNull(body.comprobante_url) : undefined);
+  set('notas', body.notas !== undefined ? emptyToNull(body.notas) : undefined);
+  set('origen', body.origen !== undefined ? cleanText(body.origen || 'manual') : undefined);
+  set('referencia_externa', body.referencia_externa !== undefined ? emptyToNull(body.referencia_externa) : undefined);
+  set('activo', body.activo !== undefined ? toBool(body.activo, true) : undefined);
+
+  Object.keys(payload).forEach(key => {
+    if (payload[key] === undefined) delete payload[key];
+  });
+
+  return payload;
+}
+
+async function createFinanzasMovimiento(body) {
+  const descripcion = cleanText(body.descripcion);
+  const monto = toNumber(body.monto);
+
+  if (!descripcion) throw new Error('La descripción del movimiento es obligatoria');
+  if (monto <= 0) throw new Error('El monto del movimiento debe ser mayor a cero');
+
+  const payload = {
+    tipo: cleanFinanzasTipo(body.tipo, 'egreso'),
+    estado: cleanFinanzasEstado(body.estado, 'pendiente'),
+    descripcion,
+    monto,
+    moneda: cleanText(body.moneda || 'ARS'),
+    cuenta_id: emptyToNull(body.cuenta_id),
+    cuenta_destino_id: emptyToNull(body.cuenta_destino_id),
+    categoria_id: emptyToNull(body.categoria_id),
+    fecha: emptyToNull(body.fecha) || new Date().toISOString().slice(0, 10),
+    fecha_vencimiento: emptyToNull(body.fecha_vencimiento),
+    fecha_pago: emptyToNull(body.fecha_pago),
+    proveedor: emptyToNull(body.proveedor),
+    comprobante_url: emptyToNull(body.comprobante_url),
+    notas: emptyToNull(body.notas),
+    origen: cleanText(body.origen || 'manual'),
+    referencia_externa: emptyToNull(body.referencia_externa),
+    activo: toBool(body.activo, true),
+  };
+
+  const created = await supabaseRequest('finanzas_movimientos', {
+    method: 'POST',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify(payload),
+  });
+
+  return Array.isArray(created) ? created[0] : created;
+}
+
+async function updateFinanzasMovimiento(body) {
+  const id = body.id || body.movimiento_id;
+  if (!id) throw new Error('Falta id del movimiento');
+
+  const payload = buildMovimientoPayload(body, true);
+
+  if (payload.descripcion !== undefined && !payload.descripcion) {
+    throw new Error('La descripción del movimiento no puede quedar vacía');
+  }
+
+  if (payload.monto !== undefined && payload.monto <= 0) {
+    throw new Error('El monto del movimiento debe ser mayor a cero');
+  }
+
+  const updated = await supabaseRequest(
+    `finanzas_movimientos?id=eq.${encodeURIComponent(id)}`,
+    {
+      method: 'PATCH',
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify(payload),
+    }
+  );
+
+  return Array.isArray(updated) ? updated[0] : updated;
+}
+
+async function deleteOrDisableFinanzasCuenta(body) {
+  const id = body.id || body.cuenta_id;
+  const hardDelete = body.hard_delete === true;
+
+  if (!id) throw new Error('Falta id de la cuenta');
+
+  if (hardDelete) {
+    await supabaseRequest(`finanzas_cuentas?id=eq.${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: { Prefer: 'return=minimal' },
+    });
+
+    return { id, deleted: true };
+  }
+
+  return updateFinanzasCuenta({
+    id,
+    activo: false,
+  });
+}
+
+async function deleteOrDisableFinanzasCategoria(body) {
+  const id = body.id || body.categoria_id;
+  const hardDelete = body.hard_delete === true;
+
+  if (!id) throw new Error('Falta id de la categoría');
+
+  if (hardDelete) {
+    await supabaseRequest(`finanzas_categorias?id=eq.${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: { Prefer: 'return=minimal' },
+    });
+
+    return { id, deleted: true };
+  }
+
+  return updateFinanzasCategoria({
+    id,
+    activo: false,
+  });
+}
+
+async function deleteOrDisableFinanzasMovimiento(body) {
+  const id = body.id || body.movimiento_id;
+  const hardDelete = body.hard_delete === true;
+
+  if (!id) throw new Error('Falta id del movimiento');
+
+  if (hardDelete) {
+    await supabaseRequest(`finanzas_movimientos?id=eq.${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: { Prefer: 'return=minimal' },
+    });
+
+    return { id, deleted: true };
+  }
+
+  return updateFinanzasMovimiento({
+    id,
+    activo: false,
+  });
+}
+
+async function handleFinanzas(req, res) {
+  try {
+    let extra = {};
+
+    if (req.method === 'GET') {
+      const response = await loadFinanzasResponse();
+      return res.status(200).json(response);
+    }
+
+    const body = getBody(req);
+    const type = body.type || body.tipo || body.recurso;
+
+    if (req.method === 'POST') {
+      if (type === 'cuenta') {
+        extra.cuenta = await createFinanzasCuenta(body);
+      } else if (type === 'categoria' || type === 'categoría') {
+        extra.categoria = await createFinanzasCategoria(body);
+      } else if (type === 'movimiento') {
+        extra.movimiento = await createFinanzasMovimiento(body);
+      } else {
+        throw new Error('POST requiere type cuenta, categoria o movimiento');
+      }
+
+      const response = await loadFinanzasResponse(extra);
+      return res.status(200).json(response);
+    }
+
+    if (req.method === 'PUT' || req.method === 'PATCH') {
+      if (type === 'cuenta') {
+        extra.cuenta = await updateFinanzasCuenta(body);
+      } else if (type === 'categoria' || type === 'categoría') {
+        extra.categoria = await updateFinanzasCategoria(body);
+      } else if (type === 'movimiento') {
+        extra.movimiento = await updateFinanzasMovimiento(body);
+      } else {
+        throw new Error('PUT requiere type cuenta, categoria o movimiento');
+      }
+
+      const response = await loadFinanzasResponse(extra);
+      return res.status(200).json(response);
+    }
+
+    if (req.method === 'DELETE') {
+      if (type === 'cuenta') {
+        extra.cuenta = await deleteOrDisableFinanzasCuenta(body);
+      } else if (type === 'categoria' || type === 'categoría') {
+        extra.categoria = await deleteOrDisableFinanzasCategoria(body);
+      } else if (type === 'movimiento') {
+        extra.movimiento = await deleteOrDisableFinanzasMovimiento(body);
+      } else {
+        throw new Error('DELETE requiere type cuenta, categoria o movimiento');
+      }
+
+      const response = await loadFinanzasResponse(extra);
+      return res.status(200).json(response);
+    }
+
+    return res.status(405).json({
+      ok: false,
+      modulo: 'finanzas',
+      error: 'Método no permitido',
+      method: req.method,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      modulo: 'finanzas',
+      error: 'Error en finanzas',
+      detail: error.message,
+    });
+  }
+}
+
+/* =========================================================
+   COSTOS GOOGLE SHEETS
+========================================================= */
+
 async function handleCostos(req, res) {
   try {
     const cacheBuster = Date.now();
@@ -656,6 +1119,10 @@ async function handleCostos(req, res) {
   }
 }
 
+/* =========================================================
+   HANDLER PRINCIPAL
+========================================================= */
+
 export default async function handler(req, res) {
   setCommonHeaders(res);
 
@@ -675,10 +1142,14 @@ export default async function handler(req, res) {
     return handleLocalidades(req, res);
   }
 
+  if (modulo === 'finanzas' || modulo === 'warroom' || modulo === 'war-room') {
+    return handleFinanzas(req, res);
+  }
+
   if (req.method !== 'GET') {
     return res.status(405).json({
       ok: false,
-      error: 'Método no permitido para costos. Para localidades usá /api/costos?modulo=localidades',
+      error: 'Método no permitido para costos. Para localidades usá /api/costos?modulo=localidades. Para finanzas usá /api/costos?modulo=finanzas.',
       method: req.method,
     });
   }
