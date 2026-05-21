@@ -1,14 +1,15 @@
-// COMMIT 19B
+import {
+  getAccountKeys,
+  getAccountLabel,
+  getValidToken,
+} from './_token.js';
+
+// COMMIT 19D
 // Nombre del commit:
-// Integra API Finanzas en costos
+// Sincroniza Mercado Pago y administra categorias financieras
 //
 // Archivo:
 // api/costos.js
-//
-// Motivo:
-// Vercel Hobby permite hasta 12 Serverless Functions.
-// No creamos /api/finanzas.js para no sumar otra función.
-// Integramos Finanzas dentro de /api/costos?modulo=finanzas.
 //
 // Rutas:
 // GET /api/costos
@@ -27,7 +28,10 @@
 //   Desactiva partido/localidad.
 //
 // GET /api/costos?modulo=finanzas
-//   Devuelve resumen, cuentas, categorías y movimientos.
+//   Devuelve resumen, cuentas, categorías, movimientos y sincroniza saldo MP.
+//
+// GET /api/costos?modulo=finanzas&sync_mp=0
+//   Devuelve finanzas sin intentar sincronizar Mercado Pago.
 //
 // POST /api/costos?modulo=finanzas
 //   Crea cuenta, categoría o movimiento.
@@ -40,6 +44,9 @@
 
 const SHEET_ID = '1AJRDGujWNkam2cWrH050zjTTz0Gmuo_niK_nMTTzKIM';
 const SHEET_NAME = 'PRODUCTOS';
+
+const ML_API = 'https://api.mercadolibre.com';
+const MP_API = 'https://api.mercadopago.com';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -593,6 +600,280 @@ async function handleLocalidades(req, res) {
    FINANZAS / WAR ROOM
 ========================================================= */
 
+async function fetchWithToken(url, token) {
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token.access_token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  const text = await response.text();
+  let data = null;
+
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = text;
+    }
+  }
+
+  return {
+    ok: response.ok,
+    status: response.status,
+    url,
+    data,
+  };
+}
+
+function extractMercadoPagoBalance(data) {
+  if (!data || typeof data !== 'object') return null;
+
+  const candidates = [
+    data.available_balance,
+    data.available_amount,
+    data.available,
+    data.total_amount,
+    data.total,
+    data.balance,
+    data.amount,
+    data.money_available,
+    data.money_release_amount,
+    data.account_money,
+    data?.available_balance?.amount,
+    data?.available?.amount,
+    data?.total_amount?.amount,
+    data?.balance?.available,
+    data?.balance?.amount,
+    data?.money?.available,
+  ];
+
+  for (const candidate of candidates) {
+    const value = toNumber(candidate);
+
+    if (Number.isFinite(value) && value >= 0) {
+      return value;
+    }
+  }
+
+  if (Array.isArray(data.balances)) {
+    const arsBalance = data.balances.find(balance =>
+      String(balance.currency_id || balance.currency || '').toUpperCase() === 'ARS'
+    );
+
+    if (arsBalance) {
+      const value = toNumber(
+        arsBalance.available_balance ??
+        arsBalance.available_amount ??
+        arsBalance.available ??
+        arsBalance.total_amount ??
+        arsBalance.amount
+      );
+
+      if (Number.isFinite(value) && value >= 0) {
+        return value;
+      }
+    }
+  }
+
+  if (Array.isArray(data.available_balances)) {
+    const arsBalance = data.available_balances.find(balance =>
+      String(balance.currency_id || balance.currency || '').toUpperCase() === 'ARS'
+    );
+
+    if (arsBalance) {
+      const value = toNumber(
+        arsBalance.amount ??
+        arsBalance.available_amount ??
+        arsBalance.available_balance
+      );
+
+      if (Number.isFinite(value) && value >= 0) {
+        return value;
+      }
+    }
+  }
+
+  return null;
+}
+
+async function getMercadoPagoAvailableBalance(token) {
+  const userId = token?.user_id;
+
+  if (!token?.access_token || !userId) {
+    return {
+      ok: false,
+      saldo: 0,
+      endpoint: null,
+      status: null,
+      error: 'Token inválido o sin user_id',
+      attempts: [],
+    };
+  }
+
+  const endpoints = [
+    `${ML_API}/users/${userId}/mercadopago_account/balance`,
+    `${MP_API}/users/${userId}/mercadopago_account/balance`,
+    `${MP_API}/v1/account/balance`,
+    `${MP_API}/v1/account/balances`,
+  ];
+
+  const attempts = [];
+
+  for (const endpoint of endpoints) {
+    const result = await fetchWithToken(endpoint, token);
+
+    attempts.push({
+      url: endpoint,
+      status: result.status,
+      ok: result.ok,
+      error: result.data?.message || result.data?.error || null,
+    });
+
+    if (!result.ok) continue;
+
+    const saldo = extractMercadoPagoBalance(result.data);
+
+    if (saldo !== null) {
+      return {
+        ok: true,
+        saldo,
+        endpoint,
+        status: result.status,
+        error: null,
+        attempts,
+      };
+    }
+  }
+
+  return {
+    ok: false,
+    saldo: 0,
+    endpoint: null,
+    status: attempts.at(-1)?.status || null,
+    error: 'No se pudo detectar saldo disponible en los endpoints probados',
+    attempts,
+  };
+}
+
+async function findFinanzasCuentaByNombre(nombre) {
+  const nombreNorm = normalizeText(nombre);
+
+  if (!nombreNorm) return null;
+
+  const rows = await supabaseRequest(
+    `finanzas_cuentas?nombre_norm=eq.${encodeURIComponent(nombreNorm)}&select=*&limit=1`
+  );
+
+  return Array.isArray(rows) ? rows[0] || null : null;
+}
+
+async function upsertFinanzasCuentaByNombre({ nombre, tipo, saldo_actual, notas, orden }) {
+  const cleanNombre = cleanText(nombre);
+
+  if (!cleanNombre) {
+    throw new Error('El nombre de la cuenta es obligatorio');
+  }
+
+  const existing = await findFinanzasCuentaByNombre(cleanNombre);
+
+  const payload = {
+    nombre: cleanNombre,
+    tipo: cleanCuentaTipo(tipo, 'mercado_pago'),
+    saldo_actual: toNumber(saldo_actual),
+    moneda: 'ARS',
+    activo: true,
+    orden: Math.trunc(toNumber(orden || 0)),
+    notas: emptyToNull(notas),
+  };
+
+  if (existing) {
+    const updated = await supabaseRequest(
+      `finanzas_cuentas?id=eq.${encodeURIComponent(existing.id)}`,
+      {
+        method: 'PATCH',
+        headers: { Prefer: 'return=representation' },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    return Array.isArray(updated) ? updated[0] : updated;
+  }
+
+  const created = await supabaseRequest('finanzas_cuentas', {
+    method: 'POST',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify(payload),
+  });
+
+  return Array.isArray(created) ? created[0] : created;
+}
+
+async function syncMercadoPagoBalances(req, res) {
+  const result = {
+    ok: true,
+    updated: 0,
+    accounts: [],
+  };
+
+  const accounts = getAccountKeys();
+
+  for (const account of accounts) {
+    const label = getAccountLabel(account);
+    const token = await getValidToken(req, res, account);
+
+    if (!token) {
+      result.accounts.push({
+        account,
+        label,
+        ok: false,
+        saldo: 0,
+        error: 'Cuenta no conectada o token inválido',
+      });
+      continue;
+    }
+
+    const balance = await getMercadoPagoAvailableBalance(token);
+    const cuentaNombre = `Mercado Pago - ${label}`;
+
+    if (!balance.ok) {
+      result.accounts.push({
+        account,
+        label,
+        cuenta: cuentaNombre,
+        ok: false,
+        saldo: 0,
+        error: balance.error,
+        attempts: balance.attempts,
+      });
+      continue;
+    }
+
+    const cuenta = await upsertFinanzasCuentaByNombre({
+      nombre: cuentaNombre,
+      tipo: 'mercado_pago',
+      saldo_actual: balance.saldo,
+      orden: account === 'lebron' ? 11 : 12,
+      notas: `Saldo sincronizado automáticamente desde Mercado Pago. Endpoint: ${balance.endpoint}. Actualizado: ${new Date().toISOString()}`,
+    });
+
+    result.updated += 1;
+    result.accounts.push({
+      account,
+      label,
+      cuenta: cuentaNombre,
+      cuenta_id: cuenta.id,
+      ok: true,
+      saldo: balance.saldo,
+      endpoint: balance.endpoint,
+      attempts: balance.attempts,
+    });
+  }
+
+  return result;
+}
+
 async function getFinanzasCuentas() {
   const rows = await supabaseRequest('finanzas_cuentas?select=*&order=orden.asc,nombre.asc');
   return Array.isArray(rows) ? rows : [];
@@ -958,7 +1239,17 @@ async function handleFinanzas(req, res) {
     let extra = {};
 
     if (req.method === 'GET') {
-      const response = await loadFinanzasResponse();
+      const syncMp = String(req.query?.sync_mp ?? '1') !== '0';
+      let mercadoPagoSync = null;
+
+      if (syncMp) {
+        mercadoPagoSync = await syncMercadoPagoBalances(req, res);
+      }
+
+      const response = await loadFinanzasResponse({
+        mercado_pago_sync: mercadoPagoSync,
+      });
+
       return res.status(200).json(response);
     }
 
