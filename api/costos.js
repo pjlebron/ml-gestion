@@ -1,54 +1,23 @@
 import {
-  getAccountKeys,
   getAccountLabel,
   getValidToken,
 } from './_token.js';
 
-// COMMIT 19E
-// Nombre del commit:
-// Automatiza liquidaciones pendientes de Mercado Pago
+// COMMIT 20B
+// Agrega gastos fijos recurrentes al War Room
 //
-// Archivo:
-// api/costos.js
+// Todo sigue dentro de /api/costos para no crear más funciones en Vercel.
 //
-// Rutas:
 // GET /api/costos
-//   Lee costos desde Google Sheets.
-//
 // GET /api/costos?modulo=localidades
-//   Lista partidos y localidades desde Supabase.
-//
-// POST /api/costos?modulo=localidades
-//   Crea partido, localidad o migra desde localStorage.
-//
-// PUT /api/costos?modulo=localidades
-//   Edita partido, localidad o tarifa.
-//
-// DELETE /api/costos?modulo=localidades
-//   Desactiva partido/localidad.
-//
 // GET /api/costos?modulo=finanzas
-//   Devuelve resumen, cuentas, categorías, movimientos y liquidaciones MP automáticas.
 //
-// GET /api/costos?modulo=finanzas&sync_mp=1
-//   Además intenta sincronizar saldo disponible MP, si el endpoint lo permite.
-//
-// GET /api/costos?modulo=finanzas&sync_liquidaciones=0
-//   Devuelve finanzas sin calcular liquidaciones dinámicas.
-//
-// POST /api/costos?modulo=finanzas
-//   Crea cuenta, categoría o movimiento.
-//
-// PUT /api/costos?modulo=finanzas
-//   Edita cuenta, categoría o movimiento.
-//
-// DELETE /api/costos?modulo=finanzas
-//   Desactiva cuenta, categoría o movimiento.
+// POST/PUT/DELETE /api/costos?modulo=finanzas
+// type: cuenta | categoria | movimiento | gasto_fijo | gastos_fijos_generar
 
 const SHEET_ID = '1AJRDGujWNkam2cWrH050zjTTz0Gmuo_niK_nMTTzKIM';
 const SHEET_NAME = 'PRODUCTOS';
 
-const ML_API = 'https://api.mercadolibre.com';
 const MP_API = 'https://api.mercadopago.com';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -61,60 +30,6 @@ function setCommonHeaders(res) {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
-}
-
-function normalizarTexto(value) {
-  return String(value ?? '').trim();
-}
-
-function normalizarClave(value) {
-  return String(value ?? '').trim().toLowerCase();
-}
-
-function tieneValorDeCosto(value) {
-  return value !== null && value !== undefined && String(value).trim() !== '';
-}
-
-function parseCosto(value) {
-  if (typeof value === 'number') return value;
-
-  const raw = String(value ?? '')
-    .replace(/\$/g, '')
-    .replace(/ARS/gi, '')
-    .replace(/\s/g, '')
-    .trim();
-
-  if (raw === '') return null;
-
-  if (raw.includes(',') && raw.includes('.')) {
-    return Number(raw.replace(/\./g, '').replace(',', '.'));
-  }
-
-  if (raw.includes('.') && /^\d{1,3}(\.\d{3})+$/.test(raw)) {
-    return Number(raw.replace(/\./g, ''));
-  }
-
-  if (raw.includes(',')) {
-    return Number(raw.replace(',', '.'));
-  }
-
-  return Number(raw);
-}
-
-function getCell(row, index) {
-  if (index === -1) return '';
-  return row.c?.[index]?.v ?? '';
-}
-
-function addCosto(costos, key, costo) {
-  const original = normalizarTexto(key);
-  const normalizada = normalizarClave(key);
-
-  if (!original) return;
-  if (!Number.isFinite(Number(costo))) return;
-
-  costos[original] = Number(costo);
-  costos[normalizada] = Number(costo);
 }
 
 function assertSupabaseConfig() {
@@ -134,6 +49,41 @@ function getSupabaseHeaders(extra = {}) {
   };
 }
 
+async function supabaseRequest(path, options = {}) {
+  assertSupabaseConfig();
+
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...options,
+    headers: getSupabaseHeaders(options.headers || {}),
+  });
+
+  const text = await response.text();
+  let data = null;
+
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = text;
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      data?.message ||
+      data?.error ||
+      data?.hint ||
+      `Error Supabase HTTP ${response.status}`
+    );
+  }
+
+  return data;
+}
+
+function cleanText(value) {
+  return String(value ?? '').trim().replace(/\s+/g, ' ');
+}
+
 function normalizeText(value) {
   return String(value ?? '')
     .trim()
@@ -141,10 +91,6 @@ function normalizeText(value) {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/\s+/g, ' ');
-}
-
-function cleanText(value) {
-  return String(value ?? '').trim().replace(/\s+/g, ' ');
 }
 
 function toNumber(value) {
@@ -182,12 +128,6 @@ function getBody(req) {
   return req.body;
 }
 
-function getBaseUrl(req) {
-  const proto = req.headers['x-forwarded-proto'] || 'https';
-  const host = req.headers['x-forwarded-host'] || req.headers.host;
-  return `${proto}://${host}`;
-}
-
 function todayArgentinaISO() {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Argentina/Buenos_Aires',
@@ -218,35 +158,10 @@ function dateOnly(value) {
   return date.toISOString().slice(0, 10);
 }
 
-async function supabaseRequest(path, options = {}) {
-  assertSupabaseConfig();
-
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-    ...options,
-    headers: getSupabaseHeaders(options.headers || {}),
-  });
-
-  const text = await response.text();
-  let data = null;
-
-  if (text) {
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = text;
-    }
-  }
-
-  if (!response.ok) {
-    throw new Error(
-      data?.message ||
-      data?.error ||
-      data?.hint ||
-      `Error Supabase HTTP ${response.status}`
-    );
-  }
-
-  return data;
+function getBaseUrl(req) {
+  const proto = req.headers['x-forwarded-proto'] || 'https';
+  const host = req.headers['x-forwarded-host'] || req.headers.host;
+  return `${proto}://${host}`;
 }
 
 async function fetchInternalJson(url, req) {
@@ -284,6 +199,48 @@ async function mapLimit(items, limit, mapper) {
   await Promise.all(workers);
 
   return results;
+}
+
+function parseCosto(value) {
+  if (typeof value === 'number') return value;
+
+  const raw = String(value ?? '')
+    .replace(/\$/g, '')
+    .replace(/ARS/gi, '')
+    .replace(/\s/g, '')
+    .trim();
+
+  if (raw === '') return null;
+
+  if (raw.includes(',') && raw.includes('.')) {
+    return Number(raw.replace(/\./g, '').replace(',', '.'));
+  }
+
+  if (raw.includes('.') && /^\d{1,3}(\.\d{3})+$/.test(raw)) {
+    return Number(raw.replace(/\./g, ''));
+  }
+
+  if (raw.includes(',')) {
+    return Number(raw.replace(',', '.'));
+  }
+
+  return Number(raw);
+}
+
+function getCell(row, index) {
+  if (index === -1) return '';
+  return row.c?.[index]?.v ?? '';
+}
+
+function addCosto(costos, key, costo) {
+  const original = cleanText(key);
+  const normalizada = String(key ?? '').trim().toLowerCase();
+
+  if (!original) return;
+  if (!Number.isFinite(Number(costo))) return;
+
+  costos[original] = Number(costo);
+  costos[normalizada] = Number(costo);
 }
 
 /* =========================================================
@@ -324,31 +281,24 @@ async function findLocalidadByNorm(partidoId, nombre) {
 
 async function createOrRestorePartido(nombre) {
   const cleanNombre = cleanText(nombre);
-
-  if (!cleanNombre) {
-    throw new Error('El nombre del partido es obligatorio');
-  }
+  if (!cleanNombre) throw new Error('El nombre del partido es obligatorio');
 
   const existing = await findPartidoByNorm(cleanNombre);
 
   if (existing) {
-    if (existing.activo === false || existing.nombre !== cleanNombre) {
-      const updated = await supabaseRequest(
-        `envio_partidos?id=eq.${encodeURIComponent(existing.id)}`,
-        {
-          method: 'PATCH',
-          headers: { Prefer: 'return=representation' },
-          body: JSON.stringify({
-            nombre: cleanNombre,
-            activo: true,
-          }),
-        }
-      );
+    const updated = await supabaseRequest(
+      `envio_partidos?id=eq.${encodeURIComponent(existing.id)}`,
+      {
+        method: 'PATCH',
+        headers: { Prefer: 'return=representation' },
+        body: JSON.stringify({
+          nombre: cleanNombre,
+          activo: true,
+        }),
+      }
+    );
 
-      return Array.isArray(updated) ? updated[0] : updated;
-    }
-
-    return existing;
+    return Array.isArray(updated) ? updated[0] : updated;
   }
 
   const created = await supabaseRequest('envio_partidos', {
@@ -367,17 +317,12 @@ async function createOrUpdateLocalidad({ partido_id, partido, localidad, nombre,
   const cleanLocalidad = cleanText(localidad || nombre);
   const cleanPartido = cleanText(partido);
 
-  if (!cleanLocalidad) {
-    throw new Error('El nombre de la localidad es obligatorio');
-  }
+  if (!cleanLocalidad) throw new Error('El nombre de la localidad es obligatorio');
 
   let partidoId = partido_id || null;
 
   if (!partidoId) {
-    if (!cleanPartido) {
-      throw new Error('Tenés que indicar partido_id o nombre de partido');
-    }
-
+    if (!cleanPartido) throw new Error('Tenés que indicar partido_id o nombre de partido');
     const partidoRow = await createOrRestorePartido(cleanPartido);
     partidoId = partidoRow.id;
   }
@@ -469,18 +414,7 @@ async function updateLocalidad(body) {
 
 async function deleteOrDisablePartido(body) {
   const id = body.id || body.partido_id;
-  const hardDelete = body.hard_delete === true;
-
   if (!id) throw new Error('Falta id del partido');
-
-  if (hardDelete) {
-    await supabaseRequest(`envio_partidos?id=eq.${encodeURIComponent(id)}`, {
-      method: 'DELETE',
-      headers: { Prefer: 'return=minimal' },
-    });
-
-    return { id, deleted: true };
-  }
 
   const updated = await supabaseRequest(
     `envio_partidos?id=eq.${encodeURIComponent(id)}`,
@@ -496,18 +430,7 @@ async function deleteOrDisablePartido(body) {
 
 async function deleteOrDisableLocalidad(body) {
   const id = body.id || body.localidad_id;
-  const hardDelete = body.hard_delete === true;
-
   if (!id) throw new Error('Falta id de la localidad');
-
-  if (hardDelete) {
-    await supabaseRequest(`envio_localidades?id=eq.${encodeURIComponent(id)}`, {
-      method: 'DELETE',
-      headers: { Prefer: 'return=minimal' },
-    });
-
-    return { id, deleted: true };
-  }
 
   const updated = await supabaseRequest(
     `envio_localidades?id=eq.${encodeURIComponent(id)}`,
@@ -522,9 +445,7 @@ async function deleteOrDisableLocalidad(body) {
 }
 
 async function migrateLocalStorageItems(items = []) {
-  if (!Array.isArray(items)) {
-    throw new Error('items debe ser un array');
-  }
+  if (!Array.isArray(items)) throw new Error('items debe ser un array');
 
   const result = {
     recibidos: items.length,
@@ -577,8 +498,8 @@ function buildLocalidadesResponse({ partidos, localidades, extra = {} }) {
     total_partidos: partidos.length,
     total_localidades: localidades.length,
     total_partidos_activos: partidosActivos.length,
-    total_localidades_activas: localidadesActivas.length,
-    nota: 'Tarifas de mensajería guardadas en Supabase dentro de /api/costos?modulo=localidades.',
+    total_localidades_activos: localidadesActivas.length,
+    nota: 'Tarifas de mensajería guardadas en Supabase.',
     ...extra,
   };
 }
@@ -615,11 +536,7 @@ async function handleLocalidades(req, res) {
       const partidos = await getPartidos();
       const localidades = await getLocalidades();
 
-      return res.status(200).json(buildLocalidadesResponse({
-        partidos,
-        localidades,
-        extra,
-      }));
+      return res.status(200).json(buildLocalidadesResponse({ partidos, localidades, extra }));
     }
 
     if (req.method === 'PUT' || req.method === 'PATCH') {
@@ -634,11 +551,7 @@ async function handleLocalidades(req, res) {
       const partidos = await getPartidos();
       const localidades = await getLocalidades();
 
-      return res.status(200).json(buildLocalidadesResponse({
-        partidos,
-        localidades,
-        extra,
-      }));
+      return res.status(200).json(buildLocalidadesResponse({ partidos, localidades, extra }));
     }
 
     if (req.method === 'DELETE') {
@@ -653,11 +566,7 @@ async function handleLocalidades(req, res) {
       const partidos = await getPartidos();
       const localidades = await getLocalidades();
 
-      return res.status(200).json(buildLocalidadesResponse({
-        partidos,
-        localidades,
-        extra,
-      }));
+      return res.status(200).json(buildLocalidadesResponse({ partidos, localidades, extra }));
     }
 
     return res.status(405).json({
@@ -677,302 +586,8 @@ async function handleLocalidades(req, res) {
 }
 
 /* =========================================================
-   FINANZAS / WAR ROOM
+   FINANZAS
 ========================================================= */
-
-async function fetchWithToken(url, token) {
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token.access_token}`,
-      'Content-Type': 'application/json',
-    },
-  });
-
-  const text = await response.text();
-  let data = null;
-
-  if (text) {
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = text;
-    }
-  }
-
-  return {
-    ok: response.ok,
-    status: response.status,
-    url,
-    data,
-  };
-}
-
-function extractMercadoPagoBalance(data) {
-  if (!data || typeof data !== 'object') return null;
-
-  const candidates = [
-    data.available_balance,
-    data.available_amount,
-    data.available,
-    data.total_amount,
-    data.total,
-    data.balance,
-    data.amount,
-    data.money_available,
-    data.money_release_amount,
-    data.account_money,
-    data?.available_balance?.amount,
-    data?.available?.amount,
-    data?.total_amount?.amount,
-    data?.balance?.available,
-    data?.balance?.amount,
-    data?.money?.available,
-  ];
-
-  for (const candidate of candidates) {
-    const value = toNumber(candidate);
-
-    if (Number.isFinite(value) && value >= 0) {
-      return value;
-    }
-  }
-
-  if (Array.isArray(data.balances)) {
-    const arsBalance = data.balances.find(balance =>
-      String(balance.currency_id || balance.currency || '').toUpperCase() === 'ARS'
-    );
-
-    if (arsBalance) {
-      const value = toNumber(
-        arsBalance.available_balance ??
-        arsBalance.available_amount ??
-        arsBalance.available ??
-        arsBalance.total_amount ??
-        arsBalance.amount
-      );
-
-      if (Number.isFinite(value) && value >= 0) {
-        return value;
-      }
-    }
-  }
-
-  if (Array.isArray(data.available_balances)) {
-    const arsBalance = data.available_balances.find(balance =>
-      String(balance.currency_id || balance.currency || '').toUpperCase() === 'ARS'
-    );
-
-    if (arsBalance) {
-      const value = toNumber(
-        arsBalance.amount ??
-        arsBalance.available_amount ??
-        arsBalance.available_balance
-      );
-
-      if (Number.isFinite(value) && value >= 0) {
-        return value;
-      }
-    }
-  }
-
-  return null;
-}
-
-async function getMercadoPagoAvailableBalance(token) {
-  const userId = token?.user_id;
-
-  if (!token?.access_token || !userId) {
-    return {
-      ok: false,
-      saldo: 0,
-      endpoint: null,
-      status: null,
-      error: 'Token inválido o sin user_id',
-      attempts: [],
-    };
-  }
-
-  const endpoints = [
-    `${ML_API}/users/${userId}/mercadopago_account/balance`,
-    `${MP_API}/users/${userId}/mercadopago_account/balance`,
-    `${MP_API}/v1/account/balance`,
-    `${MP_API}/v1/account/balances`,
-  ];
-
-  const attempts = [];
-
-  for (const endpoint of endpoints) {
-    const result = await fetchWithToken(endpoint, token);
-
-    attempts.push({
-      url: endpoint,
-      status: result.status,
-      ok: result.ok,
-      error: result.data?.message || result.data?.error || null,
-    });
-
-    if (!result.ok) continue;
-
-    const saldo = extractMercadoPagoBalance(result.data);
-
-    if (saldo !== null) {
-      return {
-        ok: true,
-        saldo,
-        endpoint,
-        status: result.status,
-        error: null,
-        attempts,
-      };
-    }
-  }
-
-  return {
-    ok: false,
-    saldo: 0,
-    endpoint: null,
-    status: attempts.at(-1)?.status || null,
-    error: 'No se pudo detectar saldo disponible en los endpoints probados',
-    attempts,
-  };
-}
-
-async function findFinanzasCuentaByNombre(nombre) {
-  const nombreNorm = normalizeText(nombre);
-
-  if (!nombreNorm) return null;
-
-  const rows = await supabaseRequest(
-    `finanzas_cuentas?nombre_norm=eq.${encodeURIComponent(nombreNorm)}&select=*&limit=1`
-  );
-
-  return Array.isArray(rows) ? rows[0] || null : null;
-}
-
-async function upsertFinanzasCuentaByNombre({ nombre, tipo, saldo_actual, notas, orden }) {
-  const cleanNombre = cleanText(nombre);
-
-  if (!cleanNombre) {
-    throw new Error('El nombre de la cuenta es obligatorio');
-  }
-
-  const existing = await findFinanzasCuentaByNombre(cleanNombre);
-
-  const payload = {
-    nombre: cleanNombre,
-    tipo: cleanCuentaTipo(tipo, 'mercado_pago'),
-    saldo_actual: toNumber(saldo_actual),
-    moneda: 'ARS',
-    activo: true,
-    orden: Math.trunc(toNumber(orden || 0)),
-    notas: emptyToNull(notas),
-  };
-
-  if (existing) {
-    const updated = await supabaseRequest(
-      `finanzas_cuentas?id=eq.${encodeURIComponent(existing.id)}`,
-      {
-        method: 'PATCH',
-        headers: { Prefer: 'return=representation' },
-        body: JSON.stringify(payload),
-      }
-    );
-
-    return Array.isArray(updated) ? updated[0] : updated;
-  }
-
-  const created = await supabaseRequest('finanzas_cuentas', {
-    method: 'POST',
-    headers: { Prefer: 'return=representation' },
-    body: JSON.stringify(payload),
-  });
-
-  return Array.isArray(created) ? created[0] : created;
-}
-
-async function syncMercadoPagoBalances(req, res) {
-  const result = {
-    ok: true,
-    updated: 0,
-    accounts: [],
-  };
-
-  const accounts = getAccountKeys();
-
-  for (const account of accounts) {
-    const label = getAccountLabel(account);
-    const token = await getValidToken(req, res, account);
-
-    if (!token) {
-      result.accounts.push({
-        account,
-        label,
-        ok: false,
-        saldo: 0,
-        error: 'Cuenta no conectada o token inválido',
-      });
-      continue;
-    }
-
-    const balance = await getMercadoPagoAvailableBalance(token);
-    const cuentaNombre = `Mercado Pago - ${label}`;
-
-    if (!balance.ok) {
-      result.accounts.push({
-        account,
-        label,
-        cuenta: cuentaNombre,
-        ok: false,
-        saldo: 0,
-        error: balance.error,
-        attempts: balance.attempts,
-      });
-      continue;
-    }
-
-    const cuenta = await upsertFinanzasCuentaByNombre({
-      nombre: cuentaNombre,
-      tipo: 'mercado_pago',
-      saldo_actual: balance.saldo,
-      orden: account === 'lebron' ? 11 : 12,
-      notas: `Saldo sincronizado automáticamente desde Mercado Pago. Endpoint: ${balance.endpoint}. Actualizado: ${new Date().toISOString()}`,
-    });
-
-    result.updated += 1;
-    result.accounts.push({
-      account,
-      label,
-      cuenta: cuentaNombre,
-      cuenta_id: cuenta.id,
-      ok: true,
-      saldo: balance.saldo,
-      endpoint: balance.endpoint,
-      attempts: balance.attempts,
-    });
-  }
-
-  return result;
-}
-
-async function getFinanzasCuentas() {
-  const rows = await supabaseRequest('finanzas_cuentas?select=*&order=orden.asc,nombre.asc');
-  return Array.isArray(rows) ? rows : [];
-}
-
-async function getFinanzasCategorias() {
-  const rows = await supabaseRequest('finanzas_categorias?select=*&order=orden.asc,nombre.asc');
-  return Array.isArray(rows) ? rows : [];
-}
-
-async function getFinanzasMovimientos() {
-  const rows = await supabaseRequest('v_finanzas_movimientos?select=*&order=fecha_vencimiento.asc.nullslast,fecha.desc,created_at.desc');
-  return Array.isArray(rows) ? rows : [];
-}
-
-async function getFinanzasResumen() {
-  const rows = await supabaseRequest('v_finanzas_resumen?select=*');
-  return Array.isArray(rows) ? rows[0] || {} : {};
-}
 
 function cleanFinanzasTipo(value, fallback = 'egreso') {
   const allowed = new Set([
@@ -984,6 +599,20 @@ function cleanFinanzasTipo(value, fallback = 'egreso') {
     'reposicion',
     'transferencia',
     'ajuste',
+    'otro',
+  ]);
+
+  const tipo = cleanText(value || fallback).toLowerCase();
+  return allowed.has(tipo) ? tipo : fallback;
+}
+
+function cleanGastoFijoTipo(value, fallback = 'egreso') {
+  const allowed = new Set([
+    'egreso',
+    'deuda',
+    'proveedor',
+    'impuesto',
+    'reposicion',
     'otro',
   ]);
 
@@ -1003,30 +632,82 @@ function cleanCuentaTipo(value, fallback = 'otro') {
   return allowed.has(tipo) ? tipo : fallback;
 }
 
-function isManualMercadoPagoLiquidacion(m) {
-  if (!m || m.tipo !== 'ingreso' || m.estado !== 'pendiente') return false;
-
-  const source = normalizeText(`${m.descripcion || ''} ${m.proveedor || ''} ${m.categoria || ''}`);
-
-  return source.includes('mercado pago') &&
-    (
-      source.includes('liquidar') ||
-      source.includes('liberar') ||
-      source.includes('a cobrar') ||
-      source.includes('pendiente')
-    );
+function clampDia(value) {
+  const n = Math.trunc(toNumber(value || 10));
+  if (n < 1) return 1;
+  if (n > 31) return 31;
+  return n;
 }
 
-function sumarIngresosManualMpExcluidos(movimientos = []) {
-  return movimientos
-    .filter(isManualMercadoPagoLiquidacion)
-    .reduce((sum, m) => sum + toNumber(m.monto), 0);
+function getPeriodoActual() {
+  return todayArgentinaISO().slice(0, 7);
 }
 
-function buildFinanzasResponse({ resumen, cuentas, categorias, movimientos, liquidacionesMp = null, extra = {} }) {
+function lastDayOfMonth(year, monthNumber) {
+  return new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
+}
+
+function vencimientoFromPeriodo(periodo, dia) {
+  const [yearRaw, monthRaw] = String(periodo || getPeriodoActual()).split('-');
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+
+  if (!year || !month) return todayArgentinaISO();
+
+  const last = lastDayOfMonth(year, month);
+  const safeDay = Math.min(clampDia(dia), last);
+
+  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(safeDay).padStart(2, '0')}`;
+}
+
+async function getFinanzasCuentas() {
+  const rows = await supabaseRequest('finanzas_cuentas?select=*&order=orden.asc,nombre.asc');
+  return Array.isArray(rows) ? rows : [];
+}
+
+async function getFinanzasCategorias() {
+  const rows = await supabaseRequest('finanzas_categorias?select=*&order=orden.asc,nombre.asc');
+  return Array.isArray(rows) ? rows : [];
+}
+
+async function getFinanzasMovimientos() {
+  const rows = await supabaseRequest('v_finanzas_movimientos?select=*&order=fecha_vencimiento.asc.nullslast,fecha.desc,created_at.desc');
+  return Array.isArray(rows) ? rows : [];
+}
+
+async function getFinanzasGastosFijos() {
+  const rows = await supabaseRequest('finanzas_gastos_fijos?select=*&order=activo.desc,dia_vencimiento.asc,nombre.asc');
+  return Array.isArray(rows) ? rows : [];
+}
+
+async function getFinanzasResumen() {
+  const rows = await supabaseRequest('v_finanzas_resumen?select=*');
+  return Array.isArray(rows) ? rows[0] || {} : {};
+}
+
+function enrichGastosFijos(gastosFijos, categorias, cuentas) {
+  const categoriaMap = new Map(categorias.map(c => [c.id, c]));
+  const cuentaMap = new Map(cuentas.map(c => [c.id, c]));
+
+  return gastosFijos.map(g => {
+    const categoria = categoriaMap.get(g.categoria_id);
+    const cuenta = cuentaMap.get(g.cuenta_id);
+
+    return {
+      ...g,
+      categoria: categoria?.nombre || null,
+      categoria_tipo: categoria?.tipo || null,
+      cuenta: cuenta?.nombre || null,
+      cuenta_tipo: cuenta?.tipo || null,
+    };
+  });
+}
+
+function buildFinanzasResponse({ resumen, cuentas, categorias, movimientos, gastosFijos, liquidacionesMp = null, gastosFijosSync = null, extra = {} }) {
   const cuentasActivas = cuentas.filter(c => c.activo !== false);
   const categoriasActivas = categorias.filter(c => c.activo !== false);
   const movimientosActivos = movimientos.filter(m => m.activo !== false);
+  const gastosFijosActivos = gastosFijos.filter(g => g.activo !== false);
 
   const pendientes = movimientosActivos.filter(m => m.estado === 'pendiente');
   const pagados = movimientosActivos.filter(m => m.estado === 'pagado' || m.estado === 'cobrado');
@@ -1048,13 +729,11 @@ function buildFinanzasResponse({ resumen, cuentas, categorias, movimientos, liqu
     modulo: 'finanzas',
     resumen: {
       dinero_disponible: dineroDisponible,
-
       dinero_a_cobrar: dineroACobrarTotal,
       dinero_a_cobrar_manual_original: dineroManualOriginal,
       dinero_a_cobrar_manual: dineroManualSinMp,
       ingresos_mp_manuales_excluidos: manualMpExcluido,
       liquidaciones_mp_pendientes: liquidacionesPendientes,
-
       dinero_a_pagar: dineroAPagar,
       pagos_vencidos: toNumber(resumen.pagos_vencidos),
       pagos_7_dias: toNumber(resumen.pagos_7_dias),
@@ -1064,43 +743,279 @@ function buildFinanzasResponse({ resumen, cuentas, categorias, movimientos, liqu
     cuentas,
     categorias,
     movimientos,
+    gastos_fijos: gastosFijos,
     cuentas_activas: cuentasActivas,
     categorias_activas: categoriasActivas,
     movimientos_activos: movimientosActivos,
+    gastos_fijos_activos: gastosFijosActivos,
     pendientes,
     pagados,
     vencidos,
     vence_7_dias: vence7Dias,
     vence_30_dias: vence30Dias,
     liquidaciones_mp: liquidacionesMp,
+    gastos_fijos_sync: gastosFijosSync,
     total_cuentas: cuentas.length,
     total_categorias: categorias.length,
     total_movimientos: movimientos.length,
+    total_gastos_fijos: gastosFijos.length,
+    total_gastos_fijos_activos: gastosFijosActivos.length,
     total_pendientes: pendientes.length,
     total_pagados: pagados.length,
     total_vencidos: vencidos.length,
-    nota: 'War Room financiero simple: disponible + ingresos manuales no MP + liquidaciones MP automáticas - a pagar = caja proyectada.',
+    nota: 'War Room: disponible + liquidaciones MP + ingresos manuales - pagos pendientes. Gastos fijos se generan por mes sin duplicarse.',
     ...extra,
   };
 }
 
-async function loadFinanzasResponse(extra = {}, liquidacionesMp = null) {
-  const [resumen, cuentas, categorias, movimientos] = await Promise.all([
+async function loadFinanzasResponse(extra = {}, liquidacionesMp = null, gastosFijosSync = null) {
+  const [resumen, cuentas, categorias, movimientos, gastosFijosRaw] = await Promise.all([
     getFinanzasResumen(),
     getFinanzasCuentas(),
     getFinanzasCategorias(),
     getFinanzasMovimientos(),
+    getFinanzasGastosFijos(),
   ]);
+
+  const gastosFijos = enrichGastosFijos(gastosFijosRaw, categorias, cuentas);
 
   return buildFinanzasResponse({
     resumen,
     cuentas,
     categorias,
     movimientos,
+    gastosFijos,
     liquidacionesMp,
+    gastosFijosSync,
     extra,
   });
 }
+
+/* ========================
+   GASTOS FIJOS
+======================== */
+
+function buildGastoFijoPayload(body, partial = false) {
+  const payload = {};
+
+  const set = (key, value) => {
+    if (!partial || value !== undefined) payload[key] = value;
+  };
+
+  set('nombre', body.nombre !== undefined ? cleanText(body.nombre) : undefined);
+  set('tipo', body.tipo !== undefined ? cleanGastoFijoTipo(body.tipo, 'egreso') : undefined);
+  set('monto', body.monto !== undefined ? toNumber(body.monto) : undefined);
+  set('moneda', body.moneda !== undefined ? cleanText(body.moneda || 'ARS') : undefined);
+  set('categoria_id', body.categoria_id !== undefined ? emptyToNull(body.categoria_id) : undefined);
+  set('cuenta_id', body.cuenta_id !== undefined ? emptyToNull(body.cuenta_id) : undefined);
+  set('proveedor', body.proveedor !== undefined ? emptyToNull(body.proveedor) : undefined);
+  set('dia_vencimiento', body.dia_vencimiento !== undefined ? clampDia(body.dia_vencimiento) : undefined);
+  set('frecuencia', 'mensual');
+  set('activo', body.activo !== undefined ? toBool(body.activo, true) : undefined);
+  set('notas', body.notas !== undefined ? emptyToNull(body.notas) : undefined);
+
+  Object.keys(payload).forEach(key => {
+    if (payload[key] === undefined) delete payload[key];
+  });
+
+  return payload;
+}
+
+async function createFinanzasGastoFijo(body) {
+  const nombre = cleanText(body.nombre);
+  const monto = toNumber(body.monto);
+
+  if (!nombre) throw new Error('El nombre del gasto fijo es obligatorio');
+  if (monto <= 0) throw new Error('El monto del gasto fijo debe ser mayor a cero');
+
+  const payload = {
+    nombre,
+    tipo: cleanGastoFijoTipo(body.tipo, 'egreso'),
+    monto,
+    moneda: cleanText(body.moneda || 'ARS'),
+    categoria_id: emptyToNull(body.categoria_id),
+    cuenta_id: emptyToNull(body.cuenta_id),
+    proveedor: emptyToNull(body.proveedor),
+    dia_vencimiento: clampDia(body.dia_vencimiento || 10),
+    frecuencia: 'mensual',
+    activo: toBool(body.activo, true),
+    notas: emptyToNull(body.notas),
+  };
+
+  const created = await supabaseRequest('finanzas_gastos_fijos', {
+    method: 'POST',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify(payload),
+  });
+
+  return Array.isArray(created) ? created[0] : created;
+}
+
+async function updateFinanzasGastoFijo(body) {
+  const id = body.id || body.gasto_fijo_id;
+  if (!id) throw new Error('Falta id del gasto fijo');
+
+  const payload = buildGastoFijoPayload(body, true);
+
+  if (payload.nombre !== undefined && !payload.nombre) {
+    throw new Error('El nombre del gasto fijo no puede quedar vacío');
+  }
+
+  if (payload.monto !== undefined && payload.monto <= 0) {
+    throw new Error('El monto del gasto fijo debe ser mayor a cero');
+  }
+
+  const updated = await supabaseRequest(
+    `finanzas_gastos_fijos?id=eq.${encodeURIComponent(id)}`,
+    {
+      method: 'PATCH',
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify(payload),
+    }
+  );
+
+  return Array.isArray(updated) ? updated[0] : updated;
+}
+
+async function deleteOrDisableFinanzasGastoFijo(body) {
+  const id = body.id || body.gasto_fijo_id;
+  const hardDelete = body.hard_delete === true;
+
+  if (!id) throw new Error('Falta id del gasto fijo');
+
+  if (hardDelete) {
+    await supabaseRequest(`finanzas_gastos_fijos?id=eq.${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: { Prefer: 'return=minimal' },
+    });
+
+    return { id, deleted: true };
+  }
+
+  return updateFinanzasGastoFijo({
+    id,
+    activo: false,
+  });
+}
+
+async function findMovimientoByReferencia(referencia) {
+  const rows = await supabaseRequest(
+    `finanzas_movimientos?referencia_externa=eq.${encodeURIComponent(referencia)}&select=*&limit=1`
+  );
+
+  return Array.isArray(rows) ? rows[0] || null : null;
+}
+
+async function generarGastoFijoDelPeriodo(gasto, periodo) {
+  const referencia = `gasto_fijo:${gasto.id}:${periodo}`;
+  const existente = await findMovimientoByReferencia(referencia);
+  const fechaVencimiento = vencimientoFromPeriodo(periodo, gasto.dia_vencimiento);
+
+  const payload = {
+    tipo: cleanGastoFijoTipo(gasto.tipo, 'egreso'),
+    estado: 'pendiente',
+    descripcion: `${gasto.nombre} (${periodo})`,
+    monto: toNumber(gasto.monto),
+    moneda: cleanText(gasto.moneda || 'ARS'),
+    cuenta_id: emptyToNull(gasto.cuenta_id),
+    categoria_id: emptyToNull(gasto.categoria_id),
+    fecha: todayArgentinaISO(),
+    fecha_vencimiento: fechaVencimiento,
+    proveedor: emptyToNull(gasto.proveedor),
+    notas: gasto.notas ? `Gasto fijo mensual. ${gasto.notas}` : 'Gasto fijo mensual.',
+    origen: 'sistema',
+    referencia_externa: referencia,
+    activo: true,
+  };
+
+  if (existente) {
+    if (existente.estado !== 'pendiente') {
+      return {
+        gasto_fijo_id: gasto.id,
+        movimiento_id: existente.id,
+        referencia,
+        accion: 'omitido',
+        motivo: `Ya existe y está ${existente.estado}`,
+      };
+    }
+
+    const updated = await supabaseRequest(
+      `finanzas_movimientos?id=eq.${encodeURIComponent(existente.id)}`,
+      {
+        method: 'PATCH',
+        headers: { Prefer: 'return=representation' },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    const row = Array.isArray(updated) ? updated[0] : updated;
+
+    return {
+      gasto_fijo_id: gasto.id,
+      movimiento_id: row.id,
+      referencia,
+      accion: 'actualizado',
+    };
+  }
+
+  const created = await supabaseRequest('finanzas_movimientos', {
+    method: 'POST',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify(payload),
+  });
+
+  const row = Array.isArray(created) ? created[0] : created;
+
+  return {
+    gasto_fijo_id: gasto.id,
+    movimiento_id: row.id,
+    referencia,
+    accion: 'creado',
+  };
+}
+
+async function syncGastosFijosDelMes({ periodo = getPeriodoActual(), gastoFijoId = null } = {}) {
+  const rows = await getFinanzasGastosFijos();
+
+  const activos = rows.filter(g =>
+    g.activo !== false &&
+    (!gastoFijoId || g.id === gastoFijoId)
+  );
+
+  const result = {
+    ok: true,
+    periodo,
+    recibidos: activos.length,
+    creados: 0,
+    actualizados: 0,
+    omitidos: 0,
+    errores: [],
+    detalle: [],
+  };
+
+  for (const gasto of activos) {
+    try {
+      const item = await generarGastoFijoDelPeriodo(gasto, periodo);
+      result.detalle.push(item);
+
+      if (item.accion === 'creado') result.creados += 1;
+      else if (item.accion === 'actualizado') result.actualizados += 1;
+      else result.omitidos += 1;
+    } catch (error) {
+      result.errores.push({
+        gasto_fijo_id: gasto.id,
+        nombre: gasto.nombre,
+        error: error.message,
+      });
+    }
+  }
+
+  return result;
+}
+
+/* ========================
+   CUENTAS/CATEGORÍAS/MOVIMIENTOS
+======================== */
 
 async function createFinanzasCuenta(body) {
   const nombre = cleanText(body.nombre);
@@ -1151,6 +1066,16 @@ async function updateFinanzasCuenta(body) {
   return Array.isArray(updated) ? updated[0] : updated;
 }
 
+async function deleteOrDisableFinanzasCuenta(body) {
+  const id = body.id || body.cuenta_id;
+  if (!id) throw new Error('Falta id de la cuenta');
+
+  return updateFinanzasCuenta({
+    id,
+    activo: false,
+  });
+}
+
 async function createFinanzasCategoria(body) {
   const nombre = cleanText(body.nombre);
   if (!nombre) throw new Error('El nombre de la categoría es obligatorio');
@@ -1192,6 +1117,16 @@ async function updateFinanzasCategoria(body) {
   );
 
   return Array.isArray(updated) ? updated[0] : updated;
+}
+
+async function deleteOrDisableFinanzasCategoria(body) {
+  const id = body.id || body.categoria_id;
+  if (!id) throw new Error('Falta id de la categoría');
+
+  return updateFinanzasCategoria({
+    id,
+    activo: false,
+  });
 }
 
 function buildMovimientoPayload(body, partial = false) {
@@ -1242,7 +1177,7 @@ async function createFinanzasMovimiento(body) {
     cuenta_id: emptyToNull(body.cuenta_id),
     cuenta_destino_id: emptyToNull(body.cuenta_destino_id),
     categoria_id: emptyToNull(body.categoria_id),
-    fecha: emptyToNull(body.fecha) || new Date().toISOString().slice(0, 10),
+    fecha: emptyToNull(body.fecha) || todayArgentinaISO(),
     fecha_vencimiento: emptyToNull(body.fecha_vencimiento),
     fecha_pago: emptyToNull(body.fecha_pago),
     proveedor: emptyToNull(body.proveedor),
@@ -1288,67 +1223,38 @@ async function updateFinanzasMovimiento(body) {
   return Array.isArray(updated) ? updated[0] : updated;
 }
 
-async function deleteOrDisableFinanzasCuenta(body) {
-  const id = body.id || body.cuenta_id;
-  const hardDelete = body.hard_delete === true;
-
-  if (!id) throw new Error('Falta id de la cuenta');
-
-  if (hardDelete) {
-    await supabaseRequest(`finanzas_cuentas?id=eq.${encodeURIComponent(id)}`, {
-      method: 'DELETE',
-      headers: { Prefer: 'return=minimal' },
-    });
-
-    return { id, deleted: true };
-  }
-
-  return updateFinanzasCuenta({
-    id,
-    activo: false,
-  });
-}
-
-async function deleteOrDisableFinanzasCategoria(body) {
-  const id = body.id || body.categoria_id;
-  const hardDelete = body.hard_delete === true;
-
-  if (!id) throw new Error('Falta id de la categoría');
-
-  if (hardDelete) {
-    await supabaseRequest(`finanzas_categorias?id=eq.${encodeURIComponent(id)}`, {
-      method: 'DELETE',
-      headers: { Prefer: 'return=minimal' },
-    });
-
-    return { id, deleted: true };
-  }
-
-  return updateFinanzasCategoria({
-    id,
-    activo: false,
-  });
-}
-
 async function deleteOrDisableFinanzasMovimiento(body) {
   const id = body.id || body.movimiento_id;
-  const hardDelete = body.hard_delete === true;
-
   if (!id) throw new Error('Falta id del movimiento');
-
-  if (hardDelete) {
-    await supabaseRequest(`finanzas_movimientos?id=eq.${encodeURIComponent(id)}`, {
-      method: 'DELETE',
-      headers: { Prefer: 'return=minimal' },
-    });
-
-    return { id, deleted: true };
-  }
 
   return updateFinanzasMovimiento({
     id,
     activo: false,
   });
+}
+
+/* ========================
+   LIQUIDACIONES MP
+======================== */
+
+function isManualMercadoPagoLiquidacion(m) {
+  if (!m || m.tipo !== 'ingreso' || m.estado !== 'pendiente') return false;
+
+  const source = normalizeText(`${m.descripcion || ''} ${m.proveedor || ''} ${m.categoria || ''}`);
+
+  return source.includes('mercado pago') &&
+    (
+      source.includes('liquidar') ||
+      source.includes('liberar') ||
+      source.includes('a cobrar') ||
+      source.includes('pendiente')
+    );
+}
+
+function sumarIngresosManualMpExcluidos(movimientos = []) {
+  return movimientos
+    .filter(isManualMercadoPagoLiquidacion)
+    .reduce((sum, m) => sum + toNumber(m.monto), 0);
 }
 
 function getPaymentNetAmount(payment, fallback = 0) {
@@ -1370,19 +1276,8 @@ function getPaymentReleaseDate(payment) {
   );
 }
 
-function getPaymentStatus(payment) {
-  return String(payment?.status || '').toLowerCase();
-}
-
-function getPaymentStatusDetail(payment) {
-  return String(payment?.status_detail || '').toLowerCase();
-}
-
 function shouldConsiderPaymentForLiquidacion(payment) {
-  const status = getPaymentStatus(payment);
-
-  if (!status) return false;
-
+  const status = String(payment?.status || '').toLowerCase();
   return ['approved', 'in_process', 'pending', 'authorized'].includes(status);
 }
 
@@ -1398,7 +1293,6 @@ function buildEmptyLiquidaciones(error = null) {
     manana: 0,
     proximos_7_dias: 0,
     proximos_30_dias: 0,
-    vencidas_o_ya_liberadas: 0,
     sin_fecha: 0,
     pagos_consultados: 0,
     pagos_validos: 0,
@@ -1407,7 +1301,7 @@ function buildEmptyLiquidaciones(error = null) {
     por_cuenta: [],
     pagos: [],
     errores: [],
-    nota: 'Liquidaciones Mercado Pago calculadas dinámicamente desde pagos. No se guardan como movimientos para evitar datos vencidos.',
+    nota: 'Liquidaciones MP calculadas dinámicamente desde pagos futuros.',
   };
 }
 
@@ -1439,8 +1333,6 @@ function summarizeLiquidaciones(pagos = [], errores = [], desde = null, hasta = 
     }
 
     if (fecha < today) {
-      summary.vencidas_o_ya_liberadas += monto;
-      pago.estado_liquidacion = 'ya_deberia_estar_liberada';
       return;
     }
 
@@ -1480,8 +1372,6 @@ function summarizeLiquidaciones(pagos = [], errores = [], desde = null, hasta = 
     if (fecha >= today && fecha <= day7) accountRow.proximos_7_dias += monto;
     if (fecha >= today && fecha <= day30) accountRow.proximos_30_dias += monto;
     byAccount.set(cuentaKey, accountRow);
-
-    pago.estado_liquidacion = fecha === today ? 'hoy' : fecha === tomorrow ? 'manana' : 'pendiente';
   });
 
   summary.total_pendiente = round2(summary.total_pendiente);
@@ -1489,7 +1379,6 @@ function summarizeLiquidaciones(pagos = [], errores = [], desde = null, hasta = 
   summary.manana = round2(summary.manana);
   summary.proximos_7_dias = round2(summary.proximos_7_dias);
   summary.proximos_30_dias = round2(summary.proximos_30_dias);
-  summary.vencidas_o_ya_liberadas = round2(summary.vencidas_o_ya_liberadas);
   summary.sin_fecha = round2(summary.sin_fecha);
 
   summary.por_fecha = Array.from(byDate.values())
@@ -1518,13 +1407,20 @@ function summarizeLiquidaciones(pagos = [], errores = [], desde = null, hasta = 
 }
 
 async function fetchMercadoPagoPayment(paymentId, token) {
-  const result = await fetchWithToken(`${MP_API}/v1/payments/${paymentId}`, token);
+  const response = await fetch(`${MP_API}/v1/payments/${paymentId}`, {
+    headers: {
+      Authorization: `Bearer ${token.access_token}`,
+      'Content-Type': 'application/json',
+    },
+  });
 
-  if (!result.ok) {
-    throw new Error(result.data?.message || result.data?.error || `Error MP HTTP ${result.status}`);
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data?.message || data?.error || `Error MP HTTP ${response.status}`);
   }
 
-  return result.data;
+  return data;
 }
 
 async function getMercadoPagoLiquidaciones(req, res) {
@@ -1607,10 +1503,7 @@ async function getMercadoPagoLiquidaciones(req, res) {
           comprador: row.comprador,
           producto: row.producto,
           fecha_venta: row.fecha_venta,
-          payment_status: getPaymentStatus(payment),
-          payment_status_detail: getPaymentStatusDetail(payment),
           money_release_date: releaseDate,
-          money_release_date_raw: payment?.money_release_date || null,
           monto_neto: montoNeto,
           transaction_amount: toNumber(payment?.transaction_amount),
           total_paid_amount: toNumber(payment?.transaction_details?.total_paid_amount || payment?.total_paid_amount),
@@ -1637,34 +1530,37 @@ async function getMercadoPagoLiquidaciones(req, res) {
   }
 }
 
+/* ========================
+   HANDLER FINANZAS
+======================== */
+
 async function handleFinanzas(req, res) {
   try {
     let extra = {};
 
     if (req.method === 'GET') {
-      const syncMp = String(req.query?.sync_mp ?? '0') === '1';
       const syncLiquidaciones = String(req.query?.sync_liquidaciones ?? '1') !== '0';
+      const syncGastosFijos = String(req.query?.sync_gastos_fijos ?? '1') !== '0';
+      const periodo = req.query?.periodo || getPeriodoActual();
 
-      let mercadoPagoSync = null;
       let liquidacionesMp = null;
+      let gastosFijosSync = null;
 
-      if (syncMp) {
-        mercadoPagoSync = await syncMercadoPagoBalances(req, res);
+      if (syncGastosFijos) {
+        gastosFijosSync = await syncGastosFijosDelMes({ periodo });
       }
 
       if (syncLiquidaciones) {
         liquidacionesMp = await getMercadoPagoLiquidaciones(req, res);
       }
 
-      const response = await loadFinanzasResponse({
-        mercado_pago_sync: mercadoPagoSync,
-      }, liquidacionesMp);
-
+      const response = await loadFinanzasResponse(extra, liquidacionesMp, gastosFijosSync);
       return res.status(200).json(response);
     }
 
     const body = getBody(req);
     const type = body.type || body.tipo || body.recurso;
+    const action = body.action || body.accion || '';
 
     if (req.method === 'POST') {
       if (type === 'cuenta') {
@@ -1673,11 +1569,18 @@ async function handleFinanzas(req, res) {
         extra.categoria = await createFinanzasCategoria(body);
       } else if (type === 'movimiento') {
         extra.movimiento = await createFinanzasMovimiento(body);
+      } else if (type === 'gasto_fijo') {
+        extra.gasto_fijo = await createFinanzasGastoFijo(body);
+      } else if (type === 'gastos_fijos_generar' || action === 'generar_gastos_fijos') {
+        extra.gastos_fijos_sync = await syncGastosFijosDelMes({
+          periodo: body.periodo || getPeriodoActual(),
+          gastoFijoId: body.gasto_fijo_id || null,
+        });
       } else {
-        throw new Error('POST requiere type cuenta, categoria o movimiento');
+        throw new Error('POST requiere type cuenta, categoria, movimiento, gasto_fijo o gastos_fijos_generar');
       }
 
-      const response = await loadFinanzasResponse(extra, null);
+      const response = await loadFinanzasResponse(extra, null, null);
       return res.status(200).json(response);
     }
 
@@ -1688,11 +1591,13 @@ async function handleFinanzas(req, res) {
         extra.categoria = await updateFinanzasCategoria(body);
       } else if (type === 'movimiento') {
         extra.movimiento = await updateFinanzasMovimiento(body);
+      } else if (type === 'gasto_fijo') {
+        extra.gasto_fijo = await updateFinanzasGastoFijo(body);
       } else {
-        throw new Error('PUT requiere type cuenta, categoria o movimiento');
+        throw new Error('PUT requiere type cuenta, categoria, movimiento o gasto_fijo');
       }
 
-      const response = await loadFinanzasResponse(extra, null);
+      const response = await loadFinanzasResponse(extra, null, null);
       return res.status(200).json(response);
     }
 
@@ -1703,11 +1608,13 @@ async function handleFinanzas(req, res) {
         extra.categoria = await deleteOrDisableFinanzasCategoria(body);
       } else if (type === 'movimiento') {
         extra.movimiento = await deleteOrDisableFinanzasMovimiento(body);
+      } else if (type === 'gasto_fijo') {
+        extra.gasto_fijo = await deleteOrDisableFinanzasGastoFijo(body);
       } else {
-        throw new Error('DELETE requiere type cuenta, categoria o movimiento');
+        throw new Error('DELETE requiere type cuenta, categoria, movimiento o gasto_fijo');
       }
 
-      const response = await loadFinanzasResponse(extra, null);
+      const response = await loadFinanzasResponse(extra, null, null);
       return res.status(200).json(response);
     }
 
@@ -1740,7 +1647,7 @@ async function handleCostos(req, res) {
       cache: 'no-store',
       headers: {
         'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
+        Pragma: 'no-cache',
       },
     });
 
@@ -1774,11 +1681,11 @@ async function handleCostos(req, res) {
     const filas_leidas = [];
 
     rows.forEach((row, index) => {
-      const sku = normalizarTexto(getCell(row, skuIdx));
-      const itemId = normalizarTexto(getCell(row, itemIdIdx));
+      const sku = cleanText(getCell(row, skuIdx));
+      const itemId = cleanText(getCell(row, itemIdIdx));
       const costoRaw = getCell(row, costoIdx);
       const costoParseado = parseCosto(costoRaw);
-      const costoValido = tieneValorDeCosto(costoRaw) && Number.isFinite(Number(costoParseado));
+      const costoValido = costoRaw !== null && costoRaw !== undefined && String(costoRaw).trim() !== '' && Number.isFinite(Number(costoParseado));
 
       if (!sku && !itemId) return;
 
