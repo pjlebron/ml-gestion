@@ -3,10 +3,16 @@ import {
   getValidToken,
 } from './_token.js';
 
-// COMMIT FINAL WAR ROOM
-// Gastos fijos recurrentes + pagos parciales
+// COMMIT 20D
+// Impacta pagos y cobros en saldos de cuentas
 //
-// Todo sigue dentro de /api/costos para no crear más funciones en Vercel.
+// Incluye:
+// - Costos desde Google Sheets
+// - Localidades/mensajería
+// - War Room financiero
+// - Gastos fijos recurrentes
+// - Pagos parciales
+// - Impactos automáticos en cuentas con historial anti-duplicado
 //
 // GET /api/costos
 // GET /api/costos?modulo=localidades
@@ -79,6 +85,13 @@ async function supabaseRequest(path, options = {}) {
   }
 
   return data;
+}
+
+async function supabaseRpc(functionName, payload) {
+  return supabaseRequest(`rpc/${functionName}`, {
+    method: 'POST',
+    body: JSON.stringify(payload || {}),
+  });
 }
 
 function cleanText(value) {
@@ -671,6 +684,30 @@ function saldoPendienteMovimiento(m) {
   return Math.max(0, round2(toNumber(m.saldo_pendiente ?? m.monto)));
 }
 
+function getPagoParcialImpactRef(pagoParcialId) {
+  return `pago_parcial:${pagoParcialId}:debito`;
+}
+
+function getMovimientoPagoTotalImpactRef(movimientoId) {
+  return `movimiento:${movimientoId}:pago_total`;
+}
+
+function getMovimientoCobroImpactRef(movimientoId) {
+  return `movimiento:${movimientoId}:cobro`;
+}
+
+function getTransferenciaSalidaImpactRef(movimientoId) {
+  return `movimiento:${movimientoId}:transferencia_salida`;
+}
+
+function getTransferenciaEntradaImpactRef(movimientoId) {
+  return `movimiento:${movimientoId}:transferencia_entrada`;
+}
+
+/* ========================
+   DATA FINANZAS
+======================== */
+
 async function getFinanzasCuentas() {
   const rows = await supabaseRequest('finanzas_cuentas?select=*&order=orden.asc,nombre.asc');
   return Array.isArray(rows) ? rows : [];
@@ -693,6 +730,11 @@ async function getFinanzasGastosFijos() {
 
 async function getFinanzasPagosParciales() {
   const rows = await supabaseRequest('finanzas_pagos_parciales?select=*&order=fecha_pago.desc,created_at.desc');
+  return Array.isArray(rows) ? rows : [];
+}
+
+async function getFinanzasCuentaImpactos() {
+  const rows = await supabaseRequest('finanzas_cuenta_impactos?select=*&order=fecha.desc,created_at.desc');
   return Array.isArray(rows) ? rows : [];
 }
 
@@ -729,6 +771,21 @@ function enrichPagosParciales(pagosParciales, cuentas) {
       ...p,
       cuenta: cuenta?.nombre || null,
       cuenta_tipo: cuenta?.tipo || null,
+    };
+  });
+}
+
+function enrichImpactos(impactos, cuentas) {
+  const cuentaMap = new Map(cuentas.map(c => [c.id, c]));
+
+  return impactos.map(i => {
+    const cuenta = cuentaMap.get(i.cuenta_id);
+
+    return {
+      ...i,
+      cuenta: cuenta?.nombre || null,
+      cuenta_tipo: cuenta?.tipo || null,
+      delta: toNumber(i.monto) * toNumber(i.signo),
     };
   });
 }
@@ -772,6 +829,173 @@ function enrichMovimientosConPagosParciales(movimientos, pagosParciales) {
   });
 }
 
+/* ========================
+   IMPACTOS EN CUENTAS
+======================== */
+
+async function aplicarImpactoCuenta({
+  cuentaId,
+  referencia,
+  delta,
+  movimientoId = null,
+  pagoParcialId = null,
+  fecha = null,
+  descripcion = null,
+  origen = 'sistema',
+}) {
+  if (!cuentaId) {
+    return {
+      ok: true,
+      aplicado: false,
+      motivo: 'sin_cuenta',
+    };
+  }
+
+  if (!referencia) {
+    throw new Error('Falta referencia para impactar cuenta');
+  }
+
+  if (round2(delta) === 0) {
+    return {
+      ok: true,
+      aplicado: false,
+      motivo: 'delta_cero',
+    };
+  }
+
+  return supabaseRpc('finanzas_aplicar_impacto_cuenta', {
+    p_cuenta_id: cuentaId,
+    p_referencia: referencia,
+    p_delta: round2(delta),
+    p_movimiento_id: movimientoId,
+    p_pago_parcial_id: pagoParcialId,
+    p_fecha: fecha || todayArgentinaISO(),
+    p_descripcion: descripcion,
+    p_origen: origen,
+  });
+}
+
+async function revertirImpactoCuenta(referencia, motivo = null) {
+  if (!referencia) {
+    return {
+      ok: true,
+      revertido: false,
+      motivo: 'sin_referencia',
+    };
+  }
+
+  return supabaseRpc('finanzas_revertir_impacto_cuenta', {
+    p_referencia: referencia,
+    p_motivo: motivo,
+  });
+}
+
+async function aplicarImpactoPagoParcial(pagoParcial, movimiento = null) {
+  if (!pagoParcial || pagoParcial.activo === false) {
+    return {
+      ok: true,
+      aplicado: false,
+      motivo: 'pago_parcial_inactivo',
+    };
+  }
+
+  return aplicarImpactoCuenta({
+    cuentaId: pagoParcial.cuenta_id,
+    referencia: getPagoParcialImpactRef(pagoParcial.id),
+    delta: -Math.abs(toNumber(pagoParcial.monto)),
+    movimientoId: pagoParcial.movimiento_id,
+    pagoParcialId: pagoParcial.id,
+    fecha: pagoParcial.fecha_pago || todayArgentinaISO(),
+    descripcion: `Pago parcial: ${movimiento?.descripcion || pagoParcial.movimiento_id}`,
+    origen: 'pago_parcial',
+  });
+}
+
+async function aplicarImpactosMovimiento(movimiento, { saldoPendienteAntes = null } = {}) {
+  if (!movimiento || movimiento.activo === false) {
+    return [];
+  }
+
+  const impactos = [];
+  const estado = cleanFinanzasEstado(movimiento.estado, 'pendiente');
+  const monto = toNumber(movimiento.monto);
+
+  if (estado === 'pagado' && esEgresoParaCaja(movimiento)) {
+    const montoAPagar = saldoPendienteAntes !== null
+      ? Math.max(0, round2(saldoPendienteAntes))
+      : monto;
+
+    if (montoAPagar > 0) {
+      impactos.push(await aplicarImpactoCuenta({
+        cuentaId: movimiento.cuenta_id,
+        referencia: getMovimientoPagoTotalImpactRef(movimiento.id),
+        delta: -Math.abs(montoAPagar),
+        movimientoId: movimiento.id,
+        fecha: movimiento.fecha_pago || todayArgentinaISO(),
+        descripcion: `Pago total: ${movimiento.descripcion || movimiento.id}`,
+        origen: 'movimiento_pago_total',
+      }));
+    }
+  }
+
+  if (estado === 'cobrado' && movimiento.tipo === 'ingreso') {
+    impactos.push(await aplicarImpactoCuenta({
+      cuentaId: movimiento.cuenta_id,
+      referencia: getMovimientoCobroImpactRef(movimiento.id),
+      delta: Math.abs(monto),
+      movimientoId: movimiento.id,
+      fecha: movimiento.fecha_pago || todayArgentinaISO(),
+      descripcion: `Cobro ingreso: ${movimiento.descripcion || movimiento.id}`,
+      origen: 'movimiento_cobro',
+    }));
+  }
+
+  if ((estado === 'pagado' || estado === 'cobrado') && movimiento.tipo === 'transferencia') {
+    impactos.push(await aplicarImpactoCuenta({
+      cuentaId: movimiento.cuenta_id,
+      referencia: getTransferenciaSalidaImpactRef(movimiento.id),
+      delta: -Math.abs(monto),
+      movimientoId: movimiento.id,
+      fecha: movimiento.fecha_pago || todayArgentinaISO(),
+      descripcion: `Transferencia salida: ${movimiento.descripcion || movimiento.id}`,
+      origen: 'transferencia_salida',
+    }));
+
+    impactos.push(await aplicarImpactoCuenta({
+      cuentaId: movimiento.cuenta_destino_id,
+      referencia: getTransferenciaEntradaImpactRef(movimiento.id),
+      delta: Math.abs(monto),
+      movimientoId: movimiento.id,
+      fecha: movimiento.fecha_pago || todayArgentinaISO(),
+      descripcion: `Transferencia entrada: ${movimiento.descripcion || movimiento.id}`,
+      origen: 'transferencia_entrada',
+    }));
+  }
+
+  return impactos;
+}
+
+async function revertirImpactosMovimiento(movimientoId, motivo = null) {
+  const refs = [
+    getMovimientoPagoTotalImpactRef(movimientoId),
+    getMovimientoCobroImpactRef(movimientoId),
+    getTransferenciaSalidaImpactRef(movimientoId),
+    getTransferenciaEntradaImpactRef(movimientoId),
+  ];
+
+  const resultados = [];
+
+  for (const ref of refs) {
+    resultados.push(await revertirImpactoCuenta(ref, motivo));
+  }
+
+  return resultados;
+}
+
+/* ========================
+   RESPONSE FINANZAS
+======================== */
+
 function buildFinanzasResponse({
   resumen,
   cuentas,
@@ -779,6 +1003,7 @@ function buildFinanzasResponse({
   movimientos,
   gastosFijos,
   pagosParciales,
+  impactosCuenta,
   liquidacionesMp = null,
   gastosFijosSync = null,
   extra = {},
@@ -788,6 +1013,7 @@ function buildFinanzasResponse({
   const movimientosActivos = movimientos.filter(m => m.activo !== false);
   const gastosFijosActivos = gastosFijos.filter(g => g.activo !== false);
   const pagosParcialesActivos = pagosParciales.filter(p => p.activo !== false);
+  const impactosActivos = impactosCuenta.filter(i => i.activo !== false);
 
   const pendientes = movimientosActivos.filter(m => m.estado === 'pendiente' && saldoPendienteMovimiento(m) > 0);
   const pagados = movimientosActivos.filter(m => m.estado === 'pagado' || m.estado === 'cobrado');
@@ -795,7 +1021,10 @@ function buildFinanzasResponse({
   const vence7Dias = pendientes.filter(m => m.vence_7_dias);
   const vence30Dias = pendientes.filter(m => m.vence_30_dias);
 
-  const dineroDisponible = toNumber(resumen.dinero_disponible);
+  const dineroDisponible = round2(
+    cuentasActivas.reduce((sum, c) => sum + toNumber(c.saldo_actual), 0)
+  );
+
   const dineroManualOriginal = toNumber(resumen.dinero_a_cobrar);
   const manualMpExcluido = liquidacionesMp ? sumarIngresosManualMpExcluidos(movimientosActivos) : 0;
   const dineroManualSinMp = Math.max(0, dineroManualOriginal - manualMpExcluido);
@@ -836,17 +1065,20 @@ function buildFinanzasResponse({
       pagos_30_dias: pagos30Dias,
       caja_proyectada: cajaProyectada,
       total_pagado_parcial: round2(pagosParcialesActivos.reduce((sum, p) => sum + toNumber(p.monto), 0)),
+      total_impactos_cuenta: round2(impactosActivos.reduce((sum, i) => sum + (toNumber(i.monto) * toNumber(i.signo)), 0)),
     },
     cuentas,
     categorias,
     movimientos,
     gastos_fijos: gastosFijos,
     pagos_parciales: pagosParciales,
+    impactos_cuenta: impactosCuenta,
     cuentas_activas: cuentasActivas,
     categorias_activas: categoriasActivas,
     movimientos_activos: movimientosActivos,
     gastos_fijos_activos: gastosFijosActivos,
     pagos_parciales_activos: pagosParcialesActivos,
+    impactos_cuenta_activos: impactosActivos,
     pendientes,
     pagados,
     vencidos,
@@ -861,27 +1093,39 @@ function buildFinanzasResponse({
     total_gastos_fijos_activos: gastosFijosActivos.length,
     total_pagos_parciales: pagosParciales.length,
     total_pagos_parciales_activos: pagosParcialesActivos.length,
+    total_impactos_cuenta: impactosCuenta.length,
+    total_impactos_cuenta_activos: impactosActivos.length,
     total_pendientes: pendientes.length,
     total_pagados: pagados.length,
     total_vencidos: vencidos.length,
-    nota: 'War Room: ahora calcula deuda real usando saldo pendiente después de pagos parciales.',
+    nota: 'War Room: pagos, cobros y pagos parciales impactan saldos de cuentas con historial anti-duplicado.',
     ...extra,
   };
 }
 
 async function loadFinanzasResponse(extra = {}, liquidacionesMp = null, gastosFijosSync = null) {
-  const [resumen, cuentas, categorias, movimientosRaw, gastosFijosRaw, pagosParcialesRaw] = await Promise.all([
+  const [
+    resumen,
+    cuentas,
+    categorias,
+    movimientosRaw,
+    gastosFijosRaw,
+    pagosParcialesRaw,
+    impactosRaw,
+  ] = await Promise.all([
     getFinanzasResumen(),
     getFinanzasCuentas(),
     getFinanzasCategorias(),
     getFinanzasMovimientos(),
     getFinanzasGastosFijos(),
     getFinanzasPagosParciales(),
+    getFinanzasCuentaImpactos(),
   ]);
 
   const pagosParciales = enrichPagosParciales(pagosParcialesRaw, cuentas);
   const movimientos = enrichMovimientosConPagosParciales(movimientosRaw, pagosParciales);
   const gastosFijos = enrichGastosFijos(gastosFijosRaw, categorias, cuentas);
+  const impactosCuenta = enrichImpactos(impactosRaw, cuentas);
 
   return buildFinanzasResponse({
     resumen,
@@ -890,6 +1134,7 @@ async function loadFinanzasResponse(extra = {}, liquidacionesMp = null, gastosFi
     movimientos,
     gastosFijos,
     pagosParciales,
+    impactosCuenta,
     liquidacionesMp,
     gastosFijosSync,
     extra,
@@ -1138,14 +1383,15 @@ async function getPagosParcialesByMovimiento(movimientoId) {
   return Array.isArray(rows) ? rows : [];
 }
 
-async function recalcularEstadoMovimientoPorPagos(movimientoId) {
+async function calcularSaldoPendienteBase(movimientoId) {
   const movimiento = await getMovimientoBaseById(movimientoId);
 
   if (!movimiento) {
-    throw new Error('No se encontró el movimiento para recalcular pagos');
+    throw new Error('No se encontró el movimiento');
   }
 
   const pagos = await getPagosParcialesByMovimiento(movimientoId);
+
   const totalPagado = round2(
     pagos
       .filter(p => p.activo !== false)
@@ -1153,6 +1399,20 @@ async function recalcularEstadoMovimientoPorPagos(movimientoId) {
   );
 
   const montoOriginal = toNumber(movimiento.monto);
+  const saldoPendiente = Math.max(0, round2(montoOriginal - totalPagado));
+
+  return {
+    movimiento,
+    pagos,
+    montoOriginal,
+    totalPagado,
+    saldoPendiente,
+  };
+}
+
+async function recalcularEstadoMovimientoPorPagos(movimientoId) {
+  const data = await calcularSaldoPendienteBase(movimientoId);
+  const { movimiento, pagos, totalPagado, montoOriginal, saldoPendiente } = data;
 
   if (!esEgresoParaCaja(movimiento)) {
     return {
@@ -1165,7 +1425,6 @@ async function recalcularEstadoMovimientoPorPagos(movimientoId) {
     };
   }
 
-  const saldoPendiente = Math.max(0, round2(montoOriginal - totalPagado));
   const debeQuedarPagado = totalPagado >= montoOriginal && montoOriginal > 0;
 
   const payload = {
@@ -1217,6 +1476,7 @@ async function createFinanzasPagoParcial(body) {
   }
 
   const pagos = await getPagosParcialesByMovimiento(movimientoId);
+
   const totalActual = pagos
     .filter(p => p.activo !== false)
     .reduce((sum, p) => sum + toNumber(p.monto), 0);
@@ -1244,10 +1504,13 @@ async function createFinanzasPagoParcial(body) {
   });
 
   const row = Array.isArray(created) ? created[0] : created;
+
+  const impacto = await aplicarImpactoPagoParcial(row, movimiento);
   const recalculo = await recalcularEstadoMovimientoPorPagos(movimientoId);
 
   return {
     pago_parcial: row,
+    impacto_cuenta: impacto,
     recalculo,
   };
 }
@@ -1265,6 +1528,9 @@ async function updateFinanzasPagoParcial(body) {
   if (!existing) {
     throw new Error('No se encontró el pago parcial');
   }
+
+  const ref = getPagoParcialImpactRef(id);
+  const impactoRevertido = await revertirImpactoCuenta(ref, 'Actualización de pago parcial');
 
   const payload = {};
 
@@ -1291,10 +1557,14 @@ async function updateFinanzasPagoParcial(body) {
   );
 
   const row = Array.isArray(updated) ? updated[0] : updated;
+  const movimiento = await getMovimientoBaseById(existing.movimiento_id);
+  const impactoNuevo = await aplicarImpactoPagoParcial(row, movimiento);
   const recalculo = await recalcularEstadoMovimientoPorPagos(existing.movimiento_id);
 
   return {
     pago_parcial: row,
+    impacto_revertido: impactoRevertido,
+    impacto_cuenta: impactoNuevo,
     recalculo,
   };
 }
@@ -1314,6 +1584,11 @@ async function deleteOrDisableFinanzasPagoParcial(body) {
   if (!existing) {
     throw new Error('No se encontró el pago parcial');
   }
+
+  const impactoRevertido = await revertirImpactoCuenta(
+    getPagoParcialImpactRef(id),
+    'Baja de pago parcial'
+  );
 
   if (hardDelete) {
     await supabaseRequest(`finanzas_pagos_parciales?id=eq.${encodeURIComponent(id)}`, {
@@ -1337,6 +1612,7 @@ async function deleteOrDisableFinanzasPagoParcial(body) {
     id,
     deleted: hardDelete,
     disabled: !hardDelete,
+    impacto_revertido: impactoRevertido,
     recalculo,
   };
 }
@@ -1522,12 +1798,23 @@ async function createFinanzasMovimiento(body) {
     body: JSON.stringify(payload),
   });
 
-  return Array.isArray(created) ? created[0] : created;
+  const row = Array.isArray(created) ? created[0] : created;
+  const impactos = await aplicarImpactosMovimiento(row, {
+    saldoPendienteAntes: toNumber(row.monto),
+  });
+
+  return {
+    ...row,
+    impactos_cuenta: impactos,
+  };
 }
 
 async function updateFinanzasMovimiento(body) {
   const id = body.id || body.movimiento_id;
   if (!id) throw new Error('Falta id del movimiento');
+
+  const beforeData = await calcularSaldoPendienteBase(id).catch(() => null);
+  const beforeMovimiento = beforeData?.movimiento || await getMovimientoBaseById(id);
 
   const payload = buildMovimientoPayload(body, true);
 
@@ -1548,17 +1835,50 @@ async function updateFinanzasMovimiento(body) {
     }
   );
 
-  return Array.isArray(updated) ? updated[0] : updated;
+  const row = Array.isArray(updated) ? updated[0] : updated;
+
+  const estadoNuevo = cleanFinanzasEstado(row.estado, 'pendiente');
+  const estadoAnterior = cleanFinanzasEstado(beforeMovimiento?.estado, 'pendiente');
+
+  let impactos = [];
+
+  if (
+    (estadoNuevo === 'pagado' || estadoNuevo === 'cobrado') &&
+    estadoAnterior !== estadoNuevo
+  ) {
+    impactos = await aplicarImpactosMovimiento(row, {
+      saldoPendienteAntes: beforeData?.saldoPendiente ?? toNumber(row.monto),
+    });
+  }
+
+  if (
+    (estadoNuevo === 'pendiente' || estadoNuevo === 'cancelado') &&
+    (estadoAnterior === 'pagado' || estadoAnterior === 'cobrado')
+  ) {
+    impactos = await revertirImpactosMovimiento(id, `Cambio de estado a ${estadoNuevo}`);
+  }
+
+  return {
+    ...row,
+    impactos_cuenta: impactos,
+  };
 }
 
 async function deleteOrDisableFinanzasMovimiento(body) {
   const id = body.id || body.movimiento_id;
   if (!id) throw new Error('Falta id del movimiento');
 
-  return updateFinanzasMovimiento({
+  const impactosRevertidos = await revertirImpactosMovimiento(id, 'Movimiento eliminado/desactivado');
+
+  const updated = await updateFinanzasMovimiento({
     id,
     activo: false,
   });
+
+  return {
+    ...updated,
+    impactos_revertidos: impactosRevertidos,
+  };
 }
 
 /* ========================
