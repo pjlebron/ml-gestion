@@ -19,6 +19,7 @@ button:hover,.btn:hover{opacity:.88}
 .red{background:#a32d2d!important}
 .amber{background:#8a5400!important}
 .blue{background:#0c447c!important}
+.purple-btn{background:#44228a!important}
 .card{background:#fff;border:1px solid #e2e2e2;border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 1px 2px rgba(0,0,0,.025)}
 .hero{background:#111;color:#fff;border-radius:18px;padding:18px;margin-bottom:14px;display:grid;grid-template-columns:1.2fr .8fr;gap:12px;align-items:center}
 .hero-title{font-size:22px;font-weight:950;letter-spacing:-.04em;margin-bottom:6px}
@@ -77,6 +78,14 @@ tr:last-child td{border-bottom:none}
 .liq-mini span{display:block;font-size:10px;color:#777;margin-bottom:3px}
 .liq-mini b{font-size:17px}
 .account-warning{font-size:11px;color:#8a5400;margin-top:3px}
+.quick-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.priority-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px}
+.priority-mini{background:#fafafa;border:1px solid #eee;border-radius:12px;padding:10px}
+.priority-mini span{display:block;font-size:10px;color:#777;margin-bottom:3px}
+.priority-mini b{font-size:17px}
+.priority-high{border-color:#f0bcbc;background:#fff5f5}
+.priority-week{border-color:#f3d8a8;background:#fffaf0}
+.priority-ok{border-color:#c9e5c5;background:#f8fff7}
 @media(max-width:980px){
   .wrap{padding:14px}
   .hero,.two,.form-grid,.form-grid-2{grid-template-columns:1fr}
@@ -91,7 +100,7 @@ tr:last-child td{border-bottom:none}
       <div class="title">💰 War Room financiero</div>
       <div class="sub">
         Caja real para decidir: saldo disponible cargado en cuentas, liquidaciones futuras de Mercado Pago, ingresos manuales y pagos pendientes.
-        Se eliminó “ya debería estar liberado” porque no sirve para operar caja. Era un número histórico inflado, una deuda moral con forma de tarjeta.
+        Ahora suma vista operativa de pagos, porque mirar un número grande sin saber a quién hay que pagarle es contabilidad decorativa.
       </div>
     </div>
     <div class="actions">
@@ -109,7 +118,7 @@ tr:last-child td{border-bottom:none}
       <div class="hero-title">Caja proyectada útil</div>
       <div class="hero-copy">
         Fórmula: <b>dinero disponible + liquidaciones futuras MP + ingresos manuales - dinero a pagar</b>.
-        El saldo disponible de Mercado Pago requiere conexión propia de Mercado Pago para completarse solo. Mientras tanto, se puede cargar manualmente.
+        El foco es simple: saber qué entra, qué sale y qué podés pagar sin hacer malabares con fuego.
       </div>
     </div>
     <div class="hero-result">
@@ -126,10 +135,65 @@ tr:last-child td{border-bottom:none}
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:10px">
       <div>
+        <div class="section-title" style="margin:0">Qué tengo que pagar</div>
+        <div class="muted">
+          Vista operativa de egresos pendientes: vencidos, esta semana, este mes y sin vencimiento.
+          Esto es lo que sirve cuando abrís la caja y el mundo decide cobrarte todo junto, como suele hacer.
+        </div>
+      </div>
+      <span class="badge warn" id="pagos-count">0 pendientes</span>
+    </div>
+
+    <div class="priority-grid" id="pagos-operativos-metrics"></div>
+
+    <div class="two">
+      <div>
+        <div class="section-title">Prioridad de pago</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Prioridad</th>
+                <th>Vence</th>
+                <th>Tipo</th>
+                <th>Descripción</th>
+                <th class="num">Monto</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="pagos-prioridad-body">
+              <tr><td colspan="6" class="empty">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">Totales por categoría</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Categoría / tipo</th>
+                <th class="num">Pendientes</th>
+                <th class="num">Total</th>
+              </tr>
+            </thead>
+            <tbody id="pagos-categorias-body">
+              <tr><td colspan="3" class="empty">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+      <div>
         <div class="section-title" style="margin:0">Liquidaciones futuras Mercado Pago</div>
         <div class="muted">
           Muestra solo plata futura útil para caja: hoy, mañana, próximos 7 días, próximos 30 días y total pendiente futuro.
-          No muestra histórico ya liberado porque eso no sirve para decidir qué pagás hoy.
         </div>
       </div>
       <span class="badge info" id="liq-count">0 pagos válidos</span>
@@ -184,7 +248,7 @@ tr:last-child td{border-bottom:none}
         <div class="section-title">Cuentas / dinero disponible</div>
         <div class="muted" style="margin-bottom:10px">
           Acá va la plata disponible ahora: banco, efectivo, caja local, reserva y Mercado Pago disponible.
-          El saldo real automático de Mercado Pago requiere conectar Mercado Pago con OAuth propio. Las liquidaciones futuras ya se calculan aparte.
+          Las liquidaciones futuras se calculan aparte.
         </div>
         <div id="cuentas-box"></div>
       </div>
@@ -333,10 +397,15 @@ tr:last-child td{border-bottom:none}
           </div>
         </div>
 
-        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+        <div class="quick-actions">
           <button class="secondary small" onclick="clearMovimientoForm()">Limpiar</button>
-          <button class="blue small" onclick="quickIngresoManual()">Cargar ingreso manual</button>
-          <button class="amber small" onclick="quickProveedor()">Cargar proveedor</button>
+          <button class="purple-btn small" onclick="quickMovimiento('proveedor','Pago proveedor')">Proveedor</button>
+          <button class="red small" onclick="quickMovimiento('impuesto','Pago impuesto')">Impuesto</button>
+          <button class="amber small" onclick="quickMovimiento('egreso','Sueldo / jornal')">Sueldo/Jornal</button>
+          <button class="blue small" onclick="quickMovimiento('reposicion','Reposición mercadería')">Reposición</button>
+          <button class="amber small" onclick="quickMovimiento('egreso','Gasto fijo')">Gasto fijo</button>
+          <button class="secondary small" onclick="quickMovimiento('otro','Otro gasto')">Otro gasto</button>
+          <button class="green small" onclick="quickIngresoManual()">Ingreso manual</button>
         </div>
       </div>
 
@@ -472,6 +541,7 @@ async function loadData(options = {}) {
 function renderAll() {
   renderSyncStatus();
   renderResumen();
+  renderPagosOperativos();
   renderLiquidaciones();
   renderCuentas();
   renderCategorias();
@@ -484,7 +554,7 @@ function renderSyncStatus() {
 
   box.innerHTML = `
     <div class="sync-box">
-      <b>Saldo disponible Mercado Pago:</b> requiere conexión propia de Mercado Pago para completarse automático. Por ahora se carga manualmente en cuentas.
+      <b>Saldo disponible Mercado Pago:</b> cargar manualmente en cuentas hasta que conectemos saldo real sin romper producción.
       <br>
       <b>Liquidaciones futuras Mercado Pago:</b> se calculan automáticamente desde pagos y fechas de liberación.
     </div>
@@ -559,6 +629,108 @@ function renderResumen() {
       <div class="s">${m.s}</div>
     </div>
   `).join('');
+}
+
+function esEgresoPendiente(m) {
+  if (!m || m.activo === false) return false;
+  if (m.estado !== 'pendiente') return false;
+  return ['egreso','deuda','proveedor','impuesto','reposicion','otro'].includes(m.tipo);
+}
+
+function getPrioridadPago(m) {
+  if (m.vencido) return { label: 'Vencido', cls: 'bad', row: 'row-vencido', rank: 1 };
+  if (m.vence_7_dias) return { label: 'Esta semana', cls: 'warn', row: 'row-vence', rank: 2 };
+  if (m.vence_30_dias) return { label: 'Este mes', cls: 'info', row: '', rank: 3 };
+  if (!m.fecha_vencimiento) return { label: 'Sin vencimiento', cls: 'neutral', row: '', rank: 4 };
+  return { label: 'Futuro', cls: 'neutral', row: '', rank: 5 };
+}
+
+function renderPagosOperativos() {
+  const pagos = STATE.movimientos.filter(esEgresoPendiente);
+
+  const vencidos = pagos.filter(m => m.vencido);
+  const semana = pagos.filter(m => !m.vencido && m.vence_7_dias);
+  const mes = pagos.filter(m => !m.vencido && !m.vence_7_dias && m.vence_30_dias);
+  const sinVencimiento = pagos.filter(m => !m.fecha_vencimiento);
+
+  const total = arr => arr.reduce((sum, m) => sum + num(m.monto), 0);
+
+  document.getElementById('pagos-count').textContent = `${pagos.length} pendiente${pagos.length === 1 ? '' : 's'}`;
+
+  const metrics = [
+    ['Vencido', vencidos.length, total(vencidos), 'red-text', 'priority-high'],
+    ['Esta semana', semana.length, total(semana), 'amber-text', 'priority-week'],
+    ['Este mes', mes.length, total(mes), 'blue-text', 'priority-ok'],
+    ['Sin vencimiento', sinVencimiento.length, total(sinVencimiento), 'muted-text', ''],
+    ['Total a pagar', pagos.length, total(pagos), 'red-text', 'priority-high']
+  ];
+
+  document.getElementById('pagos-operativos-metrics').innerHTML = metrics.map(([label,cantidad,monto,cls,extraCls]) => `
+    <div class="priority-mini ${extraCls}">
+      <span>${label} · ${cantidad} movimiento${cantidad === 1 ? '' : 's'}</span>
+      <b class="${cls}">${fmt(monto)}</b>
+    </div>
+  `).join('');
+
+  const ordenados = [...pagos].sort((a,b) => {
+    const pa = getPrioridadPago(a);
+    const pb = getPrioridadPago(b);
+
+    if (pa.rank !== pb.rank) return pa.rank - pb.rank;
+
+    const fa = a.fecha_vencimiento || '9999-12-31';
+    const fb = b.fecha_vencimiento || '9999-12-31';
+
+    return String(fa).localeCompare(String(fb)) || num(b.monto) - num(a.monto);
+  });
+
+  document.getElementById('pagos-prioridad-body').innerHTML = ordenados.length
+    ? ordenados.slice(0, 60).map(m => {
+      const p = getPrioridadPago(m);
+
+      return `
+        <tr class="${p.row}">
+          <td><span class="badge ${p.cls}">${p.label}</span></td>
+          <td>${esc(m.fecha_vencimiento || '—')}</td>
+          <td>${tipoBadge(m.tipo)}</td>
+          <td>
+            <b>${esc(m.descripcion || '—')}</b>
+            <div class="muted">${esc(m.categoria || 'Sin categoría')} · ${esc(m.proveedor || 'Sin proveedor')}</div>
+          </td>
+          <td class="num"><b>${fmt(m.monto)}</b></td>
+          <td>
+            <div class="inline-actions">
+              <button class="secondary small" onclick="editMovimiento('${esc(m.id)}')">Editar</button>
+              <button class="green small" onclick="markMovimiento('${esc(m.id)}','pagado')">Pagar</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('')
+    : '<tr><td colspan="6" class="empty">No hay pagos pendientes. Disfrutá estos cinco minutos de paz fiscal.</td></tr>';
+
+  const byCategoria = new Map();
+
+  pagos.forEach(m => {
+    const key = m.categoria || m.tipo || 'Sin categoría';
+    const row = byCategoria.get(key) || { nombre: key, cantidad: 0, monto: 0 };
+    row.cantidad += 1;
+    row.monto += num(m.monto);
+    byCategoria.set(key, row);
+  });
+
+  const categorias = Array.from(byCategoria.values())
+    .sort((a,b) => b.monto - a.monto);
+
+  document.getElementById('pagos-categorias-body').innerHTML = categorias.length
+    ? categorias.map(row => `
+      <tr>
+        <td><b>${esc(row.nombre)}</b></td>
+        <td class="num">${row.cantidad}</td>
+        <td class="num"><b>${fmt(row.monto)}</b></td>
+      </tr>
+    `).join('')
+    : '<tr><td colspan="3" class="empty">Sin egresos pendientes.</td></tr>';
 }
 
 function renderLiquidaciones() {
@@ -638,7 +810,7 @@ function renderCuentas() {
               <tr>
                 <td>
                   <b>${esc(c.nombre)}</b>
-                  ${isMp ? '<div class="account-warning">Saldo disponible MP: cargar manual hasta conectar OAuth Mercado Pago.</div>' : ''}
+                  ${isMp ? '<div class="account-warning">Saldo disponible MP: cargar manual hasta conectar saldo real.</div>' : ''}
                   ${c.notas && !isMp ? `<div class="muted">${esc(String(c.notas).substring(0, 80))}</div>` : ''}
                 </td>
                 <td><span class="badge ${isMp ? 'info' : 'neutral'}">${esc(c.tipo)}</span></td>
@@ -1109,23 +1281,34 @@ async function disableMovimiento(id) {
   }
 }
 
+function quickMovimiento(tipo, descripcion) {
+  clearMovimientoForm();
+
+  document.getElementById('mov-tipo').value = tipo;
+  filterCategorias();
+
+  document.getElementById('mov-estado').value = 'pendiente';
+  document.getElementById('mov-descripcion').value = descripcion;
+  document.getElementById('mov-fecha').value = today();
+  document.getElementById('mov-proveedor').value = '';
+  document.getElementById('mov-monto').focus();
+}
+
 function quickIngresoManual() {
   clearMovimientoForm();
+
   document.getElementById('mov-tipo').value = 'ingreso';
   filterCategorias();
+
   document.getElementById('mov-estado').value = 'pendiente';
   document.getElementById('mov-descripcion').value = 'Ingreso manual pendiente';
   document.getElementById('mov-proveedor').value = '';
   document.getElementById('mov-fecha').value = today();
+  document.getElementById('mov-monto').focus();
 }
 
 function quickProveedor() {
-  clearMovimientoForm();
-  document.getElementById('mov-tipo').value = 'proveedor';
-  filterCategorias();
-  document.getElementById('mov-estado').value = 'pendiente';
-  document.getElementById('mov-descripcion').value = 'Pago proveedor';
-  document.getElementById('mov-fecha').value = today();
+  quickMovimiento('proveedor', 'Pago proveedor');
 }
 
 async function actualizarLiquidaciones() {
