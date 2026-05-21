@@ -71,6 +71,10 @@ tr:last-child td{border-bottom:none}
 .money-input{max-width:140px;text-align:right}
 .inline-actions{display:flex;gap:6px;justify-content:flex-end}
 .sync-box{font-size:12px;color:#555;background:#fafafa;border:1px solid #eee;border-radius:12px;padding:10px;margin-bottom:14px;line-height:1.45}
+.liq-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px}
+.liq-mini{background:#fafafa;border:1px solid #eee;border-radius:12px;padding:10px}
+.liq-mini span{display:block;font-size:10px;color:#777;margin-bottom:3px}
+.liq-mini b{font-size:17px}
 @media(max-width:980px){
   .wrap{padding:14px}
   .hero,.two,.form-grid,.form-grid-2{grid-template-columns:1fr}
@@ -84,14 +88,14 @@ tr:last-child td{border-bottom:none}
     <div>
       <div class="title">💰 War Room financiero</div>
       <div class="sub">
-        Vista simple de caja: dinero disponible, plata a cobrar, pagos pendientes y caja proyectada.
-        Acá mandan pocos números, porque cuando un tablero necesita manual de 80 páginas ya dejó de ser tablero y pasó a ser castigo administrativo.
+        Vista simple de caja: dinero disponible, liquidaciones de Mercado Pago, ingresos manuales, pagos pendientes y caja proyectada.
+        Las liquidaciones se calculan en vivo; cargarlas a mano sería criar un Excel con dependencia emocional.
       </div>
     </div>
     <div class="actions">
       <a class="btn secondary" href="/">← Dashboard</a>
       <button onclick="loadData()">Actualizar</button>
-      <button class="blue" onclick="syncMercadoPago()">Sincronizar MP</button>
+      <button class="blue" onclick="actualizarLiquidaciones()">Actualizar liquidaciones MP</button>
     </div>
   </div>
 
@@ -102,8 +106,8 @@ tr:last-child td{border-bottom:none}
     <div>
       <div class="hero-title">Caja proyectada</div>
       <div class="hero-copy">
-        Fórmula base: <b>dinero disponible + dinero a cobrar - dinero a pagar</b>.
-        El saldo de Mercado Pago intenta sincronizarse automático. Lo que está “a liquidar” todavía se carga como ingreso pendiente.
+        Fórmula base: <b>dinero disponible + liquidaciones MP + ingresos manuales - dinero a pagar</b>.
+        El saldo disponible se carga manual. Las liquidaciones pendientes se actualizan desde Mercado Pago.
       </div>
     </div>
     <div class="hero-result">
@@ -117,12 +121,65 @@ tr:last-child td{border-bottom:none}
     <div class="metric"><div class="l">Cargando</div><div class="v"><span class="spinner"></span></div></div>
   </div>
 
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+      <div>
+        <div class="section-title" style="margin:0">Liquidaciones Mercado Pago</div>
+        <div class="muted">
+          Se calcula dinámicamente desde los pagos y la fecha de liberación. No se guarda como movimiento para que no quede viejo cada 15 minutos, porque ya bastante tenemos.
+        </div>
+      </div>
+      <span class="badge info" id="liq-count">0 pagos</span>
+    </div>
+
+    <div class="liq-grid" id="liq-metrics"></div>
+
+    <div class="two">
+      <div>
+        <div class="section-title">Por fecha</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th class="num">Monto</th>
+                <th class="num">Pagos</th>
+              </tr>
+            </thead>
+            <tbody id="liq-fechas-body">
+              <tr><td colspan="3" class="empty">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">Próximos pagos</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Cuenta</th>
+                <th>Comprador</th>
+                <th class="num">Neto</th>
+              </tr>
+            </thead>
+            <tbody id="liq-pagos-body">
+              <tr><td colspan="4" class="empty">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="two">
     <div>
       <div class="card">
         <div class="section-title">Cuentas / dinero disponible</div>
         <div class="muted" style="margin-bottom:10px">
-          Acá cargás saldos actuales: banco, efectivo, caja local, reserva. Mercado Pago se intenta sincronizar automáticamente por cuenta.
+          Acá cargás saldos actuales: banco, efectivo, caja local, reserva y Mercado Pago disponible. Las liquidaciones pendientes se calculan aparte, automáticamente.
         </div>
         <div id="cuentas-box"></div>
       </div>
@@ -273,7 +330,7 @@ tr:last-child td{border-bottom:none}
 
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
           <button class="secondary small" onclick="clearMovimientoForm()">Limpiar</button>
-          <button class="blue small" onclick="quickIngresoMP()">Cargar Mercado Pago a liquidar</button>
+          <button class="blue small" onclick="quickIngresoManual()">Cargar ingreso manual</button>
           <button class="amber small" onclick="quickProveedor()">Cargar proveedor</button>
         </div>
       </div>
@@ -329,6 +386,7 @@ const STATE = {
   cuentas: [],
   categorias: [],
   movimientos: [],
+  liquidacionesMp: null,
   tab: 'pendientes',
   mercadoPagoSync: null
 };
@@ -364,17 +422,19 @@ function showMsg(text, type = 'ok') {
   }, 4500);
 }
 
-async function apiRequest(method = 'GET', body = null, syncMp = true) {
-  const options = {
+async function apiRequest(method = 'GET', body = null, options = {}) {
+  const syncMp = options.syncMp === true ? '1' : '0';
+  const syncLiquidaciones = options.syncLiquidaciones === false ? '0' : '1';
+
+  const requestOptions = {
     method,
     headers: { 'Content-Type': 'application/json' },
     cache: 'no-store'
   };
 
-  if (body) options.body = JSON.stringify(body);
+  if (body) requestOptions.body = JSON.stringify(body);
 
-  const syncParam = syncMp ? '1' : '0';
-  const r = await fetch(`${API_URL}&sync_mp=${syncParam}&cb=${Date.now()}`, options);
+  const r = await fetch(`${API_URL}&sync_mp=${syncMp}&sync_liquidaciones=${syncLiquidaciones}&cb=${Date.now()}`, requestOptions);
   const data = await r.json().catch(() => ({}));
 
   if (!r.ok || data.ok === false) {
@@ -384,14 +444,18 @@ async function apiRequest(method = 'GET', body = null, syncMp = true) {
   return data;
 }
 
-async function loadData(syncMp = true) {
+async function loadData(options = {}) {
   try {
-    const data = await apiRequest('GET', null, syncMp);
+    const data = await apiRequest('GET', null, {
+      syncMp: options.syncMp === true,
+      syncLiquidaciones: options.syncLiquidaciones !== false
+    });
 
     STATE.resumen = data.resumen || {};
     STATE.cuentas = data.cuentas || [];
     STATE.categorias = data.categorias || [];
     STATE.movimientos = data.movimientos || [];
+    STATE.liquidacionesMp = data.liquidaciones_mp || null;
     STATE.mercadoPagoSync = data.mercado_pago_sync || data.extra?.mercado_pago_sync || null;
 
     renderAll();
@@ -403,6 +467,7 @@ async function loadData(syncMp = true) {
 function renderAll() {
   renderSyncStatus();
   renderResumen();
+  renderLiquidaciones();
   renderCuentas();
   renderCategorias();
   renderSelects();
@@ -414,7 +479,13 @@ function renderSyncStatus() {
   const sync = STATE.mercadoPagoSync;
 
   if (!sync) {
-    box.innerHTML = '';
+    box.innerHTML = `
+      <div class="sync-box">
+        <b>Saldo disponible Mercado Pago:</b> por ahora se carga manualmente en cuentas.
+        <br>
+        <b>Liquidaciones Mercado Pago:</b> se calculan automáticamente desde pagos y fechas de liberación.
+      </div>
+    `;
     return;
   }
 
@@ -428,10 +499,7 @@ function renderSyncStatus() {
   }
 
   const rows = accounts.map(a => {
-    if (a.ok) {
-      return `${esc(a.label)}: <b>${fmt(a.saldo)}</b>`;
-    }
-
+    if (a.ok) return `${esc(a.label)}: <b>${fmt(a.saldo)}</b>`;
     return `${esc(a.label)}: <b style="color:#a32d2d">${esc(a.error || 'No sincronizó')}</b>`;
   }).join(' · ');
 
@@ -439,9 +507,9 @@ function renderSyncStatus() {
 
   box.innerHTML = `
     <div class="${cls}">
-      <b>Sincronización Mercado Pago:</b> ${okAccounts.length} cuenta${okAccounts.length === 1 ? '' : 's'} actualizada${okAccounts.length === 1 ? '' : 's'}.
+      <b>Sincronización saldo Mercado Pago:</b> ${okAccounts.length} cuenta${okAccounts.length === 1 ? '' : 's'} actualizada${okAccounts.length === 1 ? '' : 's'}.
       <div style="margin-top:4px">${rows}</div>
-      ${badAccounts.length ? '<div class="muted" style="margin-top:4px">Si alguna cuenta falla, revisar el JSON de /api/costos?modulo=finanzas para ver attempts. Sí, hasta el saldo ahora necesita diagnóstico, qué civilización tan práctica.</div>' : ''}
+      ${badAccounts.length ? '<div class="muted" style="margin-top:4px">Si falla, no afecta liquidaciones automáticas. El saldo disponible se puede cargar manualmente.</div>' : ''}
     </div>
   `;
 }
@@ -464,9 +532,15 @@ function renderResumen() {
       cls: 'green-text'
     },
     {
-      l: 'A liquidar / cobrar',
-      v: fmt(r.dinero_a_cobrar),
-      s: 'ingresos pendientes',
+      l: 'Liquidaciones MP',
+      v: fmt(r.liquidaciones_mp_pendientes),
+      s: 'automático desde pagos',
+      cls: 'blue-text'
+    },
+    {
+      l: 'Ingresos manuales',
+      v: fmt(r.dinero_a_cobrar_manual),
+      s: 'sin duplicar Mercado Pago',
       cls: 'blue-text'
     },
     {
@@ -474,6 +548,12 @@ function renderResumen() {
       v: fmt(r.dinero_a_pagar),
       s: 'gastos/deudas pendientes',
       cls: 'red-text'
+    },
+    {
+      l: 'MP manual excluido',
+      v: fmt(r.ingresos_mp_manuales_excluidos),
+      s: 'evita duplicar liquidaciones',
+      cls: 'amber-text'
     },
     {
       l: 'Pagos vencidos',
@@ -502,6 +582,55 @@ function renderResumen() {
       <div class="s">${m.s}</div>
     </div>
   `).join('');
+}
+
+function renderLiquidaciones() {
+  const liq = STATE.liquidacionesMp || {};
+
+  document.getElementById('liq-count').textContent = `${liq.pagos_validos || 0} pagos válidos`;
+
+  const metrics = [
+    ['Hoy', liq.hoy || 0, 'green-text'],
+    ['Mañana', liq.manana || 0, 'blue-text'],
+    ['Próximos 7 días', liq.proximos_7_dias || 0, 'blue-text'],
+    ['Próximos 30 días', liq.proximos_30_dias || 0, 'blue-text'],
+    ['Total pendiente', liq.total_pendiente || 0, 'green-text'],
+    ['Ya debería estar liberado', liq.vencidas_o_ya_liberadas || 0, 'amber-text'],
+    ['Sin fecha', liq.sin_fecha || 0, 'amber-text'],
+    ['Errores', liq.pagos_con_error || 0, (liq.pagos_con_error || 0) > 0 ? 'red-text' : 'green-text']
+  ];
+
+  document.getElementById('liq-metrics').innerHTML = metrics.map(([label,value,cls]) => `
+    <div class="liq-mini">
+      <span>${label}</span>
+      <b class="${cls}">${typeof value === 'number' && label !== 'Errores' ? fmt(value) : value}</b>
+    </div>
+  `).join('');
+
+  const fechas = Array.isArray(liq.por_fecha) ? liq.por_fecha : [];
+
+  document.getElementById('liq-fechas-body').innerHTML = fechas.length
+    ? fechas.slice(0, 40).map(row => `
+      <tr>
+        <td><b>${esc(row.fecha)}</b></td>
+        <td class="num"><b>${fmt(row.monto)}</b></td>
+        <td class="num">${row.pagos || 0}</td>
+      </tr>
+    `).join('')
+    : '<tr><td colspan="3" class="empty">No hay liquidaciones futuras detectadas.</td></tr>';
+
+  const pagos = Array.isArray(liq.pagos) ? liq.pagos : [];
+
+  document.getElementById('liq-pagos-body').innerHTML = pagos.length
+    ? pagos.slice(0, 60).map(p => `
+      <tr>
+        <td>${esc(p.money_release_date || '—')}</td>
+        <td>${esc(p.cuenta || '—')}</td>
+        <td>${esc(p.comprador || '—')}</td>
+        <td class="num"><b>${fmt(p.monto_neto)}</b></td>
+      </tr>
+    `).join('')
+    : '<tr><td colspan="4" class="empty">No hay pagos próximos para mostrar.</td></tr>';
 }
 
 function renderCuentas() {
@@ -734,7 +863,7 @@ async function saveCategoria() {
         tipo,
         orden,
         activo: true
-      }, false);
+      }, { syncLiquidaciones: false });
       showMsg('Categoría actualizada.');
     } else {
       await apiRequest('POST', {
@@ -743,12 +872,12 @@ async function saveCategoria() {
         tipo,
         orden,
         activo: true
-      }, false);
+      }, { syncLiquidaciones: false });
       showMsg('Categoría creada.');
     }
 
     clearCategoriaForm();
-    await loadData(false);
+    await loadData({ syncLiquidaciones: true });
   } catch (error) {
     showMsg('Error guardando categoría: ' + error.message, 'bad');
   }
@@ -786,10 +915,10 @@ async function disableCategoria(id) {
     await apiRequest('DELETE', {
       type: 'categoria',
       id
-    }, false);
+    }, { syncLiquidaciones: false });
 
     showMsg('Categoría desactivada.');
-    await loadData(false);
+    await loadData({ syncLiquidaciones: true });
   } catch (error) {
     showMsg('Error borrando categoría: ' + error.message, 'bad');
   }
@@ -815,7 +944,7 @@ async function saveCuenta() {
         tipo,
         saldo_actual: saldo,
         activo: true
-      }, false);
+      }, { syncLiquidaciones: false });
       showMsg('Cuenta actualizada.');
     } else {
       await apiRequest('POST', {
@@ -824,12 +953,12 @@ async function saveCuenta() {
         tipo,
         saldo_actual: saldo,
         activo: true
-      }, false);
+      }, { syncLiquidaciones: false });
       showMsg('Cuenta creada.');
     }
 
     clearCuentaForm();
-    await loadData(false);
+    await loadData({ syncLiquidaciones: true });
   } catch (error) {
     showMsg('Error guardando cuenta: ' + error.message, 'bad');
   }
@@ -864,10 +993,10 @@ async function updateSaldoCuenta(id) {
       type: 'cuenta',
       id,
       saldo_actual: saldo
-    }, false);
+    }, { syncLiquidaciones: false });
 
     showMsg('Saldo actualizado.');
-    await loadData(false);
+    await loadData({ syncLiquidaciones: true });
   } catch (error) {
     showMsg('Error actualizando saldo: ' + error.message, 'bad');
   }
@@ -912,15 +1041,15 @@ async function saveMovimiento() {
       await apiRequest('PUT', {
         ...payload,
         id
-      }, false);
+      }, { syncLiquidaciones: false });
       showMsg('Movimiento actualizado.');
     } else {
-      await apiRequest('POST', payload, false);
+      await apiRequest('POST', payload, { syncLiquidaciones: false });
       showMsg('Movimiento creado.');
     }
 
     clearMovimientoForm();
-    await loadData(false);
+    await loadData({ syncLiquidaciones: true });
   } catch (error) {
     showMsg('Error guardando movimiento: ' + error.message, 'bad');
   }
@@ -971,10 +1100,10 @@ async function markMovimiento(id, estado) {
       id,
       estado,
       fecha_pago: today()
-    }, false);
+    }, { syncLiquidaciones: false });
 
     showMsg(estado === 'cobrado' ? 'Movimiento marcado como cobrado.' : 'Movimiento marcado como pagado.');
-    await loadData(false);
+    await loadData({ syncLiquidaciones: true });
   } catch (error) {
     showMsg('Error actualizando movimiento: ' + error.message, 'bad');
   }
@@ -988,22 +1117,22 @@ async function disableMovimiento(id) {
     await apiRequest('DELETE', {
       type: 'movimiento',
       id
-    }, false);
+    }, { syncLiquidaciones: false });
 
     showMsg('Movimiento desactivado.');
-    await loadData(false);
+    await loadData({ syncLiquidaciones: true });
   } catch (error) {
     showMsg('Error borrando movimiento: ' + error.message, 'bad');
   }
 }
 
-function quickIngresoMP() {
+function quickIngresoManual() {
   clearMovimientoForm();
   document.getElementById('mov-tipo').value = 'ingreso';
   filterCategorias();
   document.getElementById('mov-estado').value = 'pendiente';
-  document.getElementById('mov-descripcion').value = 'Mercado Pago a liquidar';
-  document.getElementById('mov-proveedor').value = 'Mercado Pago';
+  document.getElementById('mov-descripcion').value = 'Ingreso manual pendiente';
+  document.getElementById('mov-proveedor').value = '';
   document.getElementById('mov-fecha').value = today();
 }
 
@@ -1016,37 +1145,19 @@ function quickProveedor() {
   document.getElementById('mov-fecha').value = today();
 }
 
-async function syncMercadoPago() {
+async function actualizarLiquidaciones() {
   try {
-    showMsg('Sincronizando saldo disponible de Mercado Pago...', 'warn');
-    await loadData(true);
-
-    const sync = STATE.mercadoPagoSync;
-
-    if (!sync) {
-      showMsg('La API no devolvió mercado_pago_sync. Revisá deploy de api/costos.js.', 'warn');
-      return;
-    }
-
-    const okAccounts = (sync.accounts || []).filter(a => a.ok);
-    const badAccounts = (sync.accounts || []).filter(a => !a.ok);
-
-    if (okAccounts.length) {
-      showMsg(`Mercado Pago sincronizado. Cuentas actualizadas: ${okAccounts.length}.`);
-    }
-
-    if (!okAccounts.length && badAccounts.length) {
-      const detail = badAccounts.map(a => `${a.label}: ${a.error}`).join(' | ');
-      showMsg('No se pudo sincronizar Mercado Pago: ' + detail, 'bad');
-    }
+    showMsg('Actualizando liquidaciones de Mercado Pago...', 'warn');
+    await loadData({ syncLiquidaciones: true });
+    showMsg('Liquidaciones actualizadas.');
   } catch (error) {
-    showMsg('Error sincronizando Mercado Pago: ' + error.message, 'bad');
+    showMsg('Error actualizando liquidaciones: ' + error.message, 'bad');
   }
 }
 
 document.getElementById('mov-fecha').value = today();
 
-loadData(true);
+loadData({ syncLiquidaciones: true });
 </script>
 </body>
 </html>
