@@ -3,8 +3,8 @@ import {
   getValidToken,
 } from './_token.js';
 
-// COMMIT 20B
-// Agrega gastos fijos recurrentes al War Room
+// COMMIT FINAL WAR ROOM
+// Gastos fijos recurrentes + pagos parciales
 //
 // Todo sigue dentro de /api/costos para no crear más funciones en Vercel.
 //
@@ -13,7 +13,8 @@ import {
 // GET /api/costos?modulo=finanzas
 //
 // POST/PUT/DELETE /api/costos?modulo=finanzas
-// type: cuenta | categoria | movimiento | gasto_fijo | gastos_fijos_generar
+// type:
+// cuenta | categoria | movimiento | gasto_fijo | gastos_fijos_generar | pago_parcial
 
 const SHEET_ID = '1AJRDGujWNkam2cWrH050zjTTz0Gmuo_niK_nMTTzKIM';
 const SHEET_NAME = 'PRODUCTOS';
@@ -660,6 +661,16 @@ function vencimientoFromPeriodo(periodo, dia) {
   return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(safeDay).padStart(2, '0')}`;
 }
 
+function esEgresoParaCaja(m) {
+  return ['egreso', 'deuda', 'proveedor', 'impuesto', 'reposicion', 'otro'].includes(m?.tipo);
+}
+
+function saldoPendienteMovimiento(m) {
+  if (!esEgresoParaCaja(m)) return 0;
+  if (m.estado === 'pagado' || m.estado === 'cobrado' || m.estado === 'cancelado') return 0;
+  return Math.max(0, round2(toNumber(m.saldo_pendiente ?? m.monto)));
+}
+
 async function getFinanzasCuentas() {
   const rows = await supabaseRequest('finanzas_cuentas?select=*&order=orden.asc,nombre.asc');
   return Array.isArray(rows) ? rows : [];
@@ -677,6 +688,11 @@ async function getFinanzasMovimientos() {
 
 async function getFinanzasGastosFijos() {
   const rows = await supabaseRequest('finanzas_gastos_fijos?select=*&order=activo.desc,dia_vencimiento.asc,nombre.asc');
+  return Array.isArray(rows) ? rows : [];
+}
+
+async function getFinanzasPagosParciales() {
+  const rows = await supabaseRequest('finanzas_pagos_parciales?select=*&order=fecha_pago.desc,created_at.desc');
   return Array.isArray(rows) ? rows : [];
 }
 
@@ -703,13 +719,77 @@ function enrichGastosFijos(gastosFijos, categorias, cuentas) {
   });
 }
 
-function buildFinanzasResponse({ resumen, cuentas, categorias, movimientos, gastosFijos, liquidacionesMp = null, gastosFijosSync = null, extra = {} }) {
+function enrichPagosParciales(pagosParciales, cuentas) {
+  const cuentaMap = new Map(cuentas.map(c => [c.id, c]));
+
+  return pagosParciales.map(p => {
+    const cuenta = cuentaMap.get(p.cuenta_id);
+
+    return {
+      ...p,
+      cuenta: cuenta?.nombre || null,
+      cuenta_tipo: cuenta?.tipo || null,
+    };
+  });
+}
+
+function enrichMovimientosConPagosParciales(movimientos, pagosParciales) {
+  const pagosByMovimiento = new Map();
+
+  pagosParciales
+    .filter(p => p.activo !== false)
+    .forEach(p => {
+      const list = pagosByMovimiento.get(p.movimiento_id) || [];
+      list.push(p);
+      pagosByMovimiento.set(p.movimiento_id, list);
+    });
+
+  return movimientos.map(m => {
+    const pagos = pagosByMovimiento.get(m.id) || [];
+    const totalPagado = round2(pagos.reduce((sum, p) => sum + toNumber(p.monto), 0));
+    const montoOriginal = toNumber(m.monto);
+    const saldoPendiente = Math.max(0, round2(montoOriginal - totalPagado));
+
+    let estadoCalculado = m.estado;
+
+    if (m.estado === 'pendiente' && totalPagado > 0 && saldoPendiente > 0) {
+      estadoCalculado = 'parcial';
+    }
+
+    if (m.estado === 'pendiente' && totalPagado >= montoOriginal && montoOriginal > 0) {
+      estadoCalculado = 'pagado';
+    }
+
+    return {
+      ...m,
+      pagos_parciales: pagos,
+      total_pagado_parcial: totalPagado,
+      saldo_pendiente: esEgresoParaCaja(m) ? saldoPendiente : 0,
+      monto_original: montoOriginal,
+      estado_calculado: estadoCalculado,
+      tiene_pago_parcial: totalPagado > 0 && saldoPendiente > 0,
+    };
+  });
+}
+
+function buildFinanzasResponse({
+  resumen,
+  cuentas,
+  categorias,
+  movimientos,
+  gastosFijos,
+  pagosParciales,
+  liquidacionesMp = null,
+  gastosFijosSync = null,
+  extra = {},
+}) {
   const cuentasActivas = cuentas.filter(c => c.activo !== false);
   const categoriasActivas = categorias.filter(c => c.activo !== false);
   const movimientosActivos = movimientos.filter(m => m.activo !== false);
   const gastosFijosActivos = gastosFijos.filter(g => g.activo !== false);
+  const pagosParcialesActivos = pagosParciales.filter(p => p.activo !== false);
 
-  const pendientes = movimientosActivos.filter(m => m.estado === 'pendiente');
+  const pendientes = movimientosActivos.filter(m => m.estado === 'pendiente' && saldoPendienteMovimiento(m) > 0);
   const pagados = movimientosActivos.filter(m => m.estado === 'pagado' || m.estado === 'cobrado');
   const vencidos = pendientes.filter(m => m.vencido);
   const vence7Dias = pendientes.filter(m => m.vence_7_dias);
@@ -721,7 +801,23 @@ function buildFinanzasResponse({ resumen, cuentas, categorias, movimientos, gast
   const dineroManualSinMp = Math.max(0, dineroManualOriginal - manualMpExcluido);
   const liquidacionesPendientes = liquidacionesMp ? toNumber(liquidacionesMp.total_pendiente) : 0;
   const dineroACobrarTotal = round2(dineroManualSinMp + liquidacionesPendientes);
-  const dineroAPagar = toNumber(resumen.dinero_a_pagar);
+
+  const dineroAPagar = round2(
+    movimientosActivos.reduce((sum, m) => sum + saldoPendienteMovimiento(m), 0)
+  );
+
+  const pagosVencidos = round2(
+    vencidos.reduce((sum, m) => sum + saldoPendienteMovimiento(m), 0)
+  );
+
+  const pagos7Dias = round2(
+    vence7Dias.reduce((sum, m) => sum + saldoPendienteMovimiento(m), 0)
+  );
+
+  const pagos30Dias = round2(
+    vence30Dias.reduce((sum, m) => sum + saldoPendienteMovimiento(m), 0)
+  );
+
   const cajaProyectada = round2(dineroDisponible + dineroACobrarTotal - dineroAPagar);
 
   return {
@@ -735,19 +831,22 @@ function buildFinanzasResponse({ resumen, cuentas, categorias, movimientos, gast
       ingresos_mp_manuales_excluidos: manualMpExcluido,
       liquidaciones_mp_pendientes: liquidacionesPendientes,
       dinero_a_pagar: dineroAPagar,
-      pagos_vencidos: toNumber(resumen.pagos_vencidos),
-      pagos_7_dias: toNumber(resumen.pagos_7_dias),
-      pagos_30_dias: toNumber(resumen.pagos_30_dias),
+      pagos_vencidos: pagosVencidos,
+      pagos_7_dias: pagos7Dias,
+      pagos_30_dias: pagos30Dias,
       caja_proyectada: cajaProyectada,
+      total_pagado_parcial: round2(pagosParcialesActivos.reduce((sum, p) => sum + toNumber(p.monto), 0)),
     },
     cuentas,
     categorias,
     movimientos,
     gastos_fijos: gastosFijos,
+    pagos_parciales: pagosParciales,
     cuentas_activas: cuentasActivas,
     categorias_activas: categoriasActivas,
     movimientos_activos: movimientosActivos,
     gastos_fijos_activos: gastosFijosActivos,
+    pagos_parciales_activos: pagosParcialesActivos,
     pendientes,
     pagados,
     vencidos,
@@ -760,23 +859,28 @@ function buildFinanzasResponse({ resumen, cuentas, categorias, movimientos, gast
     total_movimientos: movimientos.length,
     total_gastos_fijos: gastosFijos.length,
     total_gastos_fijos_activos: gastosFijosActivos.length,
+    total_pagos_parciales: pagosParciales.length,
+    total_pagos_parciales_activos: pagosParcialesActivos.length,
     total_pendientes: pendientes.length,
     total_pagados: pagados.length,
     total_vencidos: vencidos.length,
-    nota: 'War Room: disponible + liquidaciones MP + ingresos manuales - pagos pendientes. Gastos fijos se generan por mes sin duplicarse.',
+    nota: 'War Room: ahora calcula deuda real usando saldo pendiente después de pagos parciales.',
     ...extra,
   };
 }
 
 async function loadFinanzasResponse(extra = {}, liquidacionesMp = null, gastosFijosSync = null) {
-  const [resumen, cuentas, categorias, movimientos, gastosFijosRaw] = await Promise.all([
+  const [resumen, cuentas, categorias, movimientosRaw, gastosFijosRaw, pagosParcialesRaw] = await Promise.all([
     getFinanzasResumen(),
     getFinanzasCuentas(),
     getFinanzasCategorias(),
     getFinanzasMovimientos(),
     getFinanzasGastosFijos(),
+    getFinanzasPagosParciales(),
   ]);
 
+  const pagosParciales = enrichPagosParciales(pagosParcialesRaw, cuentas);
+  const movimientos = enrichMovimientosConPagosParciales(movimientosRaw, pagosParciales);
   const gastosFijos = enrichGastosFijos(gastosFijosRaw, categorias, cuentas);
 
   return buildFinanzasResponse({
@@ -785,6 +889,7 @@ async function loadFinanzasResponse(extra = {}, liquidacionesMp = null, gastosFi
     categorias,
     movimientos,
     gastosFijos,
+    pagosParciales,
     liquidacionesMp,
     gastosFijosSync,
     extra,
@@ -1011,6 +1116,229 @@ async function syncGastosFijosDelMes({ periodo = getPeriodoActual(), gastoFijoId
   }
 
   return result;
+}
+
+/* ========================
+   PAGOS PARCIALES
+======================== */
+
+async function getMovimientoBaseById(id) {
+  const rows = await supabaseRequest(
+    `finanzas_movimientos?id=eq.${encodeURIComponent(id)}&select=*&limit=1`
+  );
+
+  return Array.isArray(rows) ? rows[0] || null : null;
+}
+
+async function getPagosParcialesByMovimiento(movimientoId) {
+  const rows = await supabaseRequest(
+    `finanzas_pagos_parciales?movimiento_id=eq.${encodeURIComponent(movimientoId)}&select=*&order=fecha_pago.asc,created_at.asc`
+  );
+
+  return Array.isArray(rows) ? rows : [];
+}
+
+async function recalcularEstadoMovimientoPorPagos(movimientoId) {
+  const movimiento = await getMovimientoBaseById(movimientoId);
+
+  if (!movimiento) {
+    throw new Error('No se encontró el movimiento para recalcular pagos');
+  }
+
+  const pagos = await getPagosParcialesByMovimiento(movimientoId);
+  const totalPagado = round2(
+    pagos
+      .filter(p => p.activo !== false)
+      .reduce((sum, p) => sum + toNumber(p.monto), 0)
+  );
+
+  const montoOriginal = toNumber(movimiento.monto);
+
+  if (!esEgresoParaCaja(movimiento)) {
+    return {
+      movimiento_id: movimientoId,
+      total_pagado: totalPagado,
+      saldo_pendiente: 0,
+      estado: movimiento.estado,
+      actualizado: false,
+      motivo: 'El movimiento no es egreso/deuda/proveedor/impuesto/reposición',
+    };
+  }
+
+  const saldoPendiente = Math.max(0, round2(montoOriginal - totalPagado));
+  const debeQuedarPagado = totalPagado >= montoOriginal && montoOriginal > 0;
+
+  const payload = {
+    estado: debeQuedarPagado ? 'pagado' : 'pendiente',
+    fecha_pago: debeQuedarPagado
+      ? pagos
+          .filter(p => p.activo !== false)
+          .map(p => p.fecha_pago)
+          .sort()
+          .at(-1) || todayArgentinaISO()
+      : null,
+  };
+
+  const updated = await supabaseRequest(
+    `finanzas_movimientos?id=eq.${encodeURIComponent(movimientoId)}`,
+    {
+      method: 'PATCH',
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify(payload),
+    }
+  );
+
+  const row = Array.isArray(updated) ? updated[0] : updated;
+
+  return {
+    movimiento_id: movimientoId,
+    total_pagado: totalPagado,
+    saldo_pendiente: saldoPendiente,
+    estado: row.estado,
+    actualizado: true,
+  };
+}
+
+async function createFinanzasPagoParcial(body) {
+  const movimientoId = body.movimiento_id || body.id_movimiento;
+  const monto = toNumber(body.monto);
+
+  if (!movimientoId) throw new Error('Falta movimiento_id para el pago parcial');
+  if (monto <= 0) throw new Error('El monto del pago parcial debe ser mayor a cero');
+
+  const movimiento = await getMovimientoBaseById(movimientoId);
+
+  if (!movimiento) {
+    throw new Error('No se encontró el movimiento');
+  }
+
+  if (!esEgresoParaCaja(movimiento)) {
+    throw new Error('Solo se pueden cargar pagos parciales sobre gastos, deudas, proveedores, impuestos o reposición');
+  }
+
+  const pagos = await getPagosParcialesByMovimiento(movimientoId);
+  const totalActual = pagos
+    .filter(p => p.activo !== false)
+    .reduce((sum, p) => sum + toNumber(p.monto), 0);
+
+  const saldoAntes = round2(toNumber(movimiento.monto) - totalActual);
+
+  if (monto > saldoAntes && body.permitir_sobrepago !== true) {
+    throw new Error(`El pago parcial supera el saldo pendiente. Saldo actual: ${saldoAntes}`);
+  }
+
+  const payload = {
+    movimiento_id: movimientoId,
+    cuenta_id: emptyToNull(body.cuenta_id),
+    monto,
+    moneda: cleanText(body.moneda || 'ARS'),
+    fecha_pago: emptyToNull(body.fecha_pago) || todayArgentinaISO(),
+    notas: emptyToNull(body.notas),
+    activo: toBool(body.activo, true),
+  };
+
+  const created = await supabaseRequest('finanzas_pagos_parciales', {
+    method: 'POST',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify(payload),
+  });
+
+  const row = Array.isArray(created) ? created[0] : created;
+  const recalculo = await recalcularEstadoMovimientoPorPagos(movimientoId);
+
+  return {
+    pago_parcial: row,
+    recalculo,
+  };
+}
+
+async function updateFinanzasPagoParcial(body) {
+  const id = body.id || body.pago_parcial_id;
+  if (!id) throw new Error('Falta id del pago parcial');
+
+  const rows = await supabaseRequest(
+    `finanzas_pagos_parciales?id=eq.${encodeURIComponent(id)}&select=*&limit=1`
+  );
+
+  const existing = Array.isArray(rows) ? rows[0] || null : null;
+
+  if (!existing) {
+    throw new Error('No se encontró el pago parcial');
+  }
+
+  const payload = {};
+
+  if (body.cuenta_id !== undefined) payload.cuenta_id = emptyToNull(body.cuenta_id);
+
+  if (body.monto !== undefined) {
+    const monto = toNumber(body.monto);
+    if (monto <= 0) throw new Error('El monto del pago parcial debe ser mayor a cero');
+    payload.monto = monto;
+  }
+
+  if (body.moneda !== undefined) payload.moneda = cleanText(body.moneda || 'ARS');
+  if (body.fecha_pago !== undefined) payload.fecha_pago = emptyToNull(body.fecha_pago) || todayArgentinaISO();
+  if (body.notas !== undefined) payload.notas = emptyToNull(body.notas);
+  if (body.activo !== undefined) payload.activo = toBool(body.activo, true);
+
+  const updated = await supabaseRequest(
+    `finanzas_pagos_parciales?id=eq.${encodeURIComponent(id)}`,
+    {
+      method: 'PATCH',
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify(payload),
+    }
+  );
+
+  const row = Array.isArray(updated) ? updated[0] : updated;
+  const recalculo = await recalcularEstadoMovimientoPorPagos(existing.movimiento_id);
+
+  return {
+    pago_parcial: row,
+    recalculo,
+  };
+}
+
+async function deleteOrDisableFinanzasPagoParcial(body) {
+  const id = body.id || body.pago_parcial_id;
+  const hardDelete = body.hard_delete === true;
+
+  if (!id) throw new Error('Falta id del pago parcial');
+
+  const rows = await supabaseRequest(
+    `finanzas_pagos_parciales?id=eq.${encodeURIComponent(id)}&select=*&limit=1`
+  );
+
+  const existing = Array.isArray(rows) ? rows[0] || null : null;
+
+  if (!existing) {
+    throw new Error('No se encontró el pago parcial');
+  }
+
+  if (hardDelete) {
+    await supabaseRequest(`finanzas_pagos_parciales?id=eq.${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: { Prefer: 'return=minimal' },
+    });
+  } else {
+    await supabaseRequest(
+      `finanzas_pagos_parciales?id=eq.${encodeURIComponent(id)}`,
+      {
+        method: 'PATCH',
+        headers: { Prefer: 'return=representation' },
+        body: JSON.stringify({ activo: false }),
+      }
+    );
+  }
+
+  const recalculo = await recalcularEstadoMovimientoPorPagos(existing.movimiento_id);
+
+  return {
+    id,
+    deleted: hardDelete,
+    disabled: !hardDelete,
+    recalculo,
+  };
 }
 
 /* ========================
@@ -1576,8 +1904,10 @@ async function handleFinanzas(req, res) {
           periodo: body.periodo || getPeriodoActual(),
           gastoFijoId: body.gasto_fijo_id || null,
         });
+      } else if (type === 'pago_parcial') {
+        extra.pago_parcial = await createFinanzasPagoParcial(body);
       } else {
-        throw new Error('POST requiere type cuenta, categoria, movimiento, gasto_fijo o gastos_fijos_generar');
+        throw new Error('POST requiere type cuenta, categoria, movimiento, gasto_fijo, gastos_fijos_generar o pago_parcial');
       }
 
       const response = await loadFinanzasResponse(extra, null, null);
@@ -1593,8 +1923,10 @@ async function handleFinanzas(req, res) {
         extra.movimiento = await updateFinanzasMovimiento(body);
       } else if (type === 'gasto_fijo') {
         extra.gasto_fijo = await updateFinanzasGastoFijo(body);
+      } else if (type === 'pago_parcial') {
+        extra.pago_parcial = await updateFinanzasPagoParcial(body);
       } else {
-        throw new Error('PUT requiere type cuenta, categoria, movimiento o gasto_fijo');
+        throw new Error('PUT requiere type cuenta, categoria, movimiento, gasto_fijo o pago_parcial');
       }
 
       const response = await loadFinanzasResponse(extra, null, null);
@@ -1610,8 +1942,10 @@ async function handleFinanzas(req, res) {
         extra.movimiento = await deleteOrDisableFinanzasMovimiento(body);
       } else if (type === 'gasto_fijo') {
         extra.gasto_fijo = await deleteOrDisableFinanzasGastoFijo(body);
+      } else if (type === 'pago_parcial') {
+        extra.pago_parcial = await deleteOrDisableFinanzasPagoParcial(body);
       } else {
-        throw new Error('DELETE requiere type cuenta, categoria, movimiento o gasto_fijo');
+        throw new Error('DELETE requiere type cuenta, categoria, movimiento, gasto_fijo o pago_parcial');
       }
 
       const response = await loadFinanzasResponse(extra, null, null);
