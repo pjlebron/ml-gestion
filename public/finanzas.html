@@ -3,339 +3,811 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>War Room Simple - ML Gestión</title>
+<title>War Room Financiero - ML Gestión</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f4f4f4;color:#151515;font-size:14px}
-.wrap{max-width:1350px;margin:0 auto;padding:22px}.top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:16px}.title{font-size:24px;font-weight:900;letter-spacing:-.03em}.sub{font-size:13px;color:#666;margin-top:5px;line-height:1.45;max-width:820px}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn,button{border:none;border-radius:10px;background:#111;color:#fff;padding:9px 13px;font-size:12px;font-weight:850;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}.btn.secondary,button.secondary{background:#fff;color:#111;border:1px solid #ddd}.btn.red,button.red{background:#a32d2d}.btn.green,button.green{background:#20703a}.btn.amber,button.amber{background:#8a5400}.btn.small,button.small{padding:5px 8px;font-size:11px;border-radius:7px}.card{background:#fff;border:1px solid #e1e1e1;border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 1px 2px rgba(0,0,0,.025)}.dark{background:#111;color:#fff;border-color:#111}.dark .sub,.dark .muted{color:#bbb}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}.grid.filters{grid-template-columns:1fr 1fr 1fr auto;align-items:end}.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}.three{display:grid;grid-template-columns:1.2fr .8fr .8fr;gap:14px}.metric{border:1px solid #e3e3e3;border-radius:14px;background:#fff;padding:15px}.metric .l{font-size:11px;color:#777;margin-bottom:5px}.metric .v{font-size:24px;font-weight:950;letter-spacing:-.03em}.metric .s{font-size:11px;color:#888;margin-top:3px}.dark .metric{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.14)}.dark .metric .l,.dark .metric .s{color:#c8c8c8}.dark .metric .v{color:#fff}.green{color:#20703a}.red{color:#a32d2d}.amber{color:#8a5400}.blue{color:#0c447c}.purple{color:#44228a}label{display:block;font-size:11px;color:#777;margin-bottom:5px}input,select{width:100%;border:1px solid #ddd;border-radius:10px;padding:8px 10px;font-size:13px;background:#fff}input:focus,select:focus{outline:none;border-color:#111;box-shadow:0 0 0 3px rgba(0,0,0,.06)}.section-title{font-size:16px;font-weight:900;margin-bottom:10px}.muted{font-size:12px;color:#777;line-height:1.45}.table-wrap{overflow:auto;border-radius:12px;border:1px solid #eee;background:#fff}table{width:100%;border-collapse:collapse;font-size:12px}th{text-align:left;color:#777;font-weight:700;background:#fafafa;border-bottom:1px solid #eee;padding:8px;white-space:nowrap}td{border-bottom:1px solid #f0f0f0;padding:8px;white-space:nowrap;vertical-align:middle}tr:last-child td{border-bottom:none}.num{text-align:right}.badge{display:inline-flex;align-items:center;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:850;white-space:nowrap}.ok{background:#eaf3de;color:#27500a}.bad{background:#fcebeb;color:#a32d2d}.warn{background:#faeeda;color:#633806}.neutral{background:#f2f2f2;color:#666}.info{background:#e6f1fb;color:#0c447c}.purple-bg{background:#efe8ff;color:#44228a}.form-row{display:grid;grid-template-columns:1.2fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:10px}.form-row.deuda{grid-template-columns:1.2fr 1fr 1fr 1fr auto}.summary-line{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px solid #eee}.summary-line:last-child{border-bottom:none}.summary-line span:first-child{color:#666}.summary-line b{font-size:14px}.alert{padding:12px;border-radius:13px;background:#fff8ea;border:1px solid #f3d8a8;color:#633806;font-size:13px;line-height:1.45;margin-bottom:14px}.big-number{font-size:34px;font-weight:950;letter-spacing:-.05em}.hero{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}.hero-box{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:16px}.hero-box .label{font-size:11px;color:#c8c8c8;margin-bottom:5px}.hero-box .value{font-size:28px;font-weight:950;letter-spacing:-.04em}.hero-box .hint{font-size:11px;color:#aaa;margin-top:3px}.empty{text-align:center;color:#aaa;padding:22px}.bar-row{display:grid;grid-template-columns:120px 1fr 90px;gap:8px;align-items:center;margin-bottom:9px}.bar-label{font-size:12px;color:#666}.bar-track{height:10px;background:#f0f0f0;border-radius:999px;overflow:hidden}.bar-fill{height:100%;background:#111;border-radius:999px}.bar-value{text-align:right;font-size:12px;font-weight:850}.pill-row{display:flex;gap:6px;flex-wrap:wrap}.pill{border:1px solid #ddd;background:#fff;color:#555;border-radius:999px;padding:6px 10px;font-size:12px;cursor:pointer}.pill.on{background:#111;color:#fff;border-color:#111}.buyer{display:inline-block;background:#f7f7f7;border:1px solid #eee;border-radius:7px;padding:2px 6px;max-width:140px;overflow:hidden;text-overflow:ellipsis}.product{max-width:260px;overflow:hidden;text-overflow:ellipsis}.spinner{display:inline-block;width:14px;height:14px;border:2px solid #ddd;border-top-color:#111;border-radius:50%;animation:spin .7s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
-@media(max-width:980px){.wrap{padding:14px}.two,.three,.hero,.grid.filters,.form-row,.form-row.deuda{grid-template-columns:1fr}.top{display:block}.actions{margin-top:12px}.big-number{font-size:28px}}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f5;color:#171717;font-size:14px}
+.wrap{max-width:1320px;margin:0 auto;padding:22px}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+.title{font-size:24px;font-weight:950;letter-spacing:-.04em}
+.sub{font-size:13px;color:#666;margin-top:5px;line-height:1.45;max-width:860px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+button,.btn{border:none;border-radius:10px;background:#111;color:#fff;padding:9px 13px;font-size:12px;font-weight:850;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+button:hover,.btn:hover{opacity:.88}
+.secondary{background:#fff!important;color:#111!important;border:1px solid #ddd!important}
+.green{background:#20703a!important}
+.red{background:#a32d2d!important}
+.amber{background:#8a5400!important}
+.blue{background:#0c447c!important}
+.card{background:#fff;border:1px solid #e2e2e2;border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 1px 2px rgba(0,0,0,.025)}
+.hero{background:#111;color:#fff;border-radius:18px;padding:18px;margin-bottom:14px;display:grid;grid-template-columns:1.2fr .8fr;gap:12px;align-items:center}
+.hero-title{font-size:22px;font-weight:950;letter-spacing:-.04em;margin-bottom:6px}
+.hero-copy{font-size:13px;color:#ddd;line-height:1.5}
+.hero-result{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:14px}
+.hero-result span{display:block;font-size:11px;color:#bbb;margin-bottom:4px}
+.hero-result b{font-size:28px;letter-spacing:-.04em}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:14px}
+.metric{background:#fff;border:1px solid #e5e5e5;border-radius:14px;padding:14px}
+.metric .l{font-size:11px;color:#777;margin-bottom:5px}
+.metric .v{font-size:23px;font-weight:950;letter-spacing:-.04em}
+.metric .s{font-size:11px;color:#888;margin-top:4px;line-height:1.35}
+.green-text{color:#20703a}.red-text{color:#a32d2d}.amber-text{color:#8a5400}.blue-text{color:#0c447c}.muted-text{color:#666}
+.section-title{font-size:16px;font-weight:950;margin-bottom:10px}
+.muted{font-size:12px;color:#777;line-height:1.45}
+.alert{padding:12px;border-radius:13px;background:#fff8ea;border:1px solid #f3d8a8;color:#633806;font-size:13px;line-height:1.45;margin-bottom:14px}
+.ok-alert{background:#edf8ec;border-color:#c9e5c5;color:#245a22}
+.bad-alert{background:#fff0f0;border-color:#f0bcbc;color:#8b1e1e}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.form-grid{display:grid;grid-template-columns:1fr .8fr .8fr .8fr .8fr .8fr;gap:10px;align-items:end}
+.form-grid-2{display:grid;grid-template-columns:1fr .8fr .8fr auto;gap:10px;align-items:end}
+label{display:block;font-size:11px;color:#777;margin-bottom:5px}
+input,select,textarea{width:100%;border:1px solid #ddd;border-radius:10px;padding:8px 10px;font-size:13px;background:#fff}
+textarea{min-height:38px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#111;box-shadow:0 0 0 3px rgba(0,0,0,.06)}
+.two{display:grid;grid-template-columns:.9fr 1.4fr;gap:14px}
+.table-wrap{overflow:auto;border-radius:12px;border:1px solid #eee;background:#fff}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;color:#777;font-weight:750;background:#fafafa;border-bottom:1px solid #eee;padding:8px;white-space:nowrap}
+td{border-bottom:1px solid #f0f0f0;padding:8px;white-space:nowrap;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+.num{text-align:right}
+.badge{display:inline-flex;align-items:center;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:850;white-space:nowrap}
+.ok{background:#eaf3de;color:#27500a}
+.bad{background:#fcebeb;color:#a32d2d}
+.warn{background:#faeeda;color:#633806}
+.neutral{background:#f2f2f2;color:#666}
+.info{background:#e6f1fb;color:#0c447c}
+.purple{background:#efe8ff;color:#44228a}
+.small{padding:5px 8px;font-size:11px;border-radius:7px}
+.empty{text-align:center;color:#aaa;padding:24px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tab{border:1px solid #ddd;background:#fff;color:#555;border-radius:999px;padding:7px 11px;font-size:12px;font-weight:850;cursor:pointer}
+.tab.on{background:#111;color:#fff;border-color:#111}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid #ddd;border-top-color:#111;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.row-vencido td{background:#fff0f0}
+.row-vence td{background:#fff8ea}
+.row-ok td{background:#fbfffb}
+.money-input{max-width:140px;text-align:right}
+.inline-actions{display:flex;gap:6px;justify-content:flex-end}
+@media(max-width:980px){
+  .wrap{padding:14px}
+  .hero,.two,.form-grid,.form-grid-2{grid-template-columns:1fr}
+  .hero-result b{font-size:22px}
+}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="top">
     <div>
-      <div class="title">💰 War Room simple</div>
-      <div class="sub">Tres números mandan: <b>plata disponible</b>, <b>plata a liquidar</b> y <b>deudas/gastos</b>. Todo lo demás es decoración corporativa para gente que imprime organigramas.</div>
+      <div class="title">💰 War Room financiero</div>
+      <div class="sub">
+        Vista simple de caja: dinero disponible, plata a cobrar, pagos pendientes y caja proyectada.
+        Nada de tablero aeroespacial para pagarle al proveedor de perfumes, porque aparentemente la humanidad aún necesita botones grandes.
+      </div>
     </div>
     <div class="actions">
       <a class="btn secondary" href="/">← Dashboard</a>
-      <a class="btn secondary" href="/auditoria.html">🧪 Auditoría</a>
-      <button onclick="loadFinanzas()">Actualizar MP</button>
+      <button onclick="loadData()">Actualizar</button>
     </div>
   </div>
 
-  <div class="card">
-    <div class="grid filters">
-      <div><label>Cuenta Mercado Libre</label><select id="f-account"><option value="all">Todas</option><option value="lebron">Lebron Store</option><option value="fragantify">Fragantify</option></select></div>
-      <div><label>Desde venta</label><input type="date" id="f-desde"></div>
-      <div><label>Hasta venta</label><input type="date" id="f-hasta"></div>
-      <div><label>&nbsp;</label><button style="width:100%" onclick="loadFinanzas()">Cargar liquidaciones</button></div>
+  <div id="msg"></div>
+
+  <div class="hero">
+    <div>
+      <div class="hero-title">Caja proyectada</div>
+      <div class="hero-copy">
+        Fórmula base: <b>dinero disponible + dinero a cobrar - dinero a pagar</b>.
+        Primero se carga manual. Después conectamos liquidaciones reales de Mercado Pago y dejamos de jugar al Excel con esteroides.
+      </div>
+    </div>
+    <div class="hero-result">
+      <span>Resultado proyectado</span>
+      <b id="hero-caja">$0</b>
+      <div id="hero-note" class="muted" style="color:#bbb;margin-top:4px"></div>
     </div>
   </div>
 
-  <div id="loading" class="card empty"><span class="spinner"></span> Cargando liquidaciones...</div>
+  <div class="metrics" id="metrics">
+    <div class="metric"><div class="l">Cargando</div><div class="v"><span class="spinner"></span></div></div>
+  </div>
 
-  <div id="content" style="display:none">
-    <div class="card dark">
-      <div class="section-title" style="font-size:18px;margin-bottom:12px">Tablero ejecutivo</div>
-      <div class="hero">
-        <div class="hero-box">
-          <div class="label">Disponible ahora</div>
-          <div class="value" id="hero-disponible">$0</div>
-          <div class="hint">Cuentas que cargás manualmente</div>
+  <div class="two">
+    <div>
+      <div class="card">
+        <div class="section-title">Cuentas / dinero disponible</div>
+        <div class="muted" style="margin-bottom:10px">
+          Acá cargás saldos actuales: Mercado Pago, banco, efectivo, caja local, reserva. Esto alimenta “dinero disponible”.
         </div>
-        <div class="hero-box">
-          <div class="label">A liquidar MP</div>
-          <div class="value" id="hero-liquidar">$0</div>
-          <div class="hint">Todavía no liberado por Mercado Pago</div>
+        <div id="cuentas-box"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Crear / editar cuenta</div>
+        <div class="form-grid-2">
+          <div>
+            <label>Nombre</label>
+            <input id="cuenta-nombre" placeholder="Ej: Banco Galicia">
+            <input type="hidden" id="cuenta-id">
+          </div>
+          <div>
+            <label>Tipo</label>
+            <select id="cuenta-tipo">
+              <option value="mercado_pago">Mercado Pago</option>
+              <option value="banco">Banco</option>
+              <option value="efectivo">Efectivo</option>
+              <option value="caja">Caja</option>
+              <option value="reserva">Reserva</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          <div>
+            <label>Saldo actual</label>
+            <input id="cuenta-saldo" type="number" step="0.01" placeholder="0">
+          </div>
+          <button class="green" onclick="saveCuenta()" id="btn-cuenta">Guardar</button>
         </div>
-        <div class="hero-box">
-          <div class="label">Caja neta proyectada</div>
-          <div class="value" id="hero-neta">$0</div>
-          <div class="hint">Disponible + a liquidar - deudas/gastos</div>
+        <div style="margin-top:10px">
+          <button class="secondary small" onclick="clearCuentaForm()">Limpiar</button>
         </div>
       </div>
     </div>
 
-    <div class="metrics grid" id="metrics"></div>
-
-    <div class="alert" id="decision-box"></div>
-
-    <div class="three">
+    <div>
       <div class="card">
-        <div class="section-title">Dinero disponible en cuentas</div>
-        <div class="form-row">
-          <div><label>Cuenta / lugar</label><input id="cash-name" placeholder="Ej: Mercado Pago, Banco, Efectivo"></div>
-          <div><label>Monto disponible</label><input id="cash-amount" type="number" step="0.01" placeholder="0"></div>
-          <div><label>Tipo</label><select id="cash-type"><option value="disponible">Disponible</option><option value="reserva">Reserva</option></select></div>
-          <div><label>&nbsp;</label><button class="green" onclick="addCash()">Agregar</button></div>
+        <div class="section-title">Nuevo movimiento</div>
+        <div class="form-grid">
+          <div>
+            <label>Descripción</label>
+            <input id="mov-descripcion" placeholder="Ej: Pago proveedor Yves Dorgeval">
+            <input type="hidden" id="mov-id">
+          </div>
+          <div>
+            <label>Tipo</label>
+            <select id="mov-tipo" onchange="filterCategorias()">
+              <option value="egreso">Gasto</option>
+              <option value="deuda">Deuda</option>
+              <option value="proveedor">Proveedor</option>
+              <option value="impuesto">Impuesto</option>
+              <option value="reposicion">Reposición</option>
+              <option value="ingreso">Ingreso / a cobrar</option>
+              <option value="transferencia">Transferencia</option>
+              <option value="ajuste">Ajuste</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          <div>
+            <label>Estado</label>
+            <select id="mov-estado">
+              <option value="pendiente">Pendiente</option>
+              <option value="pagado">Pagado</option>
+              <option value="cobrado">Cobrado</option>
+              <option value="cancelado">Cancelado</option>
+            </select>
+          </div>
+          <div>
+            <label>Monto</label>
+            <input id="mov-monto" type="number" step="0.01" placeholder="0">
+          </div>
+          <div>
+            <label>Vencimiento</label>
+            <input id="mov-vencimiento" type="date">
+          </div>
+          <div>
+            <label>Categoría</label>
+            <select id="mov-categoria"></select>
+          </div>
         </div>
-        <div class="table-wrap"><table><thead><tr><th>Cuenta</th><th>Tipo</th><th class="num">Monto</th><th></th></tr></thead><tbody id="cash-body"></tbody></table></div>
-      </div>
 
-      <div class="card">
-        <div class="section-title">Deudas y gastos a pagar</div>
-        <div class="form-row deuda">
-          <div><label>Concepto</label><input id="debt-name" placeholder="Proveedor, alquiler, tarjeta..."></div>
-          <div><label>Monto</label><input id="debt-amount" type="number" step="0.01" placeholder="0"></div>
-          <div><label>Vence</label><input id="debt-date" type="date"></div>
-          <div><label>Tipo</label><select id="debt-type"><option value="deuda">Deuda</option><option value="gasto">Gasto</option><option value="proveedor">Proveedor</option><option value="reposicion">Reposición</option></select></div>
-          <div><label>&nbsp;</label><button class="amber" onclick="addDebt()">Agregar</button></div>
+        <div class="form-grid" style="margin-top:10px">
+          <div>
+            <label>Cuenta</label>
+            <select id="mov-cuenta"></select>
+          </div>
+          <div>
+            <label>Proveedor / origen</label>
+            <input id="mov-proveedor" placeholder="Opcional">
+          </div>
+          <div>
+            <label>Fecha</label>
+            <input id="mov-fecha" type="date">
+          </div>
+          <div>
+            <label>Fecha pago/cobro</label>
+            <input id="mov-fecha-pago" type="date">
+          </div>
+          <div>
+            <label>Notas</label>
+            <input id="mov-notas" placeholder="Opcional">
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <button class="green" onclick="saveMovimiento()" id="btn-mov">Guardar movimiento</button>
+          </div>
         </div>
-        <div class="table-wrap"><table><thead><tr><th>Concepto</th><th>Tipo</th><th>Vence</th><th class="num">Monto</th><th></th></tr></thead><tbody id="debt-body"></tbody></table></div>
-      </div>
 
-      <div class="card">
-        <div class="section-title">Resumen simple</div>
-        <div id="simple-summary"></div>
-      </div>
-    </div>
-
-    <div class="two">
-      <div class="card">
-        <div class="section-title">Dinero a liquidar por fecha</div>
-        <div id="bucket-bars"></div>
-      </div>
-      <div class="card">
-        <div class="section-title">Qué puedo pagar</div>
-        <div id="payment-plan"></div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">
-        <div>
-          <div class="section-title" style="margin:0">Detalle de liquidaciones Mercado Pago</div>
-          <div class="sub" style="margin:3px 0 0">Esto cambia por día, entregas, liberaciones y estados. Es proyección, no conciliación bancaria. Sí, la vida financiera tiene updates como Windows.</div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="secondary small" onclick="clearMovimientoForm()">Limpiar</button>
+          <button class="blue small" onclick="quickIngresoMP()">Cargar Mercado Pago a liquidar</button>
+          <button class="amber small" onclick="quickProveedor()">Cargar proveedor</button>
         </div>
-        <input id="liq-search" style="max-width:260px" placeholder="Buscar comprador/producto..." oninput="renderLiquidaciones()">
       </div>
-      <div class="table-wrap"><table><thead><tr><th>Estado</th><th>Cuenta</th><th>Venta</th><th>Libera</th><th>Días</th><th>Comprador</th><th>Producto</th><th class="num">Cobro neto</th></tr></thead><tbody id="liq-body"></tbody></table></div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+          <div>
+            <div class="section-title" style="margin:0">Movimientos</div>
+            <div class="muted">Pendientes, pagados, cobrados y cancelados. La caja proyectada se calcula arriba.</div>
+          </div>
+          <div>
+            <label>Buscar</label>
+            <input id="search" placeholder="descripción/proveedor..." oninput="renderMovimientos()">
+          </div>
+        </div>
+
+        <div class="tabs">
+          <button class="tab on" onclick="setTab(this,'pendientes')">Pendientes</button>
+          <button class="tab" onclick="setTab(this,'vencidos')">Vencidos</button>
+          <button class="tab" onclick="setTab(this,'vence7')">7 días</button>
+          <button class="tab" onclick="setTab(this,'todos')">Todos</button>
+          <button class="tab" onclick="setTab(this,'pagados')">Pagados/Cobrados</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Estado</th>
+                <th>Tipo</th>
+                <th>Descripción</th>
+                <th>Proveedor</th>
+                <th>Vencimiento</th>
+                <th class="num">Monto</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="movimientos-body">
+              <tr><td colspan="7" class="empty">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
-const STORAGE_CASH = 'ml_warroom_cash_simple';
-const STORAGE_DEBTS = 'ml_warroom_debts_simple';
+const API_URL = '/api/costos?modulo=finanzas';
+
 const STATE = {
-  data:null,
-  liquidaciones:[],
-  cash: JSON.parse(localStorage.getItem(STORAGE_CASH) || '[]'),
-  debts: JSON.parse(localStorage.getItem(STORAGE_DEBTS) || '[]')
+  resumen: {},
+  cuentas: [],
+  categorias: [],
+  movimientos: [],
+  tab: 'pendientes'
 };
 
-const num = v => { const n = Number(v ?? 0); return Number.isFinite(n) ? n : 0; };
-const fmt = n => '$' + Math.round(num(n)).toLocaleString('es-AR');
-const esc = v => String(v ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const norm = v => String(v ?? '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ');
 const today = () => new Date().toISOString().slice(0,10);
-const daysAgo = d => { const x = new Date(); x.setDate(x.getDate()-d); return x.toISOString().slice(0,10); };
 
-function init(){
-  document.getElementById('f-desde').value = daysAgo(45);
-  document.getElementById('f-hasta').value = today();
-  document.getElementById('debt-date').value = today();
-  renderManualData();
-  loadFinanzas();
+const num = v => {
+  const n = Number(v ?? 0);
+  return Number.isFinite(n) ? n : 0;
+};
+
+const fmt = n => '$' + Math.round(num(n)).toLocaleString('es-AR');
+
+const esc = v => String(v ?? '').replace(/[&<>"]/g, c => ({
+  '&':'&amp;',
+  '<':'&lt;',
+  '>':'&gt;',
+  '"':'&quot;'
+}[c]));
+
+const norm = v => String(v ?? '')
+  .trim()
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/\s+/g, ' ');
+
+function showMsg(text, type = 'ok') {
+  const cls = type === 'bad' ? 'bad-alert' : type === 'warn' ? 'alert' : 'ok-alert';
+  document.getElementById('msg').innerHTML = `<div class="alert ${cls}">${esc(text)}</div>`;
+  setTimeout(() => {
+    document.getElementById('msg').innerHTML = '';
+  }, 4500);
 }
 
-async function loadFinanzas(){
-  document.getElementById('loading').style.display = 'block';
-  document.getElementById('loading').innerHTML = '<span class="spinner"></span> Cargando liquidaciones...';
-  document.getElementById('content').style.display = 'none';
-  try{
-    const account = document.getElementById('f-account').value;
-    const desde = document.getElementById('f-desde').value;
-    const hasta = document.getElementById('f-hasta').value;
-    const r = await fetch(`/api/finanzas?account=${encodeURIComponent(account)}&desde=${desde}&hasta=${hasta}&cb=${Date.now()}`, {cache:'no-store'});
-    const d = await r.json();
-    if(d.error) throw new Error(d.detail || d.message || d.error);
-    STATE.data = d;
-    STATE.liquidaciones = d.liquidaciones || [];
+async function apiRequest(method = 'GET', body = null) {
+  const options = {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    cache: 'no-store'
+  };
+
+  if (body) options.body = JSON.stringify(body);
+
+  const r = await fetch(`${API_URL}&cb=${Date.now()}`, options);
+  const data = await r.json().catch(() => ({}));
+
+  if (!r.ok || data.ok === false) {
+    throw new Error(data.detail || data.error || `Error HTTP ${r.status}`);
+  }
+
+  return data;
+}
+
+async function loadData() {
+  try {
+    const data = await apiRequest('GET');
+
+    STATE.resumen = data.resumen || {};
+    STATE.cuentas = data.cuentas || [];
+    STATE.categorias = data.categorias || [];
+    STATE.movimientos = data.movimientos || [];
+
     renderAll();
-  }catch(e){
-    document.getElementById('loading').innerHTML = 'Error cargando liquidaciones: ' + esc(e.message);
+  } catch (error) {
+    showMsg('Error cargando finanzas: ' + error.message, 'bad');
   }
 }
 
-function saveCash(){ localStorage.setItem(STORAGE_CASH, JSON.stringify(STATE.cash)); }
-function saveDebts(){ localStorage.setItem(STORAGE_DEBTS, JSON.stringify(STATE.debts)); }
-
-function addCash(){
-  const name = document.getElementById('cash-name').value.trim();
-  const amount = num(document.getElementById('cash-amount').value);
-  const type = document.getElementById('cash-type').value;
-  if(!name || !amount) return alert('Cargá cuenta y monto. La caja imaginaria no cuenta, aunque sería cómodo.');
-  STATE.cash.push({id:Date.now(), name, amount, type, created_at:new Date().toISOString()});
-  saveCash();
-  document.getElementById('cash-name').value = '';
-  document.getElementById('cash-amount').value = '';
-  renderAll();
+function renderAll() {
+  renderResumen();
+  renderCuentas();
+  renderSelects();
+  renderMovimientos();
 }
 
-function addDebt(){
-  const name = document.getElementById('debt-name').value.trim();
-  const amount = num(document.getElementById('debt-amount').value);
-  const due = document.getElementById('debt-date').value || today();
-  const type = document.getElementById('debt-type').value;
-  if(!name || !amount) return alert('Cargá concepto y monto. Deudas sin monto son poesía triste.');
-  STATE.debts.push({id:Date.now(), name, amount, due, type, paid:false, created_at:new Date().toISOString()});
-  saveDebts();
-  document.getElementById('debt-name').value = '';
-  document.getElementById('debt-amount').value = '';
-  renderAll();
+function renderResumen() {
+  const r = STATE.resumen || {};
+  const caja = num(r.caja_proyectada);
+
+  document.getElementById('hero-caja').textContent = fmt(caja);
+  document.getElementById('hero-caja').className = caja >= 0 ? 'green-text' : 'red-text';
+  document.getElementById('hero-note').textContent = caja >= 0
+    ? 'Caja proyectada positiva. No festejes tanto, todavía faltan los proveedores.'
+    : 'Caja proyectada negativa. Hay que mirar pagos, cobros o saldos antes de seguir comprando stock como si no existiera mañana.';
+
+  const metrics = [
+    {
+      l: 'Dinero disponible',
+      v: fmt(r.dinero_disponible),
+      s: 'suma de cuentas activas',
+      cls: 'green-text'
+    },
+    {
+      l: 'A liquidar / cobrar',
+      v: fmt(r.dinero_a_cobrar),
+      s: 'ingresos pendientes',
+      cls: 'blue-text'
+    },
+    {
+      l: 'A pagar',
+      v: fmt(r.dinero_a_pagar),
+      s: 'gastos/deudas pendientes',
+      cls: 'red-text'
+    },
+    {
+      l: 'Pagos vencidos',
+      v: fmt(r.pagos_vencidos),
+      s: 'requiere atención',
+      cls: num(r.pagos_vencidos) > 0 ? 'red-text' : 'green-text'
+    },
+    {
+      l: 'Pagos próximos 7 días',
+      v: fmt(r.pagos_7_dias),
+      s: 'semana operativa',
+      cls: 'amber-text'
+    },
+    {
+      l: 'Pagos próximos 30 días',
+      v: fmt(r.pagos_30_dias),
+      s: 'mes operativo',
+      cls: 'amber-text'
+    }
+  ];
+
+  document.getElementById('metrics').innerHTML = metrics.map(m => `
+    <div class="metric">
+      <div class="l">${m.l}</div>
+      <div class="v ${m.cls}">${m.v}</div>
+      <div class="s">${m.s}</div>
+    </div>
+  `).join('');
 }
 
-function removeCash(id){ STATE.cash = STATE.cash.filter(x => x.id !== id); saveCash(); renderAll(); }
-function removeDebt(id){ STATE.debts = STATE.debts.filter(x => x.id !== id); saveDebts(); renderAll(); }
-function toggleDebt(id){ const d = STATE.debts.find(x => x.id === id); if(d) d.paid = !d.paid; saveDebts(); renderAll(); }
+function renderCuentas() {
+  const cuentas = STATE.cuentas.filter(c => c.activo !== false);
 
-function totals(){
-  const disponible = STATE.cash.filter(x => x.type === 'disponible').reduce((s,x) => s + num(x.amount), 0);
-  const reserva = STATE.cash.filter(x => x.type === 'reserva').reduce((s,x) => s + num(x.amount), 0);
-  const pendienteMP = (STATE.data?.resumen?.pendiente_liquidar) || STATE.liquidaciones.filter(x => !x.liberado_estimado).reduce((s,x) => s + num(x.cobro_neto_mp), 0);
-  const liquidaHoy = STATE.data?.resumen?.libera_hoy || 0;
-  const liquida7 = STATE.data?.resumen?.libera_7_dias || 0;
-  const liquida30 = STATE.data?.resumen?.libera_30_dias || 0;
-  const deudaTotal = STATE.debts.filter(x => !x.paid).reduce((s,x) => s + num(x.amount), 0);
-  const deudaVencida = STATE.debts.filter(x => !x.paid && x.due < today()).reduce((s,x) => s + num(x.amount), 0);
-  const deuda7 = STATE.debts.filter(x => !x.paid && x.due <= addDays(7)).reduce((s,x) => s + num(x.amount), 0);
-  const cajaNeta = disponible + pendienteMP - deudaTotal;
-  const caja7 = disponible + liquida7 - deuda7;
-  return {disponible,reserva,pendienteMP,liquidaHoy,liquida7,liquida30,deudaTotal,deudaVencida,deuda7,cajaNeta,caja7};
-}
-
-function addDays(days){ const d = new Date(); d.setDate(d.getDate()+days); return d.toISOString().slice(0,10); }
-
-function renderAll(){
-  renderManualData();
-  renderMetrics();
-  renderBuckets();
-  renderPaymentPlan();
-  renderLiquidaciones();
-  document.getElementById('loading').style.display = 'none';
-  document.getElementById('content').style.display = 'block';
-}
-
-function renderManualData(){
-  document.getElementById('cash-body').innerHTML = STATE.cash.map(x => `
-    <tr>
-      <td>${esc(x.name)}</td>
-      <td><span class="badge ${x.type === 'reserva' ? 'purple-bg' : 'ok'}">${esc(x.type)}</span></td>
-      <td class="num"><b>${fmt(x.amount)}</b></td>
-      <td class="num"><button class="small red" onclick="removeCash(${x.id})">Borrar</button></td>
-    </tr>
-  `).join('') || '<tr><td colspan="4" class="empty">Cargá tus saldos disponibles: Mercado Pago, bancos, efectivo, etc.</td></tr>';
-
-  const sortedDebts = [...STATE.debts].sort((a,b) => String(a.due).localeCompare(String(b.due)));
-  document.getElementById('debt-body').innerHTML = sortedDebts.map(x => `
-    <tr style="${x.paid ? 'opacity:.45;text-decoration:line-through' : ''}">
-      <td>${esc(x.name)}</td>
-      <td><span class="badge ${x.type === 'proveedor' ? 'warn' : x.type === 'reposicion' ? 'info' : 'neutral'}">${esc(x.type)}</span></td>
-      <td>${esc(x.due || '—')}</td>
-      <td class="num"><b>${fmt(x.amount)}</b></td>
-      <td class="num"><button class="small secondary" onclick="toggleDebt(${x.id})">${x.paid ? 'Reabrir' : 'Pagar'}</button> <button class="small red" onclick="removeDebt(${x.id})">Borrar</button></td>
-    </tr>
-  `).join('') || '<tr><td colspan="5" class="empty">Cargá deudas, gastos y proveedores pendientes.</td></tr>';
-}
-
-function renderMetrics(){
-  const t = totals();
-  document.getElementById('hero-disponible').textContent = fmt(t.disponible);
-  document.getElementById('hero-liquidar').textContent = fmt(t.pendienteMP);
-  document.getElementById('hero-neta').textContent = fmt(t.cajaNeta);
-  document.getElementById('hero-neta').className = 'value ' + (t.cajaNeta >= 0 ? 'green' : 'red');
-
-  document.getElementById('metrics').innerHTML = [
-    {l:'Disponible ahora',v:fmt(t.disponible),s:'cargado manual',cls:'green'},
-    {l:'Reserva / colchón',v:fmt(t.reserva),s:'no tocar salvo emergencia',cls:'purple'},
-    {l:'A liquidar MP',v:fmt(t.pendienteMP),s:'pendiente Mercado Pago',cls:'amber'},
-    {l:'Liquida hoy',v:fmt(t.liquidaHoy),s:'entrada inmediata estimada',cls:'green'},
-    {l:'Liquida 7 días',v:fmt(t.liquida7),s:'incluye hoy',cls:'blue'},
-    {l:'Liquida 30 días',v:fmt(t.liquida30),s:'flujo próximo',cls:'blue'},
-    {l:'Deudas/gastos',v:fmt(t.deudaTotal),s:'pendiente de pago',cls:'red'},
-    {l:'Caja 7 días',v:fmt(t.caja7),s:'disponible + 7d - pagos 7d',cls:t.caja7>=0?'green':'red'},
-  ].map(m => `<div class="metric"><div class="l">${m.l}</div><div class="v ${m.cls}">${m.v}</div><div class="s">${m.s}</div></div>`).join('');
-
-  const decision = document.getElementById('decision-box');
-  if(t.caja7 < 0){
-    decision.innerHTML = `<b>Semáforo rojo:</b> con lo disponible + lo que liquida en 7 días no cubrís los pagos próximos. Primero renegociar, patear reposición o priorizar lo crítico. Comprar stock ahora sería pilotear con los ojos cerrados, muy cinematográfico, pésimo negocio.`;
-  } else if(t.cajaNeta < 0){
-    decision.innerHTML = `<b>Semáforo amarillo:</b> los próximos 7 días están cubiertos, pero la caja neta total queda ajustada. Se puede operar, pero sin hacerse el magnate.`;
-  } else {
-    decision.innerHTML = `<b>Semáforo verde:</b> con los datos cargados, la caja proyectada queda positiva. Podés planificar pagos y reposición con más criterio, una rareza agradable en el comercio.`;
+  if (!cuentas.length) {
+    document.getElementById('cuentas-box').innerHTML = '<div class="empty">No hay cuentas cargadas.</div>';
+    return;
   }
 
-  document.getElementById('simple-summary').innerHTML = `
-    <div class="summary-line"><span>Disponible</span><b class="green">${fmt(t.disponible)}</b></div>
-    <div class="summary-line"><span>+ A liquidar MP</span><b class="amber">${fmt(t.pendienteMP)}</b></div>
-    <div class="summary-line"><span>- Deudas/gastos</span><b class="red">${fmt(t.deudaTotal)}</b></div>
-    <div class="summary-line"><span>= Caja neta proyectada</span><b class="${t.cajaNeta>=0?'green':'red'}">${fmt(t.cajaNeta)}</b></div>
-    <div class="summary-line"><span>Pagos vencidos</span><b class="red">${fmt(t.deudaVencida)}</b></div>
-    <div class="summary-line"><span>Pagos próximos 7 días</span><b class="amber">${fmt(t.deuda7)}</b></div>
+  document.getElementById('cuentas-box').innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Cuenta</th>
+            <th>Tipo</th>
+            <th class="num">Saldo</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${cuentas.map(c => `
+            <tr>
+              <td><b>${esc(c.nombre)}</b></td>
+              <td><span class="badge neutral">${esc(c.tipo)}</span></td>
+              <td class="num">
+                <input class="money-input" type="number" step="0.01" id="saldo-${esc(c.id)}" value="${num(c.saldo_actual)}">
+              </td>
+              <td>
+                <div class="inline-actions">
+                  <button class="secondary small" onclick="editCuenta('${esc(c.id)}')">Editar</button>
+                  <button class="green small" onclick="updateSaldoCuenta('${esc(c.id)}')">Guardar saldo</button>
+                </div>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
   `;
 }
 
-function renderBuckets(){
-  const buckets = STATE.data?.buckets || [];
-  const useful = buckets.filter(b => ['hoy','manana','proximos_7','proximos_15','proximos_30','mas_30','sin_fecha'].includes(b.key));
-  const max = Math.max(1, ...useful.map(b => num(b.monto)));
-  document.getElementById('bucket-bars').innerHTML = useful.map(b => {
-    const w = Math.max(3, Math.round(num(b.monto) / max * 100));
-    const color = b.key === 'hoy' ? '#20703a' : b.key === 'sin_fecha' ? '#a32d2d' : '#111';
-    return `<div class="bar-row"><div class="bar-label">${esc(b.label)}</div><div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${color}"></div></div><div class="bar-value">${fmt(b.monto)}</div></div>`;
-  }).join('') || '<div class="empty">Sin dinero a liquidar.</div>';
+function renderSelects() {
+  const cuentas = STATE.cuentas.filter(c => c.activo !== false);
+  const cuentaOptions = ['<option value="">Sin cuenta</option>']
+    .concat(cuentas.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)}</option>`));
+
+  document.getElementById('mov-cuenta').innerHTML = cuentaOptions.join('');
+
+  filterCategorias();
 }
 
-function renderPaymentPlan(){
-  const t = totals();
-  const debts = STATE.debts.filter(x => !x.paid).sort((a,b) => String(a.due).localeCompare(String(b.due)));
-  let caja = t.disponible;
-  let html = `<div class="summary-line"><span>Caja disponible inicial</span><b>${fmt(caja)}</b></div>`;
-  debts.slice(0,10).forEach(d => {
-    const canPay = caja >= num(d.amount);
-    if(canPay) caja -= num(d.amount);
-    html += `<div class="summary-line"><span>${canPay ? '✅' : '⚠️'} ${esc(d.name)} <span class="muted">(${esc(d.due)})</span></span><b class="${canPay?'green':'red'}">${fmt(d.amount)}</b></div>`;
-  });
-  html += `<div class="summary-line"><span>Caja restante si pagás en orden</span><b class="${caja>=0?'green':'red'}">${fmt(caja)}</b></div>`;
-  if(!debts.length) html = '<div class="empty">Sin deudas cargadas. Disfrutá este momento ficticio.</div>';
-  document.getElementById('payment-plan').innerHTML = html;
+function filterCategorias() {
+  const tipo = document.getElementById('mov-tipo').value;
+  const categorias = STATE.categorias.filter(c => c.activo !== false && c.tipo === tipo);
+
+  const fallback = STATE.categorias.filter(c => c.activo !== false);
+
+  const rows = categorias.length ? categorias : fallback;
+
+  document.getElementById('mov-categoria').innerHTML = ['<option value="">Sin categoría</option>']
+    .concat(rows.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)} (${esc(c.tipo)})</option>`))
+    .join('');
 }
 
-function statusBadge(row){
-  if(row.bucket === 'sin_fecha') return '<span class="badge bad">SIN FECHA</span>';
-  if(row.liberado_estimado) return '<span class="badge ok">LIBERADO EST.</span>';
-  if(row.bucket === 'hoy') return '<span class="badge ok">HOY</span>';
-  if(row.bucket === 'manana') return '<span class="badge info">MAÑANA</span>';
-  if(row.bucket === 'proximos_7') return '<span class="badge info">7 DÍAS</span>';
-  if(row.bucket === 'proximos_15') return '<span class="badge purple-bg">15 DÍAS</span>';
-  if(row.bucket === 'proximos_30') return '<span class="badge purple-bg">30 DÍAS</span>';
-  return '<span class="badge neutral">FUTURO</span>';
+function estadoBadge(estado) {
+  if (estado === 'pendiente') return '<span class="badge warn">Pendiente</span>';
+  if (estado === 'pagado') return '<span class="badge ok">Pagado</span>';
+  if (estado === 'cobrado') return '<span class="badge info">Cobrado</span>';
+  if (estado === 'cancelado') return '<span class="badge bad">Cancelado</span>';
+  return `<span class="badge neutral">${esc(estado)}</span>`;
 }
 
-function renderLiquidaciones(){
-  const q = norm(document.getElementById('liq-search')?.value || '');
-  let rows = STATE.liquidaciones || [];
-  if(q){
-    rows = rows.filter(row => [row.comprador,row.producto,row.sku,row.payment_id,row.order_id,row.pack_id,row.cuenta].some(v => norm(v).includes(q)));
+function tipoBadge(tipo) {
+  const map = {
+    ingreso: 'info',
+    egreso: 'bad',
+    deuda: 'warn',
+    proveedor: 'purple',
+    impuesto: 'bad',
+    reposicion: 'warn',
+    transferencia: 'neutral',
+    ajuste: 'neutral',
+    otro: 'neutral'
+  };
+
+  return `<span class="badge ${map[tipo] || 'neutral'}">${esc(tipo)}</span>`;
+}
+
+function movimientoRowClass(m) {
+  if (m.estado === 'pendiente' && m.vencido) return 'row-vencido';
+  if (m.estado === 'pendiente' && m.vence_7_dias) return 'row-vence';
+  if (m.estado === 'pagado' || m.estado === 'cobrado') return 'row-ok';
+  return '';
+}
+
+function movimientosFiltrados() {
+  const q = norm(document.getElementById('search').value);
+  let rows = [...STATE.movimientos].filter(m => m.activo !== false);
+
+  if (STATE.tab === 'pendientes') {
+    rows = rows.filter(m => m.estado === 'pendiente');
   }
-  document.getElementById('liq-body').innerHTML = rows.map(row => `
-    <tr>
-      <td>${statusBadge(row)}</td>
-      <td><span class="badge ${row.cuenta_key === 'fragantify' ? 'info' : 'neutral'}">${esc(row.cuenta)}</span></td>
-      <td>${esc(row.fecha_venta || '—')}</td>
-      <td><b>${esc(row.fecha_liberacion || '—')}</b></td>
-      <td class="num">${row.dias_para_liberar === null ? '—' : row.dias_para_liberar}</td>
-      <td><span class="buyer" title="${esc(row.comprador)}">${esc(row.comprador)}</span></td>
-      <td class="product" title="${esc(row.producto)}">${esc(row.producto)}</td>
-      <td class="num"><b>${fmt(row.cobro_neto_mp)}</b></td>
-    </tr>
-  `).join('') || '<tr><td colspan="8" class="empty">Sin liquidaciones.</td></tr>';
+
+  if (STATE.tab === 'vencidos') {
+    rows = rows.filter(m => m.estado === 'pendiente' && m.vencido);
+  }
+
+  if (STATE.tab === 'vence7') {
+    rows = rows.filter(m => m.estado === 'pendiente' && m.vence_7_dias);
+  }
+
+  if (STATE.tab === 'pagados') {
+    rows = rows.filter(m => m.estado === 'pagado' || m.estado === 'cobrado');
+  }
+
+  if (q) {
+    rows = rows.filter(m =>
+      norm(m.descripcion).includes(q) ||
+      norm(m.proveedor).includes(q) ||
+      norm(m.categoria).includes(q) ||
+      norm(m.cuenta).includes(q)
+    );
+  }
+
+  return rows;
 }
 
-init();
+function renderMovimientos() {
+  const rows = movimientosFiltrados();
+
+  if (!rows.length) {
+    document.getElementById('movimientos-body').innerHTML = '<tr><td colspan="7" class="empty">No hay movimientos para mostrar.</td></tr>';
+    return;
+  }
+
+  document.getElementById('movimientos-body').innerHTML = rows.map(m => `
+    <tr class="${movimientoRowClass(m)}">
+      <td>${estadoBadge(m.estado)}</td>
+      <td>${tipoBadge(m.tipo)}</td>
+      <td>
+        <b>${esc(m.descripcion)}</b>
+        <div class="muted">${esc(m.categoria || 'Sin categoría')} · ${esc(m.cuenta || 'Sin cuenta')}</div>
+      </td>
+      <td>${esc(m.proveedor || '—')}</td>
+      <td>${esc(m.fecha_vencimiento || '—')}</td>
+      <td class="num"><b>${fmt(m.monto)}</b></td>
+      <td>
+        <div class="inline-actions">
+          <button class="secondary small" onclick="editMovimiento('${esc(m.id)}')">Editar</button>
+          ${m.estado === 'pendiente' && m.tipo === 'ingreso' ? `<button class="green small" onclick="markMovimiento('${esc(m.id)}','cobrado')">Cobrar</button>` : ''}
+          ${m.estado === 'pendiente' && m.tipo !== 'ingreso' ? `<button class="green small" onclick="markMovimiento('${esc(m.id)}','pagado')">Pagar</button>` : ''}
+          <button class="red small" onclick="disableMovimiento('${esc(m.id)}')">Borrar</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function setTab(btn, tab) {
+  STATE.tab = tab;
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('on'));
+  btn.classList.add('on');
+  renderMovimientos();
+}
+
+async function saveCuenta() {
+  const id = document.getElementById('cuenta-id').value;
+  const nombre = document.getElementById('cuenta-nombre').value.trim();
+  const tipo = document.getElementById('cuenta-tipo').value;
+  const saldo = num(document.getElementById('cuenta-saldo').value);
+
+  if (!nombre) {
+    showMsg('Cargá el nombre de la cuenta.', 'warn');
+    return;
+  }
+
+  try {
+    if (id) {
+      await apiRequest('PUT', {
+        type: 'cuenta',
+        id,
+        nombre,
+        tipo,
+        saldo_actual: saldo,
+        activo: true
+      });
+      showMsg('Cuenta actualizada.');
+    } else {
+      await apiRequest('POST', {
+        type: 'cuenta',
+        nombre,
+        tipo,
+        saldo_actual: saldo,
+        activo: true
+      });
+      showMsg('Cuenta creada.');
+    }
+
+    clearCuentaForm();
+    await loadData();
+  } catch (error) {
+    showMsg('Error guardando cuenta: ' + error.message, 'bad');
+  }
+}
+
+function editCuenta(id) {
+  const c = STATE.cuentas.find(x => x.id === id);
+  if (!c) return;
+
+  document.getElementById('cuenta-id').value = c.id;
+  document.getElementById('cuenta-nombre').value = c.nombre;
+  document.getElementById('cuenta-tipo').value = c.tipo;
+  document.getElementById('cuenta-saldo').value = num(c.saldo_actual);
+  document.getElementById('btn-cuenta').textContent = 'Actualizar';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function clearCuentaForm() {
+  document.getElementById('cuenta-id').value = '';
+  document.getElementById('cuenta-nombre').value = '';
+  document.getElementById('cuenta-tipo').value = 'mercado_pago';
+  document.getElementById('cuenta-saldo').value = '';
+  document.getElementById('btn-cuenta').textContent = 'Guardar';
+}
+
+async function updateSaldoCuenta(id) {
+  const input = document.getElementById(`saldo-${id}`);
+  const saldo = num(input.value);
+
+  try {
+    await apiRequest('PUT', {
+      type: 'cuenta',
+      id,
+      saldo_actual: saldo
+    });
+
+    showMsg('Saldo actualizado.');
+    await loadData();
+  } catch (error) {
+    showMsg('Error actualizando saldo: ' + error.message, 'bad');
+  }
+}
+
+async function saveMovimiento() {
+  const id = document.getElementById('mov-id').value;
+  const descripcion = document.getElementById('mov-descripcion').value.trim();
+  const tipo = document.getElementById('mov-tipo').value;
+  const estado = document.getElementById('mov-estado').value;
+  const monto = num(document.getElementById('mov-monto').value);
+
+  if (!descripcion) {
+    showMsg('Cargá una descripción.', 'warn');
+    return;
+  }
+
+  if (monto <= 0) {
+    showMsg('El monto tiene que ser mayor a cero.', 'warn');
+    return;
+  }
+
+  const payload = {
+    type: 'movimiento',
+    descripcion,
+    tipo,
+    estado,
+    monto,
+    categoria_id: document.getElementById('mov-categoria').value || null,
+    cuenta_id: document.getElementById('mov-cuenta').value || null,
+    proveedor: document.getElementById('mov-proveedor').value.trim() || null,
+    fecha: document.getElementById('mov-fecha').value || today(),
+    fecha_vencimiento: document.getElementById('mov-vencimiento').value || null,
+    fecha_pago: document.getElementById('mov-fecha-pago').value || null,
+    notas: document.getElementById('mov-notas').value.trim() || null,
+    origen: 'manual',
+    activo: true
+  };
+
+  try {
+    if (id) {
+      await apiRequest('PUT', {
+        ...payload,
+        id
+      });
+      showMsg('Movimiento actualizado.');
+    } else {
+      await apiRequest('POST', payload);
+      showMsg('Movimiento creado.');
+    }
+
+    clearMovimientoForm();
+    await loadData();
+  } catch (error) {
+    showMsg('Error guardando movimiento: ' + error.message, 'bad');
+  }
+}
+
+function editMovimiento(id) {
+  const m = STATE.movimientos.find(x => x.id === id);
+  if (!m) return;
+
+  document.getElementById('mov-id').value = m.id;
+  document.getElementById('mov-descripcion').value = m.descripcion || '';
+  document.getElementById('mov-tipo').value = m.tipo || 'egreso';
+  filterCategorias();
+  document.getElementById('mov-estado').value = m.estado || 'pendiente';
+  document.getElementById('mov-monto').value = num(m.monto);
+  document.getElementById('mov-vencimiento').value = m.fecha_vencimiento || '';
+  document.getElementById('mov-categoria').value = m.categoria_id || '';
+  document.getElementById('mov-cuenta').value = m.cuenta_id || '';
+  document.getElementById('mov-proveedor').value = m.proveedor || '';
+  document.getElementById('mov-fecha').value = m.fecha || today();
+  document.getElementById('mov-fecha-pago').value = m.fecha_pago || '';
+  document.getElementById('mov-notas').value = m.notas || '';
+  document.getElementById('btn-mov').textContent = 'Actualizar movimiento';
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function clearMovimientoForm() {
+  document.getElementById('mov-id').value = '';
+  document.getElementById('mov-descripcion').value = '';
+  document.getElementById('mov-tipo').value = 'egreso';
+  document.getElementById('mov-estado').value = 'pendiente';
+  document.getElementById('mov-monto').value = '';
+  document.getElementById('mov-vencimiento').value = '';
+  document.getElementById('mov-cuenta').value = '';
+  document.getElementById('mov-proveedor').value = '';
+  document.getElementById('mov-fecha').value = today();
+  document.getElementById('mov-fecha-pago').value = '';
+  document.getElementById('mov-notas').value = '';
+  document.getElementById('btn-mov').textContent = 'Guardar movimiento';
+  filterCategorias();
+}
+
+async function markMovimiento(id, estado) {
+  try {
+    await apiRequest('PUT', {
+      type: 'movimiento',
+      id,
+      estado,
+      fecha_pago: today()
+    });
+
+    showMsg(estado === 'cobrado' ? 'Movimiento marcado como cobrado.' : 'Movimiento marcado como pagado.');
+    await loadData();
+  } catch (error) {
+    showMsg('Error actualizando movimiento: ' + error.message, 'bad');
+  }
+}
+
+async function disableMovimiento(id) {
+  const ok = confirm('¿Borrar/desactivar este movimiento?');
+  if (!ok) return;
+
+  try {
+    await apiRequest('DELETE', {
+      type: 'movimiento',
+      id
+    });
+
+    showMsg('Movimiento desactivado.');
+    await loadData();
+  } catch (error) {
+    showMsg('Error borrando movimiento: ' + error.message, 'bad');
+  }
+}
+
+function quickIngresoMP() {
+  clearMovimientoForm();
+  document.getElementById('mov-tipo').value = 'ingreso';
+  filterCategorias();
+  document.getElementById('mov-estado').value = 'pendiente';
+  document.getElementById('mov-descripcion').value = 'Mercado Pago a liquidar';
+  document.getElementById('mov-proveedor').value = 'Mercado Pago';
+  document.getElementById('mov-fecha').value = today();
+}
+
+function quickProveedor() {
+  clearMovimientoForm();
+  document.getElementById('mov-tipo').value = 'proveedor';
+  filterCategorias();
+  document.getElementById('mov-estado').value = 'pendiente';
+  document.getElementById('mov-descripcion').value = 'Pago proveedor';
+  document.getElementById('mov-fecha').value = today();
+}
+
+document.getElementById('mov-fecha').value = today();
+
+loadData();
 </script>
 </body>
 </html>
