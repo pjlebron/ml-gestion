@@ -32,7 +32,7 @@ button:hover,.btn:hover{opacity:.88}
 .metric .l{font-size:11px;color:#777;margin-bottom:5px}
 .metric .v{font-size:23px;font-weight:950;letter-spacing:-.04em}
 .metric .s{font-size:11px;color:#888;margin-top:4px;line-height:1.35}
-.green-text{color:#20703a}.red-text{color:#a32d2d}.amber-text{color:#8a5400}.blue-text{color:#0c447c}.muted-text{color:#666}
+.green-text{color:#20703a}.red-text{color:#a32d2d}.amber-text{color:#8a5400}.blue-text{color:#0c447c}.muted-text{color:#666}.purple-text{color:#44228a}
 .section-title{font-size:16px;font-weight:950;margin-bottom:10px}
 .muted{font-size:12px;color:#777;line-height:1.45}
 .alert{padding:12px;border-radius:13px;background:#fff8ea;border:1px solid #f3d8a8;color:#633806;font-size:13px;line-height:1.45;margin-bottom:14px}
@@ -53,7 +53,7 @@ th{text-align:left;color:#777;font-weight:750;background:#fafafa;border-bottom:1
 td{border-bottom:1px solid #f0f0f0;padding:8px;white-space:nowrap;vertical-align:middle}
 tr:last-child td{border-bottom:none}
 .num{text-align:right}
-.badge{display:inline-flex;align-items:center;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:850;white-space:nowrap}
+.badge{display:inline-flex;align-items:center;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:850;white-space:nowrap;margin-right:3px}
 .ok{background:#eaf3de;color:#27500a}
 .bad{background:#fcebeb;color:#a32d2d}
 .warn{background:#faeeda;color:#633806}
@@ -71,7 +71,7 @@ tr:last-child td{border-bottom:none}
 .row-vence td{background:#fff8ea}
 .row-ok td{background:#fbfffb}
 .money-input{max-width:140px;text-align:right}
-.inline-actions{display:flex;gap:6px;justify-content:flex-end}
+.inline-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
 .sync-box{font-size:12px;color:#555;background:#fafafa;border:1px solid #eee;border-radius:12px;padding:10px;margin-bottom:14px;line-height:1.45}
 .liq-grid,.priority-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px}
 .liq-mini,.priority-mini{background:#fafafa;border:1px solid #eee;border-radius:12px;padding:10px}
@@ -82,6 +82,9 @@ tr:last-child td{border-bottom:none}
 .priority-ok{border-color:#c9e5c5;background:#f8fff7}
 .quick-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .account-warning{font-size:11px;color:#8a5400;margin-top:3px}
+.partial-box{border:1px solid #e7d7ff;background:#fbf8ff;border-radius:14px;padding:12px;margin-bottom:14px}
+.partial-title{font-weight:950;margin-bottom:5px}
+.partial-info{font-size:12px;color:#555;margin-bottom:10px;line-height:1.45}
 @media(max-width:980px){
   .wrap{padding:14px}
   .hero,.two,.form-grid,.form-grid-2,.form-grid-3{grid-template-columns:1fr}
@@ -95,8 +98,8 @@ tr:last-child td{border-bottom:none}
     <div>
       <div class="title">💰 War Room financiero</div>
       <div class="sub">
-        Caja real para decidir: saldo disponible, liquidaciones futuras, ingresos manuales, pagos pendientes y gastos fijos.
-        Ahora el contador se carga una vez y aparece todos los meses, porque repetir tareas tontas no es gestión: es castigo con teclado.
+        Caja real para decidir: saldo disponible, liquidaciones futuras, ingresos manuales, pagos pendientes, gastos fijos y pagos parciales.
+        Ahora si a un proveedor le pagás de a partes, el sistema calcula el saldo real. Al fin una pantalla que entiende que la vida no se paga toda de una.
       </div>
     </div>
     <div class="actions">
@@ -114,8 +117,8 @@ tr:last-child td{border-bottom:none}
     <div>
       <div class="hero-title">Caja proyectada útil</div>
       <div class="hero-copy">
-        Fórmula: <b>dinero disponible + liquidaciones futuras MP + ingresos manuales - dinero a pagar</b>.
-        Los gastos fijos del mes se generan automáticamente sin duplicarse.
+        Fórmula: <b>dinero disponible + liquidaciones futuras MP + ingresos manuales - saldos pendientes reales</b>.
+        Los pagos parciales descuentan deuda automáticamente.
       </div>
     </div>
     <div class="hero-result">
@@ -129,11 +132,43 @@ tr:last-child td{border-bottom:none}
     <div class="metric"><div class="l">Cargando</div><div class="v"><span class="spinner"></span></div></div>
   </div>
 
+  <div class="partial-box" id="pago-parcial-box" style="display:none">
+    <div class="partial-title">Registrar pago parcial</div>
+    <div class="partial-info" id="pp-info">Seleccioná un movimiento.</div>
+
+    <input type="hidden" id="pp-movimiento-id">
+
+    <div class="form-grid-2">
+      <div>
+        <label>Monto pagado</label>
+        <input id="pp-monto" type="number" step="0.01" placeholder="0">
+      </div>
+      <div>
+        <label>Fecha de pago</label>
+        <input id="pp-fecha" type="date">
+      </div>
+      <div>
+        <label>Cuenta usada</label>
+        <select id="pp-cuenta"></select>
+      </div>
+      <button class="green" onclick="savePagoParcial()">Guardar parcial</button>
+    </div>
+
+    <div class="form-grid-2" style="margin-top:10px">
+      <div>
+        <label>Notas</label>
+        <input id="pp-notas" placeholder="Opcional">
+      </div>
+      <div></div>
+      <div></div>
+      <button class="secondary" onclick="cancelPagoParcial()">Cancelar</button>
+    </div>
+  </div>
+
   <div class="card">
     <div class="section-title">Gastos fijos recurrentes</div>
     <div class="muted" style="margin-bottom:10px">
       Cargalos una sola vez. El sistema genera el movimiento pendiente del mes actual con referencia interna para no duplicarlo.
-      Ejemplo: Contador, alquiler, internet, jornales fijos, servicios.
     </div>
 
     <div class="form-grid-3">
@@ -209,7 +244,7 @@ tr:last-child td{border-bottom:none}
       <div>
         <div class="section-title" style="margin:0">Qué tengo que pagar</div>
         <div class="muted">
-          Vista operativa de egresos pendientes: vencidos, esta semana, este mes y sin vencimiento.
+          Vista operativa de saldos pendientes reales: vencidos, esta semana, este mes y sin vencimiento.
         </div>
       </div>
       <span class="badge warn" id="pagos-count">0 pendientes</span>
@@ -228,12 +263,14 @@ tr:last-child td{border-bottom:none}
                 <th>Vence</th>
                 <th>Tipo</th>
                 <th>Descripción</th>
-                <th class="num">Monto</th>
+                <th class="num">Original</th>
+                <th class="num">Pagado</th>
+                <th class="num">Saldo</th>
                 <th></th>
               </tr>
             </thead>
             <tbody id="pagos-prioridad-body">
-              <tr><td colspan="6" class="empty">Cargando...</td></tr>
+              <tr><td colspan="8" class="empty">Cargando...</td></tr>
             </tbody>
           </table>
         </div>
@@ -247,7 +284,7 @@ tr:last-child td{border-bottom:none}
               <tr>
                 <th>Categoría / tipo</th>
                 <th class="num">Pendientes</th>
-                <th class="num">Total</th>
+                <th class="num">Saldo</th>
               </tr>
             </thead>
             <tbody id="pagos-categorias-body">
@@ -478,7 +515,7 @@ tr:last-child td{border-bottom:none}
         <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:10px">
           <div>
             <div class="section-title" style="margin:0">Movimientos manuales y generados</div>
-            <div class="muted">Los gastos fijos generados aparecen acá como movimientos pendientes del mes.</div>
+            <div class="muted">Los pagos parciales se descuentan del saldo pendiente real.</div>
           </div>
           <div>
             <label>Buscar</label>
@@ -488,6 +525,7 @@ tr:last-child td{border-bottom:none}
 
         <div class="tabs">
           <button class="tab on" onclick="setTab(this,'pendientes')">Pendientes</button>
+          <button class="tab" onclick="setTab(this,'parciales')">Parciales</button>
           <button class="tab" onclick="setTab(this,'vencidos')">Vencidos</button>
           <button class="tab" onclick="setTab(this,'vence7')">7 días</button>
           <button class="tab" onclick="setTab(this,'todos')">Todos</button>
@@ -503,12 +541,14 @@ tr:last-child td{border-bottom:none}
                 <th>Descripción</th>
                 <th>Proveedor</th>
                 <th>Vencimiento</th>
-                <th class="num">Monto</th>
+                <th class="num">Original</th>
+                <th class="num">Pagado</th>
+                <th class="num">Saldo</th>
                 <th></th>
               </tr>
             </thead>
             <tbody id="movimientos-body">
-              <tr><td colspan="7" class="empty">Cargando...</td></tr>
+              <tr><td colspan="9" class="empty">Cargando...</td></tr>
             </tbody>
           </table>
         </div>
@@ -527,6 +567,7 @@ const STATE = {
   categorias: [],
   movimientos: [],
   gastosFijos: [],
+  pagosParciales: [],
   liquidacionesMp: null,
   gastosFijosSync: null,
   tab: 'pendientes'
@@ -597,6 +638,7 @@ async function loadData(options = {}) {
     STATE.categorias = data.categorias || [];
     STATE.movimientos = data.movimientos || [];
     STATE.gastosFijos = data.gastos_fijos || [];
+    STATE.pagosParciales = data.pagos_parciales || [];
     STATE.liquidacionesMp = data.liquidaciones_mp || null;
     STATE.gastosFijosSync = data.gastos_fijos_sync || null;
 
@@ -604,6 +646,22 @@ async function loadData(options = {}) {
   } catch (error) {
     showMsg('Error cargando finanzas: ' + error.message, 'bad');
   }
+}
+
+function saldoMovimiento(m) {
+  return Math.max(0, num(m.saldo_pendiente ?? m.monto));
+}
+
+function pagadoParcialMovimiento(m) {
+  return num(m.total_pagado_parcial);
+}
+
+function estadoVisual(m) {
+  if (m.estado === 'pagado') return 'pagado';
+  if (m.estado === 'cobrado') return 'cobrado';
+  if (m.estado === 'cancelado') return 'cancelado';
+  if (pagadoParcialMovimiento(m) > 0 && saldoMovimiento(m) > 0) return 'parcial';
+  return m.estado || 'pendiente';
 }
 
 function renderAll() {
@@ -633,6 +691,8 @@ function renderSyncStatus() {
       <br>
       <b>Liquidaciones futuras Mercado Pago:</b> automáticas desde pagos y fechas de liberación.
       <br>
+      <b>Pagos parciales:</b> descuentan deuda real de proveedores/deudas/gastos.
+      <br>
       <b>${esc(syncText)}</b>
     </div>
   `;
@@ -651,15 +711,18 @@ function renderResumen() {
   const gastosFijosActivos = STATE.gastosFijos.filter(g => g.activo !== false);
   const totalGastosFijos = gastosFijosActivos.reduce((sum, g) => sum + num(g.monto), 0);
 
+  const pagosParcialesActivos = STATE.pagosParciales.filter(p => p.activo !== false);
+  const totalParciales = pagosParcialesActivos.reduce((sum, p) => sum + num(p.monto), 0);
+
   const metrics = [
     ['Dinero disponible', fmt(r.dinero_disponible), 'suma de cuentas activas', 'green-text'],
     ['Liquidaciones futuras MP', fmt(r.liquidaciones_mp_pendientes), 'automático desde pagos', 'blue-text'],
     ['Ingresos manuales', fmt(r.dinero_a_cobrar_manual), 'sin duplicar Mercado Pago', 'blue-text'],
-    ['A pagar', fmt(r.dinero_a_pagar), 'gastos/deudas pendientes', 'red-text'],
+    ['A pagar real', fmt(r.dinero_a_pagar), 'saldo pendiente real', 'red-text'],
     ['Caja proyectada', fmt(r.caja_proyectada), 'disponible + entra - sale', caja >= 0 ? 'green-text' : 'red-text'],
+    ['Pagos parciales', fmt(totalParciales), `${pagosParcialesActivos.length} pago${pagosParcialesActivos.length === 1 ? '' : 's'}`, 'purple-text'],
     ['Gastos fijos activos', fmt(totalGastosFijos), `${gastosFijosActivos.length} recurrente${gastosFijosActivos.length === 1 ? '' : 's'}`, 'amber-text'],
-    ['Pagos vencidos', fmt(r.pagos_vencidos), 'requiere atención', num(r.pagos_vencidos) > 0 ? 'red-text' : 'green-text'],
-    ['Pagos próximos 7 días', fmt(r.pagos_7_dias), 'semana operativa', 'amber-text']
+    ['Pagos vencidos', fmt(r.pagos_vencidos), 'saldo vencido real', num(r.pagos_vencidos) > 0 ? 'red-text' : 'green-text']
   ];
 
   document.getElementById('metrics').innerHTML = metrics.map(([l,v,s,cls]) => `
@@ -675,10 +738,6 @@ function getCategoriaNombre(id) {
   return STATE.categorias.find(c => c.id === id)?.nombre || 'Sin categoría';
 }
 
-function getCuentaNombre(id) {
-  return STATE.cuentas.find(c => c.id === id)?.nombre || 'Sin cuenta';
-}
-
 function renderGastosFijos() {
   const rows = [...STATE.gastosFijos].sort((a,b) => {
     if ((a.activo !== false) !== (b.activo !== false)) return a.activo === false ? 1 : -1;
@@ -686,7 +745,7 @@ function renderGastosFijos() {
   });
 
   if (!rows.length) {
-    document.getElementById('gastos-fijos-body').innerHTML = '<tr><td colspan="7" class="empty">No hay gastos fijos cargados. Cargá “Contador” y dejá de repetirlo todos los meses como ritual contable.</td></tr>';
+    document.getElementById('gastos-fijos-body').innerHTML = '<tr><td colspan="7" class="empty">No hay gastos fijos cargados.</td></tr>';
     return;
   }
 
@@ -714,8 +773,9 @@ function renderGastosFijos() {
 
 function esEgresoPendiente(m) {
   if (!m || m.activo === false) return false;
-  if (m.estado !== 'pendiente') return false;
-  return ['egreso','deuda','proveedor','impuesto','reposicion','otro'].includes(m.tipo);
+  if (!['egreso','deuda','proveedor','impuesto','reposicion','otro'].includes(m.tipo)) return false;
+  if (m.estado === 'pagado' || m.estado === 'cobrado' || m.estado === 'cancelado') return false;
+  return saldoMovimiento(m) > 0;
 }
 
 function getPrioridadPago(m) {
@@ -732,9 +792,10 @@ function renderPagosOperativos() {
   const vencidos = pagos.filter(m => m.vencido);
   const semana = pagos.filter(m => !m.vencido && m.vence_7_dias);
   const mes = pagos.filter(m => !m.vencido && !m.vence_7_dias && m.vence_30_dias);
+  const parciales = pagos.filter(m => pagadoParcialMovimiento(m) > 0);
   const sinVencimiento = pagos.filter(m => !m.fecha_vencimiento);
 
-  const total = arr => arr.reduce((sum, m) => sum + num(m.monto), 0);
+  const total = arr => arr.reduce((sum, m) => sum + saldoMovimiento(m), 0);
 
   document.getElementById('pagos-count').textContent = `${pagos.length} pendiente${pagos.length === 1 ? '' : 's'}`;
 
@@ -742,6 +803,7 @@ function renderPagosOperativos() {
     ['Vencido', vencidos.length, total(vencidos), 'red-text', 'priority-high'],
     ['Esta semana', semana.length, total(semana), 'amber-text', 'priority-week'],
     ['Este mes', mes.length, total(mes), 'blue-text', 'priority-ok'],
+    ['Con pago parcial', parciales.length, total(parciales), 'purple-text', ''],
     ['Sin vencimiento', sinVencimiento.length, total(sinVencimiento), 'muted-text', ''],
     ['Total a pagar', pagos.length, total(pagos), 'red-text', 'priority-high']
   ];
@@ -762,33 +824,40 @@ function renderPagosOperativos() {
     const fa = a.fecha_vencimiento || '9999-12-31';
     const fb = b.fecha_vencimiento || '9999-12-31';
 
-    return String(fa).localeCompare(String(fb)) || num(b.monto) - num(a.monto);
+    return String(fa).localeCompare(String(fb)) || saldoMovimiento(b) - saldoMovimiento(a);
   });
 
   document.getElementById('pagos-prioridad-body').innerHTML = ordenados.length
     ? ordenados.slice(0, 60).map(m => {
       const p = getPrioridadPago(m);
+      const esParcial = pagadoParcialMovimiento(m) > 0 && saldoMovimiento(m) > 0;
 
       return `
         <tr class="${p.row}">
-          <td><span class="badge ${p.cls}">${p.label}</span></td>
+          <td>
+            <span class="badge ${p.cls}">${p.label}</span>
+            ${esParcial ? '<span class="badge purple">Parcial</span>' : ''}
+          </td>
           <td>${esc(m.fecha_vencimiento || '—')}</td>
           <td>${tipoBadge(m.tipo)}</td>
           <td>
             <b>${esc(m.descripcion || '—')}</b>
             <div class="muted">${esc(m.categoria || 'Sin categoría')} · ${esc(m.proveedor || 'Sin proveedor')}</div>
           </td>
-          <td class="num"><b>${fmt(m.monto)}</b></td>
+          <td class="num">${fmt(m.monto_original ?? m.monto)}</td>
+          <td class="num">${fmt(m.total_pagado_parcial || 0)}</td>
+          <td class="num"><b>${fmt(saldoMovimiento(m))}</b></td>
           <td>
             <div class="inline-actions">
+              <button class="purple-btn small" onclick="openPagoParcial('${esc(m.id)}')">Pago parcial</button>
               <button class="secondary small" onclick="editMovimiento('${esc(m.id)}')">Editar</button>
-              <button class="green small" onclick="markMovimiento('${esc(m.id)}','pagado')">Pagar</button>
+              <button class="green small" onclick="markMovimiento('${esc(m.id)}','pagado')">Pagar todo</button>
             </div>
           </td>
         </tr>
       `;
     }).join('')
-    : '<tr><td colspan="6" class="empty">No hay pagos pendientes. Raro, sospechoso, pero hermoso.</td></tr>';
+    : '<tr><td colspan="8" class="empty">No hay pagos pendientes. Raro, sospechoso, pero hermoso.</td></tr>';
 
   const byCategoria = new Map();
 
@@ -796,7 +865,7 @@ function renderPagosOperativos() {
     const key = m.categoria || m.tipo || 'Sin categoría';
     const row = byCategoria.get(key) || { nombre: key, cantidad: 0, monto: 0 };
     row.cantidad += 1;
-    row.monto += num(m.monto);
+    row.monto += saldoMovimiento(m);
     byCategoria.set(key, row);
   });
 
@@ -962,6 +1031,7 @@ function renderSelects() {
 
   document.getElementById('mov-cuenta').innerHTML = cuentaOptions.join('');
   document.getElementById('gf-cuenta').innerHTML = cuentaOptions.join('');
+  document.getElementById('pp-cuenta').innerHTML = cuentaOptions.join('');
 
   filterCategorias();
   filterGastoFijoCategorias();
@@ -990,6 +1060,7 @@ function filterGastoFijoCategorias() {
 }
 
 function estadoBadge(estado) {
+  if (estado === 'parcial') return '<span class="badge purple">Parcial</span>';
   if (estado === 'pendiente') return '<span class="badge warn">Pendiente</span>';
   if (estado === 'pagado') return '<span class="badge ok">Pagado</span>';
   if (estado === 'cobrado') return '<span class="badge info">Cobrado</span>';
@@ -1025,7 +1096,11 @@ function movimientosFiltrados() {
   let rows = [...STATE.movimientos].filter(m => m.activo !== false);
 
   if (STATE.tab === 'pendientes') {
-    rows = rows.filter(m => m.estado === 'pendiente');
+    rows = rows.filter(m => m.estado === 'pendiente' && saldoMovimiento(m) > 0);
+  }
+
+  if (STATE.tab === 'parciales') {
+    rows = rows.filter(m => pagadoParcialMovimiento(m) > 0 && saldoMovimiento(m) > 0);
   }
 
   if (STATE.tab === 'vencidos') {
@@ -1056,31 +1131,38 @@ function renderMovimientos() {
   const rows = movimientosFiltrados();
 
   if (!rows.length) {
-    document.getElementById('movimientos-body').innerHTML = '<tr><td colspan="7" class="empty">No hay movimientos para mostrar.</td></tr>';
+    document.getElementById('movimientos-body').innerHTML = '<tr><td colspan="9" class="empty">No hay movimientos para mostrar.</td></tr>';
     return;
   }
 
-  document.getElementById('movimientos-body').innerHTML = rows.map(m => `
-    <tr class="${movimientoRowClass(m)}">
-      <td>${estadoBadge(m.estado)}</td>
-      <td>${tipoBadge(m.tipo)}</td>
-      <td>
-        <b>${esc(m.descripcion)}</b>
-        <div class="muted">${esc(m.categoria || 'Sin categoría')} · ${esc(m.cuenta || 'Sin cuenta')}</div>
-      </td>
-      <td>${esc(m.proveedor || '—')}</td>
-      <td>${esc(m.fecha_vencimiento || '—')}</td>
-      <td class="num"><b>${fmt(m.monto)}</b></td>
-      <td>
-        <div class="inline-actions">
-          <button class="secondary small" onclick="editMovimiento('${esc(m.id)}')">Editar</button>
-          ${m.estado === 'pendiente' && m.tipo === 'ingreso' ? `<button class="green small" onclick="markMovimiento('${esc(m.id)}','cobrado')">Cobrar</button>` : ''}
-          ${m.estado === 'pendiente' && m.tipo !== 'ingreso' ? `<button class="green small" onclick="markMovimiento('${esc(m.id)}','pagado')">Pagar</button>` : ''}
-          <button class="red small" onclick="disableMovimiento('${esc(m.id)}')">Borrar</button>
-        </div>
-      </td>
-    </tr>
-  `).join('');
+  document.getElementById('movimientos-body').innerHTML = rows.map(m => {
+    const visual = estadoVisual(m);
+
+    return `
+      <tr class="${movimientoRowClass(m)}">
+        <td>${estadoBadge(visual)}</td>
+        <td>${tipoBadge(m.tipo)}</td>
+        <td>
+          <b>${esc(m.descripcion)}</b>
+          <div class="muted">${esc(m.categoria || 'Sin categoría')} · ${esc(m.cuenta || 'Sin cuenta')}</div>
+        </td>
+        <td>${esc(m.proveedor || '—')}</td>
+        <td>${esc(m.fecha_vencimiento || '—')}</td>
+        <td class="num">${fmt(m.monto_original ?? m.monto)}</td>
+        <td class="num">${fmt(m.total_pagado_parcial || 0)}</td>
+        <td class="num"><b>${fmt(saldoMovimiento(m))}</b></td>
+        <td>
+          <div class="inline-actions">
+            ${['egreso','deuda','proveedor','impuesto','reposicion','otro'].includes(m.tipo) && saldoMovimiento(m) > 0 ? `<button class="purple-btn small" onclick="openPagoParcial('${esc(m.id)}')">Pago parcial</button>` : ''}
+            <button class="secondary small" onclick="editMovimiento('${esc(m.id)}')">Editar</button>
+            ${m.estado === 'pendiente' && m.tipo === 'ingreso' ? `<button class="green small" onclick="markMovimiento('${esc(m.id)}','cobrado')">Cobrar</button>` : ''}
+            ${m.estado === 'pendiente' && m.tipo !== 'ingreso' ? `<button class="green small" onclick="markMovimiento('${esc(m.id)}','pagado')">Pagar todo</button>` : ''}
+            <button class="red small" onclick="disableMovimiento('${esc(m.id)}')">Borrar</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
 }
 
 function setTab(btn, tab) {
@@ -1090,9 +1172,64 @@ function setTab(btn, tab) {
   renderMovimientos();
 }
 
-/* ========================
-   GUARDADO GASTOS FIJOS
-======================== */
+function openPagoParcial(movimientoId) {
+  const m = STATE.movimientos.find(x => x.id === movimientoId);
+  if (!m) return;
+
+  document.getElementById('pago-parcial-box').style.display = 'block';
+  document.getElementById('pp-movimiento-id').value = m.id;
+  document.getElementById('pp-monto').value = '';
+  document.getElementById('pp-fecha').value = today();
+  document.getElementById('pp-cuenta').value = m.cuenta_id || '';
+  document.getElementById('pp-notas').value = '';
+
+  document.getElementById('pp-info').innerHTML = `
+    <b>${esc(m.descripcion)}</b><br>
+    Original: <b>${fmt(m.monto_original ?? m.monto)}</b> ·
+    Pagado: <b>${fmt(m.total_pagado_parcial || 0)}</b> ·
+    Saldo: <b>${fmt(saldoMovimiento(m))}</b>
+  `;
+
+  document.getElementById('pp-monto').focus();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function cancelPagoParcial() {
+  document.getElementById('pago-parcial-box').style.display = 'none';
+  document.getElementById('pp-movimiento-id').value = '';
+}
+
+async function savePagoParcial() {
+  const movimientoId = document.getElementById('pp-movimiento-id').value;
+  const monto = num(document.getElementById('pp-monto').value);
+
+  if (!movimientoId) {
+    showMsg('Seleccioná un movimiento para pagar parcialmente.', 'warn');
+    return;
+  }
+
+  if (monto <= 0) {
+    showMsg('El monto del pago parcial tiene que ser mayor a cero.', 'warn');
+    return;
+  }
+
+  try {
+    await apiRequest('POST', {
+      type: 'pago_parcial',
+      movimiento_id: movimientoId,
+      monto,
+      fecha_pago: document.getElementById('pp-fecha').value || today(),
+      cuenta_id: document.getElementById('pp-cuenta').value || null,
+      notas: document.getElementById('pp-notas').value.trim() || null
+    }, { syncLiquidaciones: false, syncGastosFijos: false });
+
+    showMsg('Pago parcial registrado.');
+    cancelPagoParcial();
+    await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
+  } catch (error) {
+    showMsg('Error registrando pago parcial: ' + error.message, 'bad');
+  }
+}
 
 async function saveGastoFijo() {
   const id = document.getElementById('gf-id').value;
@@ -1207,10 +1344,6 @@ async function generarGastosFijos(gastoFijoId = null) {
     showMsg('Error generando gastos fijos: ' + error.message, 'bad');
   }
 }
-
-/* ========================
-   CUENTAS / CATEGORÍAS / MOVIMIENTOS
-======================== */
 
 async function saveCategoria() {
   const id = document.getElementById('cat-id').value;
@@ -1490,6 +1623,7 @@ async function actualizarLiquidaciones() {
 }
 
 document.getElementById('mov-fecha').value = today();
+document.getElementById('pp-fecha').value = today();
 
 loadData({ syncLiquidaciones: true, syncGastosFijos: true });
 </script>
