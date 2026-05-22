@@ -6,6 +6,7 @@
 <title>War Room Financiero - ML Gestión</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
+html,body{max-width:100%;overflow-x:hidden}
 body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f5;color:#171717;font-size:14px}
 .wrap{max-width:1320px;margin:0 auto;padding:22px}
 .top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:16px}
@@ -20,7 +21,7 @@ button:hover,.btn:hover{opacity:.88}
 .amber{background:#8a5400!important}
 .blue{background:#0c447c!important}
 .purple-btn{background:#44228a!important}
-.card{background:#fff;border:1px solid #e2e2e2;border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 1px 2px rgba(0,0,0,.025)}
+.card{background:#fff;border:1px solid #e2e2e2;border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 1px 2px rgba(0,0,0,.025);max-width:100%;overflow-x:auto}
 .hero{background:#111;color:#fff;border-radius:18px;padding:18px;margin-bottom:14px;display:grid;grid-template-columns:1.2fr .8fr;gap:12px;align-items:center}
 .hero-title{font-size:22px;font-weight:950;letter-spacing:-.04em;margin-bottom:6px}
 .hero-copy{font-size:13px;color:#ddd;line-height:1.5}
@@ -28,9 +29,9 @@ button:hover,.btn:hover{opacity:.88}
 .hero-result span{display:block;font-size:11px;color:#bbb;margin-bottom:4px}
 .hero-result b{font-size:28px;letter-spacing:-.04em}
 .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:14px}
-.metric{background:#fff;border:1px solid #e5e5e5;border-radius:14px;padding:14px}
+.metric{background:#fff;border:1px solid #e5e5e5;border-radius:14px;padding:14px;min-width:0}
 .metric .l{font-size:11px;color:#777;margin-bottom:5px}
-.metric .v{font-size:23px;font-weight:950;letter-spacing:-.04em}
+.metric .v{font-size:23px;font-weight:950;letter-spacing:-.04em;overflow:hidden;text-overflow:ellipsis}
 .metric .s{font-size:11px;color:#888;margin-top:4px;line-height:1.35}
 .green-text{color:#20703a}.red-text{color:#a32d2d}.amber-text{color:#8a5400}.blue-text{color:#0c447c}.muted-text{color:#666}.purple-text{color:#44228a}
 .section-title{font-size:16px;font-weight:950;margin-bottom:10px}
@@ -47,10 +48,10 @@ input,select,textarea{width:100%;border:1px solid #ddd;border-radius:10px;paddin
 textarea{min-height:38px;resize:vertical}
 input:focus,select:focus,textarea:focus{outline:none;border-color:#111;box-shadow:0 0 0 3px rgba(0,0,0,.06)}
 .two{display:grid;grid-template-columns:.9fr 1.4fr;gap:14px}
-.table-wrap{overflow:auto;border-radius:12px;border:1px solid #eee;background:#fff}
-table{width:100%;border-collapse:collapse;font-size:12px}
+.table-wrap{overflow:auto;border-radius:12px;border:1px solid #eee;background:#fff;max-width:100%}
+table{width:100%;border-collapse:collapse;font-size:12px;min-width:900px}
 th{text-align:left;color:#777;font-weight:750;background:#fafafa;border-bottom:1px solid #eee;padding:8px;white-space:nowrap}
-td{border-bottom:1px solid #f0f0f0;padding:8px;white-space:nowrap;vertical-align:middle}
+td{border-bottom:1px solid #f0f0f0;padding:8px;white-space:nowrap;vertical-align:middle;max-width:240px;overflow:hidden;text-overflow:ellipsis}
 tr:last-child td{border-bottom:none}
 .num{text-align:right}
 .badge{display:inline-flex;align-items:center;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:850;white-space:nowrap;margin-right:3px}
@@ -74,7 +75,7 @@ tr:last-child td{border-bottom:none}
 .inline-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
 .sync-box{font-size:12px;color:#555;background:#fafafa;border:1px solid #eee;border-radius:12px;padding:10px;margin-bottom:14px;line-height:1.45}
 .liq-grid,.priority-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px}
-.liq-mini,.priority-mini{background:#fafafa;border:1px solid #eee;border-radius:12px;padding:10px}
+.liq-mini,.priority-mini{background:#fafafa;border:1px solid #eee;border-radius:12px;padding:10px;min-width:0}
 .liq-mini span,.priority-mini span{display:block;font-size:10px;color:#777;margin-bottom:3px}
 .liq-mini b,.priority-mini b{font-size:17px}
 .priority-high{border-color:#f0bcbc;background:#fff5f5}
@@ -84,10 +85,14 @@ tr:last-child td{border-bottom:none}
 .partial-box{border:1px solid #e7d7ff;background:#fbf8ff;border-radius:14px;padding:12px;margin-bottom:14px}
 .partial-title{font-weight:950;margin-bottom:5px}
 .partial-info{font-size:12px;color:#555;margin-bottom:10px;line-height:1.45}
+.editing-card{border:2px solid #111!important;box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.editing-pill{display:none;background:#111;color:#fff;border-radius:999px;padding:4px 10px;font-size:11px;font-weight:900;margin-left:8px}
+.editing .editing-pill{display:inline-flex}
 @media(max-width:980px){
   .wrap{padding:14px}
   .hero,.two,.form-grid,.form-grid-2,.form-grid-3{grid-template-columns:1fr}
   .hero-result b{font-size:22px}
+  table{min-width:980px}
 }
 </style>
 </head>
@@ -98,7 +103,6 @@ tr:last-child td{border-bottom:none}
       <div class="title">💰 War Room financiero</div>
       <div class="sub">
         Caja real para decidir: saldo disponible, liquidaciones futuras, ingresos manuales, pagos pendientes, gastos fijos, pagos parciales e impactos automáticos en cuentas.
-        Si pagás desde una cuenta, esa cuenta baja. Si cobrás, sube. Revolucionario, como usar números para administrar plata.
       </div>
     </div>
     <div class="actions">
@@ -117,7 +121,7 @@ tr:last-child td{border-bottom:none}
       <div class="hero-title">Caja proyectada útil</div>
       <div class="hero-copy">
         Fórmula: <b>dinero disponible + liquidaciones futuras MP + ingresos manuales - saldos pendientes reales</b>.
-        Los pagos parciales, pagos totales, cobros y transferencias ahora impactan en cuentas.
+        Los pagos parciales, pagos totales, cobros y transferencias impactan en cuentas.
       </div>
     </div>
     <div class="hero-result">
@@ -131,10 +135,114 @@ tr:last-child td{border-bottom:none}
     <div class="metric"><div class="l">Cargando</div><div class="v"><span class="spinner"></span></div></div>
   </div>
 
+  <div class="card" id="movimiento-form-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+      <div>
+        <div class="section-title" id="mov-form-title" style="margin:0">
+          Nuevo movimiento manual
+          <span class="editing-pill" id="mov-editing-pill">Editando</span>
+        </div>
+        <div class="muted" id="mov-form-subtitle">
+          Cargá deudas, gastos, ingresos, proveedores, impuestos o transferencias.
+        </div>
+      </div>
+      <button class="secondary small" onclick="clearMovimientoForm()">Cancelar / Limpiar</button>
+    </div>
+
+    <div class="form-grid">
+      <div>
+        <label>Descripción</label>
+        <input id="mov-descripcion" placeholder="Ej: Deuda proveedor">
+        <input type="hidden" id="mov-id">
+      </div>
+      <div>
+        <label>Tipo</label>
+        <select id="mov-tipo" onchange="onMovimientoTipoChange()">
+          <option value="egreso">Gasto</option>
+          <option value="deuda">Deuda</option>
+          <option value="proveedor">Proveedor</option>
+          <option value="impuesto">Impuesto</option>
+          <option value="reposicion">Reposición</option>
+          <option value="ingreso">Ingreso / a cobrar</option>
+          <option value="transferencia">Transferencia</option>
+          <option value="ajuste">Ajuste</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+      <div>
+        <label>Estado</label>
+        <select id="mov-estado">
+          <option value="pendiente">Pendiente</option>
+          <option value="pagado">Pagado</option>
+          <option value="cobrado">Cobrado</option>
+          <option value="cancelado">Cancelado</option>
+        </select>
+      </div>
+      <div>
+        <label>Monto</label>
+        <input id="mov-monto" type="number" step="0.01" placeholder="0">
+      </div>
+      <div>
+        <label>Vencimiento</label>
+        <input id="mov-vencimiento" type="date">
+      </div>
+      <div>
+        <label>Categoría</label>
+        <select id="mov-categoria"></select>
+      </div>
+    </div>
+
+    <div class="form-grid" style="margin-top:10px">
+      <div>
+        <label>Cuenta origen / cuenta usada</label>
+        <select id="mov-cuenta"></select>
+      </div>
+      <div>
+        <label>Cuenta destino</label>
+        <select id="mov-cuenta-destino"></select>
+      </div>
+      <div>
+        <label>Proveedor / origen</label>
+        <input id="mov-proveedor" placeholder="Opcional">
+      </div>
+      <div>
+        <label>Fecha</label>
+        <input id="mov-fecha" type="date">
+      </div>
+      <div>
+        <label>Fecha pago/cobro</label>
+        <input id="mov-fecha-pago" type="date">
+      </div>
+      <div>
+        <label>&nbsp;</label>
+        <button class="green" onclick="saveMovimiento()" id="btn-mov">Guardar movimiento</button>
+      </div>
+    </div>
+
+    <div class="form-grid-2" style="margin-top:10px">
+      <div>
+        <label>Notas</label>
+        <input id="mov-notas" placeholder="Opcional">
+      </div>
+      <div></div>
+      <div></div>
+      <button class="secondary" onclick="clearMovimientoForm()">Limpiar</button>
+    </div>
+
+    <div class="quick-actions">
+      <button class="purple-btn small" onclick="quickMovimiento('proveedor','Pago proveedor')">Proveedor</button>
+      <button class="red small" onclick="quickMovimiento('impuesto','Pago impuesto')">Impuesto</button>
+      <button class="amber small" onclick="quickMovimiento('deuda','Deuda pendiente')">Deuda</button>
+      <button class="blue small" onclick="quickMovimiento('reposicion','Reposición mercadería')">Reposición</button>
+      <button class="amber small" onclick="quickMovimiento('egreso','Gasto fijo')">Gasto</button>
+      <button class="green small" onclick="quickIngresoManual()">Ingreso</button>
+      <button class="blue small" onclick="quickTransferencia()">Transferencia</button>
+    </div>
+  </div>
+
   <div class="partial-box" id="pago-parcial-box" style="display:none">
     <div class="partial-title">Registrar pago parcial</div>
     <div class="partial-info" id="pp-info">Seleccioná un movimiento.</div>
-
     <input type="hidden" id="pp-movimiento-id">
 
     <div class="form-grid-2">
@@ -165,214 +273,48 @@ tr:last-child td{border-bottom:none}
   </div>
 
   <div class="card">
-    <div class="section-title">Gastos fijos recurrentes</div>
-    <div class="muted" style="margin-bottom:10px">
-      Cargalos una sola vez. El sistema genera el movimiento pendiente del mes actual con referencia interna para no duplicarlo.
-    </div>
-
-    <div class="form-grid-3">
-      <div>
-        <label>Nombre</label>
-        <input id="gf-nombre" placeholder="Ej: Contador">
-        <input type="hidden" id="gf-id">
-      </div>
-      <div>
-        <label>Tipo</label>
-        <select id="gf-tipo" onchange="filterGastoFijoCategorias()">
-          <option value="egreso">Gasto</option>
-          <option value="proveedor">Proveedor</option>
-          <option value="impuesto">Impuesto</option>
-          <option value="deuda">Deuda</option>
-          <option value="reposicion">Reposición</option>
-          <option value="otro">Otro</option>
-        </select>
-      </div>
-      <div>
-        <label>Monto</label>
-        <input id="gf-monto" type="number" step="0.01" placeholder="0">
-      </div>
-      <div>
-        <label>Día vence</label>
-        <input id="gf-dia" type="number" min="1" max="31" value="10">
-      </div>
-      <div>
-        <label>Categoría</label>
-        <select id="gf-categoria"></select>
-      </div>
-      <button class="green" onclick="saveGastoFijo()" id="btn-gf">Guardar fijo</button>
-    </div>
-
-    <div class="form-grid-2" style="margin-top:10px">
-      <div>
-        <label>Proveedor / origen</label>
-        <input id="gf-proveedor" placeholder="Ej: Estudio contable">
-      </div>
-      <div>
-        <label>Cuenta sugerida</label>
-        <select id="gf-cuenta"></select>
-      </div>
-      <div>
-        <label>Notas</label>
-        <input id="gf-notas" placeholder="Opcional">
-      </div>
-      <button class="secondary" onclick="clearGastoFijoForm()">Limpiar</button>
-    </div>
-
-    <div style="margin-top:12px" class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Activo</th>
-            <th>Gasto fijo</th>
-            <th>Tipo</th>
-            <th>Categoría</th>
-            <th>Vence</th>
-            <th class="num">Monto</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="gastos-fijos-body">
-          <tr><td colspan="7" class="empty">Cargando...</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:10px">
       <div>
-        <div class="section-title" style="margin:0">Qué tengo que pagar</div>
-        <div class="muted">
-          Vista operativa de saldos pendientes reales: vencidos, esta semana, este mes y sin vencimiento.
-        </div>
+        <div class="section-title" style="margin:0">Deudas, gastos y movimientos</div>
+        <div class="muted">Tocá Editar y el formulario se abre arriba con los datos cargados. Tremenda tecnología: que el botón haga lo que dice.</div>
       </div>
       <span class="badge warn" id="pagos-count">0 pendientes</span>
     </div>
 
     <div class="priority-grid" id="pagos-operativos-metrics"></div>
 
-    <div class="two">
-      <div>
-        <div class="section-title">Prioridad de pago</div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Prioridad</th>
-                <th>Vence</th>
-                <th>Tipo</th>
-                <th>Descripción</th>
-                <th class="num">Original</th>
-                <th class="num">Pagado</th>
-                <th class="num">Saldo</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="pagos-prioridad-body">
-              <tr><td colspan="8" class="empty">Cargando...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div>
-        <div class="section-title">Totales por categoría</div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Categoría / tipo</th>
-                <th class="num">Pendientes</th>
-                <th class="num">Saldo</th>
-              </tr>
-            </thead>
-            <tbody id="pagos-categorias-body">
-              <tr><td colspan="3" class="empty">Cargando...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:10px">
-      <div>
-        <div class="section-title" style="margin:0">Liquidaciones futuras Mercado Pago</div>
-        <div class="muted">Plata futura útil para caja: hoy, mañana, 7 días, 30 días y total pendiente futuro.</div>
-      </div>
-      <span class="badge info" id="liq-count">0 pagos válidos</span>
+    <div class="tabs">
+      <button class="tab on" onclick="setTab(this,'pendientes')">Pendientes</button>
+      <button class="tab" onclick="setTab(this,'deudas')">Deudas</button>
+      <button class="tab" onclick="setTab(this,'parciales')">Parciales</button>
+      <button class="tab" onclick="setTab(this,'vencidos')">Vencidos</button>
+      <button class="tab" onclick="setTab(this,'vence7')">7 días</button>
+      <button class="tab" onclick="setTab(this,'pagados')">Pagados/Cobrados</button>
+      <button class="tab" onclick="setTab(this,'todos')">Todos</button>
     </div>
 
-    <div class="liq-grid" id="liq-metrics"></div>
-
-    <div class="two">
-      <div>
-        <div class="section-title">Por fecha de liberación</div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th class="num">Monto</th>
-                <th class="num">Pagos</th>
-              </tr>
-            </thead>
-            <tbody id="liq-fechas-body">
-              <tr><td colspan="3" class="empty">Cargando...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div>
-        <div class="section-title">Por cuenta</div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Cuenta</th>
-                <th class="num">Hoy</th>
-                <th class="num">7 días</th>
-                <th class="num">30 días</th>
-                <th class="num">Total</th>
-              </tr>
-            </thead>
-            <tbody id="liq-cuentas-body">
-              <tr><td colspan="5" class="empty">Cargando...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:10px">
-      <div>
-        <div class="section-title" style="margin:0">Impactos en cuentas</div>
-        <div class="muted">
-          Historial anti-duplicado de débitos y créditos. Sirve para auditar por qué subió o bajó cada cuenta.
-        </div>
-      </div>
-      <span class="badge neutral" id="impactos-count">0 impactos</span>
+    <div style="margin-bottom:10px">
+      <label>Buscar</label>
+      <input id="search" placeholder="descripción/proveedor/categoría/cuenta..." oninput="renderMovimientos()">
     </div>
 
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
-            <th>Fecha</th>
-            <th>Cuenta</th>
+            <th>Estado</th>
             <th>Tipo</th>
             <th>Descripción</th>
-            <th>Origen</th>
-            <th class="num">Monto</th>
-            <th>Referencia</th>
+            <th>Proveedor</th>
+            <th>Vencimiento</th>
+            <th class="num">Original</th>
+            <th class="num">Pagado</th>
+            <th class="num">Saldo</th>
+            <th></th>
           </tr>
         </thead>
-        <tbody id="impactos-body">
-          <tr><td colspan="7" class="empty">Cargando...</td></tr>
+        <tbody id="movimientos-body">
+          <tr><td colspan="9" class="empty">Cargando...</td></tr>
         </tbody>
       </table>
     </div>
@@ -382,9 +324,7 @@ tr:last-child td{border-bottom:none}
     <div>
       <div class="card">
         <div class="section-title">Cuentas / dinero disponible</div>
-        <div class="muted" style="margin-bottom:10px">
-          Los saldos se actualizan cuando registrás pagos, cobros o transferencias. Si corregís un saldo manualmente, hacelo con criterio, que el Excel interno de la realidad no perdona.
-        </div>
+        <div class="muted" style="margin-bottom:10px">Los saldos se actualizan cuando registrás pagos, cobros o transferencias.</div>
         <div id="cuentas-box"></div>
       </div>
 
@@ -458,144 +398,135 @@ tr:last-child td{border-bottom:none}
 
     <div>
       <div class="card">
-        <div class="section-title">Nuevo movimiento manual</div>
-        <div class="form-grid">
+        <div class="section-title">Gastos fijos recurrentes</div>
+        <div class="muted" style="margin-bottom:10px">Cargalos una sola vez. El sistema genera el movimiento pendiente del mes actual sin duplicarlo.</div>
+
+        <div class="form-grid-3">
           <div>
-            <label>Descripción</label>
-            <input id="mov-descripcion" placeholder="Ej: Pago proveedor">
-            <input type="hidden" id="mov-id">
+            <label>Nombre</label>
+            <input id="gf-nombre" placeholder="Ej: Contador">
+            <input type="hidden" id="gf-id">
           </div>
           <div>
             <label>Tipo</label>
-            <select id="mov-tipo" onchange="onMovimientoTipoChange()">
+            <select id="gf-tipo" onchange="filterGastoFijoCategorias()">
               <option value="egreso">Gasto</option>
-              <option value="deuda">Deuda</option>
               <option value="proveedor">Proveedor</option>
               <option value="impuesto">Impuesto</option>
+              <option value="deuda">Deuda</option>
               <option value="reposicion">Reposición</option>
-              <option value="ingreso">Ingreso / a cobrar</option>
-              <option value="transferencia">Transferencia</option>
-              <option value="ajuste">Ajuste</option>
               <option value="otro">Otro</option>
             </select>
           </div>
           <div>
-            <label>Estado</label>
-            <select id="mov-estado">
-              <option value="pendiente">Pendiente</option>
-              <option value="pagado">Pagado</option>
-              <option value="cobrado">Cobrado</option>
-              <option value="cancelado">Cancelado</option>
-            </select>
-          </div>
-          <div>
             <label>Monto</label>
-            <input id="mov-monto" type="number" step="0.01" placeholder="0">
+            <input id="gf-monto" type="number" step="0.01" placeholder="0">
           </div>
           <div>
-            <label>Vencimiento</label>
-            <input id="mov-vencimiento" type="date">
+            <label>Día vence</label>
+            <input id="gf-dia" type="number" min="1" max="31" value="10">
           </div>
           <div>
             <label>Categoría</label>
-            <select id="mov-categoria"></select>
+            <select id="gf-categoria"></select>
           </div>
-        </div>
-
-        <div class="form-grid" style="margin-top:10px">
-          <div>
-            <label>Cuenta origen / cuenta usada *</label>
-            <select id="mov-cuenta"></select>
-          </div>
-          <div>
-            <label>Cuenta destino</label>
-            <select id="mov-cuenta-destino"></select>
-          </div>
-          <div>
-            <label>Proveedor / origen</label>
-            <input id="mov-proveedor" placeholder="Opcional">
-          </div>
-          <div>
-            <label>Fecha</label>
-            <input id="mov-fecha" type="date">
-          </div>
-          <div>
-            <label>Fecha pago/cobro</label>
-            <input id="mov-fecha-pago" type="date">
-          </div>
-          <div>
-            <label>&nbsp;</label>
-            <button class="green" onclick="saveMovimiento()" id="btn-mov">Guardar movimiento</button>
-          </div>
+          <button class="green" onclick="saveGastoFijo()" id="btn-gf">Guardar fijo</button>
         </div>
 
         <div class="form-grid-2" style="margin-top:10px">
           <div>
-            <label>Notas</label>
-            <input id="mov-notas" placeholder="Opcional">
+            <label>Proveedor / origen</label>
+            <input id="gf-proveedor" placeholder="Ej: Estudio contable">
           </div>
-          <div></div>
-          <div></div>
-          <button class="secondary" onclick="clearMovimientoForm()">Limpiar</button>
+          <div>
+            <label>Cuenta sugerida</label>
+            <select id="gf-cuenta"></select>
+          </div>
+          <div>
+            <label>Notas</label>
+            <input id="gf-notas" placeholder="Opcional">
+          </div>
+          <button class="secondary" onclick="clearGastoFijoForm()">Limpiar</button>
         </div>
 
-        <div class="quick-actions">
-          <button class="purple-btn small" onclick="quickMovimiento('proveedor','Pago proveedor')">Proveedor</button>
-          <button class="red small" onclick="quickMovimiento('impuesto','Pago impuesto')">Impuesto</button>
-          <button class="amber small" onclick="quickMovimiento('egreso','Sueldo / jornal')">Sueldo/Jornal</button>
-          <button class="blue small" onclick="quickMovimiento('reposicion','Reposición mercadería')">Reposición</button>
-          <button class="amber small" onclick="quickMovimiento('egreso','Gasto fijo')">Gasto fijo</button>
-          <button class="secondary small" onclick="quickMovimiento('otro','Otro gasto')">Otro gasto</button>
-          <button class="green small" onclick="quickIngresoManual()">Ingreso manual</button>
-          <button class="blue small" onclick="quickTransferencia()">Transferencia</button>
+        <div style="margin-top:12px" class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Activo</th>
+                <th>Gasto fijo</th>
+                <th>Tipo</th>
+                <th>Categoría</th>
+                <th>Vence</th>
+                <th class="num">Monto</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="gastos-fijos-body">
+              <tr><td colspan="7" class="empty">Cargando...</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
       <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:10px">
           <div>
-            <div class="section-title" style="margin:0">Movimientos manuales y generados</div>
-            <div class="muted">Los pagos, cobros y pagos parciales impactan saldos de cuentas.</div>
+            <div class="section-title" style="margin:0">Liquidaciones futuras Mercado Pago</div>
+            <div class="muted">Plata futura útil para caja: hoy, mañana, 7 días, 30 días y total pendiente futuro.</div>
           </div>
-          <div>
-            <label>Buscar</label>
-            <input id="search" placeholder="descripción/proveedor..." oninput="renderMovimientos()">
-          </div>
+          <span class="badge info" id="liq-count">0 pagos válidos</span>
         </div>
 
-        <div class="tabs">
-          <button class="tab on" onclick="setTab(this,'pendientes')">Pendientes</button>
-          <button class="tab" onclick="setTab(this,'parciales')">Parciales</button>
-          <button class="tab" onclick="setTab(this,'vencidos')">Vencidos</button>
-          <button class="tab" onclick="setTab(this,'vence7')">7 días</button>
-          <button class="tab" onclick="setTab(this,'todos')">Todos</button>
-          <button class="tab" onclick="setTab(this,'pagados')">Pagados/Cobrados</button>
+        <div class="liq-grid" id="liq-metrics"></div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th class="num">Monto</th>
+                <th class="num">Pagos</th>
+              </tr>
+            </thead>
+            <tbody id="liq-fechas-body">
+              <tr><td colspan="3" class="empty">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+          <div>
+            <div class="section-title" style="margin:0">Impactos en cuentas</div>
+            <div class="muted">Historial anti-duplicado de débitos y créditos.</div>
+          </div>
+          <span class="badge neutral" id="impactos-count">0 impactos</span>
         </div>
 
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Estado</th>
+                <th>Fecha</th>
+                <th>Cuenta</th>
                 <th>Tipo</th>
                 <th>Descripción</th>
-                <th>Proveedor</th>
-                <th>Vencimiento</th>
-                <th class="num">Original</th>
-                <th class="num">Pagado</th>
-                <th class="num">Saldo</th>
-                <th></th>
+                <th>Origen</th>
+                <th class="num">Monto</th>
+                <th>Referencia</th>
               </tr>
             </thead>
-            <tbody id="movimientos-body">
-              <tr><td colspan="9" class="empty">Cargando...</td></tr>
+            <tbody id="impactos-body">
+              <tr><td colspan="7" class="empty">Cargando...</td></tr>
             </tbody>
           </table>
         </div>
       </div>
+
     </div>
   </div>
-
 </div>
 
 <script>
@@ -709,19 +640,17 @@ function estadoVisual(m) {
 function renderAll() {
   renderSyncStatus();
   renderResumen();
+  renderMovimientos();
   renderGastosFijos();
-  renderPagosOperativos();
   renderLiquidaciones();
   renderImpactos();
   renderCuentas();
   renderCategorias();
   renderSelects();
-  renderMovimientos();
 }
 
 function renderSyncStatus() {
   const sync = STATE.gastosFijosSync;
-
   let syncText = 'Gastos fijos del mes: se generan automáticamente y no se duplican.';
 
   if (sync) {
@@ -730,11 +659,9 @@ function renderSyncStatus() {
 
   document.getElementById('sync-status').innerHTML = `
     <div class="sync-box">
-      <b>Saldo disponible:</b> se calcula desde las cuentas activas.
+      <b>Edición de deudas:</b> tocá Editar y el formulario se abre arriba con los datos cargados.
       <br>
       <b>Impactos automáticos:</b> pago parcial descuenta cuenta, pago total descuenta cuenta, cobro suma cuenta y transferencia mueve saldo entre cuentas.
-      <br>
-      <b>Liquidaciones futuras Mercado Pago:</b> automáticas desde pagos y fechas de liberación.
       <br>
       <b>${esc(syncText)}</b>
     </div>
@@ -749,16 +676,11 @@ function renderResumen() {
   document.getElementById('hero-caja').className = caja >= 0 ? 'green-text' : 'red-text';
   document.getElementById('hero-note').textContent = caja >= 0
     ? 'Caja proyectada positiva. Sirve para decidir pagos, compras y reposición.'
-    : 'Caja proyectada negativa. Frená compras o revisá pagos antes de que el tablero te cobre intereses emocionales.';
-
-  const gastosFijosActivos = STATE.gastosFijos.filter(g => g.activo !== false);
-  const totalGastosFijos = gastosFijosActivos.reduce((sum, g) => sum + num(g.monto), 0);
+    : 'Caja proyectada negativa. Revisá pagos antes de seguir cargando gastos como si el dinero fuera WiFi.';
 
   const pagosParcialesActivos = STATE.pagosParciales.filter(p => p.activo !== false);
-  const totalParciales = pagosParcialesActivos.reduce((sum, p) => sum + num(p.monto), 0);
-
+  const gastosFijosActivos = STATE.gastosFijos.filter(g => g.activo !== false);
   const impactosActivos = STATE.impactosCuenta.filter(i => i.activo !== false);
-  const totalImpactos = impactosActivos.reduce((sum, i) => sum + num(i.delta ?? (num(i.monto) * num(i.signo))), 0);
 
   const metrics = [
     ['Dinero disponible', fmt(r.dinero_disponible), 'suma de cuentas activas', 'green-text'],
@@ -766,10 +688,9 @@ function renderResumen() {
     ['Ingresos manuales', fmt(r.dinero_a_cobrar_manual), 'sin duplicar Mercado Pago', 'blue-text'],
     ['A pagar real', fmt(r.dinero_a_pagar), 'saldo pendiente real', 'red-text'],
     ['Caja proyectada', fmt(r.caja_proyectada), 'disponible + entra - sale', caja >= 0 ? 'green-text' : 'red-text'],
-    ['Pagos parciales', fmt(totalParciales), `${pagosParcialesActivos.length} pago${pagosParcialesActivos.length === 1 ? '' : 's'}`, 'purple-text'],
-    ['Impactos cuentas', fmt(totalImpactos), `${impactosActivos.length} impacto${impactosActivos.length === 1 ? '' : 's'}`, totalImpactos >= 0 ? 'green-text' : 'red-text'],
-    ['Gastos fijos activos', fmt(totalGastosFijos), `${gastosFijosActivos.length} recurrente${gastosFijosActivos.length === 1 ? '' : 's'}`, 'amber-text'],
-    ['Pagos vencidos', fmt(r.pagos_vencidos), 'saldo vencido real', num(r.pagos_vencidos) > 0 ? 'red-text' : 'green-text']
+    ['Pagos parciales', fmt(pagosParcialesActivos.reduce((s,p)=>s+num(p.monto),0)), `${pagosParcialesActivos.length} pagos`, 'purple-text'],
+    ['Gastos fijos', fmt(gastosFijosActivos.reduce((s,g)=>s+num(g.monto),0)), `${gastosFijosActivos.length} activos`, 'amber-text'],
+    ['Impactos cuentas', fmt(impactosActivos.reduce((s,i)=>s+num(i.delta ?? (num(i.monto)*num(i.signo))),0)), `${impactosActivos.length} impactos`, 'blue-text']
   ];
 
   document.getElementById('metrics').innerHTML = metrics.map(([l,v,s,cls]) => `
@@ -779,6 +700,513 @@ function renderResumen() {
       <div class="s">${s}</div>
     </div>
   `).join('');
+}
+
+function esEgresoPendiente(m) {
+  if (!m || m.activo === false) return false;
+  if (!['egreso','deuda','proveedor','impuesto','reposicion','otro'].includes(m.tipo)) return false;
+  if (m.estado === 'pagado' || m.estado === 'cobrado' || m.estado === 'cancelado') return false;
+  return saldoMovimiento(m) > 0;
+}
+
+function getPrioridadPago(m) {
+  if (m.vencido) return { label: 'Vencido', cls: 'bad', row: 'row-vencido', rank: 1 };
+  if (m.vence_7_dias) return { label: 'Esta semana', cls: 'warn', row: 'row-vence', rank: 2 };
+  if (m.vence_30_dias) return { label: 'Este mes', cls: 'info', row: '', rank: 3 };
+  if (!m.fecha_vencimiento) return { label: 'Sin vencimiento', cls: 'neutral', row: '', rank: 4 };
+  return { label: 'Futuro', cls: 'neutral', row: '', rank: 5 };
+}
+
+function movimientosFiltrados() {
+  const q = norm(document.getElementById('search')?.value || '');
+  let rows = [...STATE.movimientos].filter(m => m.activo !== false);
+
+  if (STATE.tab === 'pendientes') {
+    rows = rows.filter(m => m.estado === 'pendiente' && saldoMovimiento(m) > 0);
+  }
+
+  if (STATE.tab === 'deudas') {
+    rows = rows.filter(m => ['deuda','proveedor','impuesto','reposicion','egreso','otro'].includes(m.tipo));
+  }
+
+  if (STATE.tab === 'parciales') {
+    rows = rows.filter(m => pagadoParcialMovimiento(m) > 0 && saldoMovimiento(m) > 0);
+  }
+
+  if (STATE.tab === 'vencidos') {
+    rows = rows.filter(m => m.estado === 'pendiente' && m.vencido);
+  }
+
+  if (STATE.tab === 'vence7') {
+    rows = rows.filter(m => m.estado === 'pendiente' && m.vence_7_dias);
+  }
+
+  if (STATE.tab === 'pagados') {
+    rows = rows.filter(m => m.estado === 'pagado' || m.estado === 'cobrado');
+  }
+
+  if (q) {
+    rows = rows.filter(m =>
+      norm(m.descripcion).includes(q) ||
+      norm(m.proveedor).includes(q) ||
+      norm(m.categoria).includes(q) ||
+      norm(m.cuenta).includes(q) ||
+      norm(m.tipo).includes(q)
+    );
+  }
+
+  return rows.sort((a,b) => {
+    const pa = getPrioridadPago(a);
+    const pb = getPrioridadPago(b);
+    if (pa.rank !== pb.rank) return pa.rank - pb.rank;
+    const fa = a.fecha_vencimiento || '9999-12-31';
+    const fb = b.fecha_vencimiento || '9999-12-31';
+    return String(fa).localeCompare(String(fb));
+  });
+}
+
+function renderMovimientos() {
+  const rows = movimientosFiltrados();
+  const pagos = STATE.movimientos.filter(esEgresoPendiente);
+
+  const vencidos = pagos.filter(m => m.vencido);
+  const semana = pagos.filter(m => !m.vencido && m.vence_7_dias);
+  const mes = pagos.filter(m => !m.vencido && !m.vence_7_dias && m.vence_30_dias);
+  const parciales = pagos.filter(m => pagadoParcialMovimiento(m) > 0);
+  const total = arr => arr.reduce((sum, m) => sum + saldoMovimiento(m), 0);
+
+  document.getElementById('pagos-count').textContent = `${pagos.length} pendiente${pagos.length === 1 ? '' : 's'}`;
+
+  document.getElementById('pagos-operativos-metrics').innerHTML = [
+    ['Vencido', vencidos.length, total(vencidos), 'red-text', 'priority-high'],
+    ['Esta semana', semana.length, total(semana), 'amber-text', 'priority-week'],
+    ['Este mes', mes.length, total(mes), 'blue-text', 'priority-ok'],
+    ['Con pago parcial', parciales.length, total(parciales), 'purple-text', ''],
+    ['Total a pagar', pagos.length, total(pagos), 'red-text', 'priority-high']
+  ].map(([label,cantidad,monto,cls,extraCls]) => `
+    <div class="priority-mini ${extraCls}">
+      <span>${label} · ${cantidad} movimiento${cantidad === 1 ? '' : 's'}</span>
+      <b class="${cls}">${fmt(monto)}</b>
+    </div>
+  `).join('');
+
+  if (!rows.length) {
+    document.getElementById('movimientos-body').innerHTML = '<tr><td colspan="9" class="empty">No hay movimientos para mostrar.</td></tr>';
+    return;
+  }
+
+  document.getElementById('movimientos-body').innerHTML = rows.map(m => {
+    const visual = estadoVisual(m);
+    const requiereCuenta = ['egreso','deuda','proveedor','impuesto','reposicion','otro','ingreso','transferencia'].includes(m.tipo);
+    const faltaCuenta = requiereCuenta && !m.cuenta_id;
+    const p = getPrioridadPago(m);
+
+    return `
+      <tr class="${movimientoRowClass(m)}">
+        <td>
+          ${estadoBadge(visual)}
+          ${m.estado === 'pendiente' && saldoMovimiento(m) > 0 ? `<span class="badge ${p.cls}">${p.label}</span>` : ''}
+        </td>
+        <td>${tipoBadge(m.tipo)}</td>
+        <td>
+          <b title="${esc(m.descripcion)}">${esc(m.descripcion || '—')}</b>
+          <div class="muted">${esc(m.categoria || 'Sin categoría')} · ${esc(m.cuenta || 'Sin cuenta')}</div>
+          ${faltaCuenta ? '<div class="muted red-text">Falta cuenta para impactar saldo.</div>' : ''}
+        </td>
+        <td>${esc(m.proveedor || '—')}</td>
+        <td>${esc(m.fecha_vencimiento || '—')}</td>
+        <td class="num">${fmt(m.monto_original ?? m.monto)}</td>
+        <td class="num">${fmt(m.total_pagado_parcial || 0)}</td>
+        <td class="num"><b>${fmt(saldoMovimiento(m))}</b></td>
+        <td>
+          <div class="inline-actions">
+            <button class="secondary small" onclick="editMovimiento('${esc(m.id)}')">Editar</button>
+            ${['egreso','deuda','proveedor','impuesto','reposicion','otro'].includes(m.tipo) && saldoMovimiento(m) > 0 ? `<button class="purple-btn small" onclick="openPagoParcial('${esc(m.id)}')">Pago parcial</button>` : ''}
+            ${m.estado === 'pendiente' && m.tipo === 'ingreso' ? `<button class="green small" onclick="markMovimiento('${esc(m.id)}','cobrado')">Cobrar</button>` : ''}
+            ${m.estado === 'pendiente' && m.tipo !== 'ingreso' ? `<button class="green small" onclick="markMovimiento('${esc(m.id)}','pagado')">Pagar todo</button>` : ''}
+            <button class="red small" onclick="disableMovimiento('${esc(m.id)}')">Borrar</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function setTab(btn, tab) {
+  STATE.tab = tab;
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('on'));
+  btn.classList.add('on');
+  renderMovimientos();
+}
+
+function estadoBadge(estado) {
+  if (estado === 'parcial') return '<span class="badge purple">Parcial</span>';
+  if (estado === 'pendiente') return '<span class="badge warn">Pendiente</span>';
+  if (estado === 'pagado') return '<span class="badge ok">Pagado</span>';
+  if (estado === 'cobrado') return '<span class="badge info">Cobrado</span>';
+  if (estado === 'cancelado') return '<span class="badge bad">Cancelado</span>';
+  return `<span class="badge neutral">${esc(estado)}</span>`;
+}
+
+function tipoBadge(tipo) {
+  const map = {
+    ingreso: 'info',
+    egreso: 'bad',
+    deuda: 'warn',
+    proveedor: 'purple',
+    impuesto: 'bad',
+    reposicion: 'warn',
+    transferencia: 'info',
+    ajuste: 'neutral',
+    otro: 'neutral'
+  };
+
+  return `<span class="badge ${map[tipo] || 'neutral'}">${esc(tipo)}</span>`;
+}
+
+function movimientoRowClass(m) {
+  if (m.estado === 'pendiente' && m.vencido) return 'row-vencido';
+  if (m.estado === 'pendiente' && m.vence_7_dias) return 'row-vence';
+  if (m.estado === 'pagado' || m.estado === 'cobrado') return 'row-ok';
+  return '';
+}
+
+function renderSelects() {
+  const cuentas = STATE.cuentas.filter(c => c.activo !== false);
+  const cuentaOptions = ['<option value="">Seleccionar cuenta</option>']
+    .concat(cuentas.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)}</option>`));
+
+  const cuentaOptionalOptions = ['<option value="">Sin cuenta</option>']
+    .concat(cuentas.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)}</option>`));
+
+  document.getElementById('mov-cuenta').innerHTML = cuentaOptionalOptions.join('');
+  document.getElementById('mov-cuenta-destino').innerHTML = cuentaOptionalOptions.join('');
+  document.getElementById('gf-cuenta').innerHTML = cuentaOptionalOptions.join('');
+  document.getElementById('pp-cuenta').innerHTML = cuentaOptions.join('');
+
+  filterCategorias();
+  filterGastoFijoCategorias();
+}
+
+function filterCategorias() {
+  const tipo = document.getElementById('mov-tipo').value;
+  const categorias = STATE.categorias.filter(c => c.activo !== false && c.tipo === tipo);
+  const fallback = STATE.categorias.filter(c => c.activo !== false);
+  const rows = categorias.length ? categorias : fallback;
+
+  document.getElementById('mov-categoria').innerHTML = ['<option value="">Sin categoría</option>']
+    .concat(rows.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)} (${esc(c.tipo)})</option>`))
+    .join('');
+}
+
+function filterGastoFijoCategorias() {
+  const tipo = document.getElementById('gf-tipo').value;
+  const categorias = STATE.categorias.filter(c => c.activo !== false && c.tipo === tipo);
+  const fallback = STATE.categorias.filter(c => c.activo !== false);
+  const rows = categorias.length ? categorias : fallback;
+
+  document.getElementById('gf-categoria').innerHTML = ['<option value="">Sin categoría</option>']
+    .concat(rows.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)} (${esc(c.tipo)})</option>`))
+    .join('');
+}
+
+function onMovimientoTipoChange() {
+  filterCategorias();
+  const tipo = document.getElementById('mov-tipo').value;
+
+  if (tipo === 'transferencia') {
+    document.getElementById('mov-estado').value = 'pagado';
+  }
+
+  if (tipo === 'ingreso') {
+    document.getElementById('mov-estado').value = 'pendiente';
+  }
+}
+
+function setEditingMode(active, movimiento = null) {
+  const card = document.getElementById('movimiento-form-card');
+  const title = document.getElementById('mov-form-title');
+  const subtitle = document.getElementById('mov-form-subtitle');
+  const btn = document.getElementById('btn-mov');
+
+  if (active && movimiento) {
+    card.classList.add('editing-card', 'editing');
+    title.childNodes[0].nodeValue = 'Editando movimiento ';
+    subtitle.textContent = `Editando: ${movimiento.descripcion || 'movimiento cargado'}`;
+    btn.textContent = 'Actualizar movimiento';
+  } else {
+    card.classList.remove('editing-card', 'editing');
+    title.childNodes[0].nodeValue = 'Nuevo movimiento manual ';
+    subtitle.textContent = 'Cargá deudas, gastos, ingresos, proveedores, impuestos o transferencias.';
+    btn.textContent = 'Guardar movimiento';
+  }
+}
+
+function editMovimiento(id) {
+  const m = STATE.movimientos.find(x => String(x.id) === String(id));
+  if (!m) {
+    showMsg('No encontré ese movimiento para editar. Actualizá y probá de nuevo.', 'warn');
+    return;
+  }
+
+  document.getElementById('mov-id').value = m.id;
+  document.getElementById('mov-descripcion').value = m.descripcion || '';
+  document.getElementById('mov-tipo').value = m.tipo || 'egreso';
+  filterCategorias();
+
+  document.getElementById('mov-estado').value = m.estado || 'pendiente';
+  document.getElementById('mov-monto').value = num(m.monto_original ?? m.monto);
+  document.getElementById('mov-vencimiento').value = m.fecha_vencimiento || '';
+  document.getElementById('mov-categoria').value = m.categoria_id || '';
+  document.getElementById('mov-cuenta').value = m.cuenta_id || '';
+  document.getElementById('mov-cuenta-destino').value = m.cuenta_destino_id || '';
+  document.getElementById('mov-proveedor').value = m.proveedor || '';
+  document.getElementById('mov-fecha').value = m.fecha || today();
+  document.getElementById('mov-fecha-pago').value = m.fecha_pago || '';
+  document.getElementById('mov-notas').value = m.notas || '';
+
+  setEditingMode(true, m);
+
+  document.getElementById('movimiento-form-card').scrollIntoView({
+    behavior: 'smooth',
+    block: 'start'
+  });
+
+  setTimeout(() => {
+    document.getElementById('mov-descripcion').focus();
+  }, 350);
+}
+
+function clearMovimientoForm() {
+  document.getElementById('mov-id').value = '';
+  document.getElementById('mov-descripcion').value = '';
+  document.getElementById('mov-tipo').value = 'egreso';
+  document.getElementById('mov-estado').value = 'pendiente';
+  document.getElementById('mov-monto').value = '';
+  document.getElementById('mov-vencimiento').value = '';
+  document.getElementById('mov-cuenta').value = '';
+  document.getElementById('mov-cuenta-destino').value = '';
+  document.getElementById('mov-proveedor').value = '';
+  document.getElementById('mov-fecha').value = today();
+  document.getElementById('mov-fecha-pago').value = '';
+  document.getElementById('mov-notas').value = '';
+  setEditingMode(false);
+  filterCategorias();
+}
+
+function validarMovimientoAntesDeGuardar({ tipo, estado, cuentaId, cuentaDestinoId }) {
+  if (tipo === 'transferencia') {
+    if (!cuentaId) return 'Elegí la cuenta origen de la transferencia.';
+    if (!cuentaDestinoId) return 'Elegí la cuenta destino de la transferencia.';
+    if (cuentaId === cuentaDestinoId) return 'La cuenta origen y destino no pueden ser la misma.';
+  }
+
+  if ((estado === 'pagado' || estado === 'cobrado') && ['egreso','deuda','proveedor','impuesto','reposicion','otro','ingreso'].includes(tipo) && !cuentaId) {
+    return 'Elegí una cuenta para impactar el saldo.';
+  }
+
+  return null;
+}
+
+async function saveMovimiento() {
+  const id = document.getElementById('mov-id').value;
+  const descripcion = document.getElementById('mov-descripcion').value.trim();
+  const tipo = document.getElementById('mov-tipo').value;
+  const estado = document.getElementById('mov-estado').value;
+  const monto = num(document.getElementById('mov-monto').value);
+  const cuentaId = document.getElementById('mov-cuenta').value || null;
+  const cuentaDestinoId = document.getElementById('mov-cuenta-destino').value || null;
+
+  if (!descripcion) {
+    showMsg('Cargá una descripción.', 'warn');
+    return;
+  }
+
+  if (monto <= 0) {
+    showMsg('El monto tiene que ser mayor a cero.', 'warn');
+    return;
+  }
+
+  const errorValidacion = validarMovimientoAntesDeGuardar({ tipo, estado, cuentaId, cuentaDestinoId });
+  if (errorValidacion) {
+    showMsg(errorValidacion, 'warn');
+    return;
+  }
+
+  const payload = {
+    type: 'movimiento',
+    descripcion,
+    tipo,
+    estado,
+    monto,
+    categoria_id: document.getElementById('mov-categoria').value || null,
+    cuenta_id: cuentaId,
+    cuenta_destino_id: cuentaDestinoId,
+    proveedor: document.getElementById('mov-proveedor').value.trim() || null,
+    fecha: document.getElementById('mov-fecha').value || today(),
+    fecha_vencimiento: document.getElementById('mov-vencimiento').value || null,
+    fecha_pago: document.getElementById('mov-fecha-pago').value || null,
+    notas: document.getElementById('mov-notas').value.trim() || null,
+    origen: 'manual',
+    activo: true
+  };
+
+  try {
+    if (id) {
+      await apiRequest('PUT', { ...payload, id }, { syncLiquidaciones: false, syncGastosFijos: false });
+      showMsg('Movimiento actualizado.');
+    } else {
+      await apiRequest('POST', payload, { syncLiquidaciones: false, syncGastosFijos: false });
+      showMsg('Movimiento creado.');
+    }
+
+    clearMovimientoForm();
+    await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
+  } catch (error) {
+    showMsg('Error guardando movimiento: ' + error.message, 'bad');
+  }
+}
+
+function quickMovimiento(tipo, descripcion) {
+  clearMovimientoForm();
+  document.getElementById('mov-tipo').value = tipo;
+  filterCategorias();
+  document.getElementById('mov-estado').value = 'pendiente';
+  document.getElementById('mov-descripcion').value = descripcion;
+  document.getElementById('mov-fecha').value = today();
+  document.getElementById('mov-proveedor').value = '';
+  document.getElementById('mov-monto').focus();
+}
+
+function quickIngresoManual() {
+  clearMovimientoForm();
+  document.getElementById('mov-tipo').value = 'ingreso';
+  filterCategorias();
+  document.getElementById('mov-estado').value = 'pendiente';
+  document.getElementById('mov-descripcion').value = 'Ingreso manual pendiente';
+  document.getElementById('mov-fecha').value = today();
+  document.getElementById('mov-monto').focus();
+}
+
+function quickTransferencia() {
+  clearMovimientoForm();
+  document.getElementById('mov-tipo').value = 'transferencia';
+  filterCategorias();
+  document.getElementById('mov-estado').value = 'pagado';
+  document.getElementById('mov-descripcion').value = 'Transferencia entre cuentas';
+  document.getElementById('mov-fecha').value = today();
+  document.getElementById('mov-fecha-pago').value = today();
+  document.getElementById('mov-monto').focus();
+}
+
+async function markMovimiento(id, estado) {
+  const m = STATE.movimientos.find(x => x.id === id);
+  if (!m) return;
+
+  if ((estado === 'pagado' || estado === 'cobrado') && !m.cuenta_id) {
+    showMsg('Este movimiento no tiene cuenta asignada. Editalo, elegí cuenta y después pagalo/cobralo.', 'warn');
+    editMovimiento(id);
+    return;
+  }
+
+  if (m.tipo === 'transferencia' && (!m.cuenta_id || !m.cuenta_destino_id)) {
+    showMsg('La transferencia necesita cuenta origen y cuenta destino.', 'warn');
+    editMovimiento(id);
+    return;
+  }
+
+  try {
+    await apiRequest('PUT', {
+      type: 'movimiento',
+      id,
+      estado,
+      fecha_pago: today()
+    }, { syncLiquidaciones: false, syncGastosFijos: false });
+
+    showMsg(estado === 'cobrado' ? 'Movimiento cobrado e impactado en cuenta.' : 'Movimiento pagado e impactado en cuenta.');
+    await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
+  } catch (error) {
+    showMsg('Error actualizando movimiento: ' + error.message, 'bad');
+  }
+}
+
+async function disableMovimiento(id) {
+  const ok = confirm('¿Borrar/desactivar este movimiento? Si tenía impacto en cuenta, se revierte.');
+  if (!ok) return;
+
+  try {
+    await apiRequest('DELETE', { type: 'movimiento', id }, { syncLiquidaciones: false, syncGastosFijos: false });
+    showMsg('Movimiento desactivado. Si tenía impacto en cuenta, fue revertido.');
+    await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
+  } catch (error) {
+    showMsg('Error borrando movimiento: ' + error.message, 'bad');
+  }
+}
+
+function openPagoParcial(movimientoId) {
+  const m = STATE.movimientos.find(x => x.id === movimientoId);
+  if (!m) return;
+
+  document.getElementById('pago-parcial-box').style.display = 'block';
+  document.getElementById('pp-movimiento-id').value = m.id;
+  document.getElementById('pp-monto').value = '';
+  document.getElementById('pp-fecha').value = today();
+  document.getElementById('pp-cuenta').value = m.cuenta_id || '';
+  document.getElementById('pp-notas').value = '';
+
+  document.getElementById('pp-info').innerHTML = `
+    <b>${esc(m.descripcion)}</b><br>
+    Original: <b>${fmt(m.monto_original ?? m.monto)}</b> ·
+    Pagado: <b>${fmt(m.total_pagado_parcial || 0)}</b> ·
+    Saldo: <b>${fmt(saldoMovimiento(m))}</b>
+    ${!m.cuenta_id ? '<br><span class="red-text">Elegí una cuenta para que el saldo baje correctamente.</span>' : ''}
+  `;
+
+  document.getElementById('pago-parcial-box').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.getElementById('pp-monto').focus();
+}
+
+function cancelPagoParcial() {
+  document.getElementById('pago-parcial-box').style.display = 'none';
+  document.getElementById('pp-movimiento-id').value = '';
+}
+
+async function savePagoParcial() {
+  const movimientoId = document.getElementById('pp-movimiento-id').value;
+  const monto = num(document.getElementById('pp-monto').value);
+  const cuentaId = document.getElementById('pp-cuenta').value;
+
+  if (!movimientoId) {
+    showMsg('Seleccioná un movimiento para pagar parcialmente.', 'warn');
+    return;
+  }
+
+  if (monto <= 0) {
+    showMsg('El monto del pago parcial tiene que ser mayor a cero.', 'warn');
+    return;
+  }
+
+  if (!cuentaId) {
+    showMsg('Elegí la cuenta usada para pagar. Sin cuenta no hay impacto de saldo.', 'warn');
+    return;
+  }
+
+  try {
+    await apiRequest('POST', {
+      type: 'pago_parcial',
+      movimiento_id: movimientoId,
+      monto,
+      fecha_pago: document.getElementById('pp-fecha').value || today(),
+      cuenta_id: cuentaId,
+      notas: document.getElementById('pp-notas').value.trim() || null
+    }, { syncLiquidaciones: false, syncGastosFijos: false });
+
+    showMsg('Pago parcial registrado e impactado en cuenta.');
+    cancelPagoParcial();
+    await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
+  } catch (error) {
+    showMsg('Error registrando pago parcial: ' + error.message, 'bad');
+  }
 }
 
 function getCategoriaNombre(id) {
@@ -818,116 +1246,117 @@ function renderGastosFijos() {
   `).join('');
 }
 
-function esEgresoPendiente(m) {
-  if (!m || m.activo === false) return false;
-  if (!['egreso','deuda','proveedor','impuesto','reposicion','otro'].includes(m.tipo)) return false;
-  if (m.estado === 'pagado' || m.estado === 'cobrado' || m.estado === 'cancelado') return false;
-  return saldoMovimiento(m) > 0;
+async function saveGastoFijo() {
+  const id = document.getElementById('gf-id').value;
+  const nombre = document.getElementById('gf-nombre').value.trim();
+  const tipo = document.getElementById('gf-tipo').value;
+  const monto = num(document.getElementById('gf-monto').value);
+
+  if (!nombre) {
+    showMsg('Cargá el nombre del gasto fijo.', 'warn');
+    return;
+  }
+
+  if (monto <= 0) {
+    showMsg('El monto del gasto fijo tiene que ser mayor a cero.', 'warn');
+    return;
+  }
+
+  const payload = {
+    type: 'gasto_fijo',
+    nombre,
+    tipo,
+    monto,
+    dia_vencimiento: num(document.getElementById('gf-dia').value || 10),
+    categoria_id: document.getElementById('gf-categoria').value || null,
+    cuenta_id: document.getElementById('gf-cuenta').value || null,
+    proveedor: document.getElementById('gf-proveedor').value.trim() || null,
+    notas: document.getElementById('gf-notas').value.trim() || null,
+    activo: true
+  };
+
+  try {
+    if (id) {
+      await apiRequest('PUT', { ...payload, id }, { syncLiquidaciones: false, syncGastosFijos: false });
+      showMsg('Gasto fijo actualizado.');
+    } else {
+      await apiRequest('POST', payload, { syncLiquidaciones: false, syncGastosFijos: false });
+      showMsg('Gasto fijo creado.');
+    }
+
+    clearGastoFijoForm();
+    await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
+  } catch (error) {
+    showMsg('Error guardando gasto fijo: ' + error.message, 'bad');
+  }
 }
 
-function getPrioridadPago(m) {
-  if (m.vencido) return { label: 'Vencido', cls: 'bad', row: 'row-vencido', rank: 1 };
-  if (m.vence_7_dias) return { label: 'Esta semana', cls: 'warn', row: 'row-vence', rank: 2 };
-  if (m.vence_30_dias) return { label: 'Este mes', cls: 'info', row: '', rank: 3 };
-  if (!m.fecha_vencimiento) return { label: 'Sin vencimiento', cls: 'neutral', row: '', rank: 4 };
-  return { label: 'Futuro', cls: 'neutral', row: '', rank: 5 };
+function editGastoFijo(id) {
+  const g = STATE.gastosFijos.find(x => x.id === id);
+  if (!g) return;
+
+  document.getElementById('gf-id').value = g.id;
+  document.getElementById('gf-nombre').value = g.nombre || '';
+  document.getElementById('gf-tipo').value = g.tipo || 'egreso';
+  filterGastoFijoCategorias();
+  document.getElementById('gf-monto').value = num(g.monto);
+  document.getElementById('gf-dia').value = num(g.dia_vencimiento || 10);
+  document.getElementById('gf-categoria').value = g.categoria_id || '';
+  document.getElementById('gf-cuenta').value = g.cuenta_id || '';
+  document.getElementById('gf-proveedor').value = g.proveedor || '';
+  document.getElementById('gf-notas').value = g.notas || '';
+  document.getElementById('btn-gf').textContent = 'Actualizar fijo';
+  document.getElementById('gf-nombre').focus();
 }
 
-function renderPagosOperativos() {
-  const pagos = STATE.movimientos.filter(esEgresoPendiente);
+function clearGastoFijoForm() {
+  document.getElementById('gf-id').value = '';
+  document.getElementById('gf-nombre').value = '';
+  document.getElementById('gf-tipo').value = 'egreso';
+  document.getElementById('gf-monto').value = '';
+  document.getElementById('gf-dia').value = 10;
+  document.getElementById('gf-categoria').value = '';
+  document.getElementById('gf-cuenta').value = '';
+  document.getElementById('gf-proveedor').value = '';
+  document.getElementById('gf-notas').value = '';
+  document.getElementById('btn-gf').textContent = 'Guardar fijo';
+  filterGastoFijoCategorias();
+}
 
-  const vencidos = pagos.filter(m => m.vencido);
-  const semana = pagos.filter(m => !m.vencido && m.vence_7_dias);
-  const mes = pagos.filter(m => !m.vencido && !m.vence_7_dias && m.vence_30_dias);
-  const parciales = pagos.filter(m => pagadoParcialMovimiento(m) > 0);
-  const sinVencimiento = pagos.filter(m => !m.fecha_vencimiento);
+async function disableGastoFijo(id) {
+  const g = STATE.gastosFijos.find(x => x.id === id);
+  if (!g) return;
 
-  const total = arr => arr.reduce((sum, m) => sum + saldoMovimiento(m), 0);
+  const ok = confirm(`¿Borrar/desactivar el gasto fijo "${g.nombre}"?`);
+  if (!ok) return;
 
-  document.getElementById('pagos-count').textContent = `${pagos.length} pendiente${pagos.length === 1 ? '' : 's'}`;
+  try {
+    await apiRequest('DELETE', {
+      type: 'gasto_fijo',
+      id
+    }, { syncLiquidaciones: false, syncGastosFijos: false });
 
-  const metrics = [
-    ['Vencido', vencidos.length, total(vencidos), 'red-text', 'priority-high'],
-    ['Esta semana', semana.length, total(semana), 'amber-text', 'priority-week'],
-    ['Este mes', mes.length, total(mes), 'blue-text', 'priority-ok'],
-    ['Con pago parcial', parciales.length, total(parciales), 'purple-text', ''],
-    ['Sin vencimiento', sinVencimiento.length, total(sinVencimiento), 'muted-text', ''],
-    ['Total a pagar', pagos.length, total(pagos), 'red-text', 'priority-high']
-  ];
+    showMsg('Gasto fijo desactivado.');
+    await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
+  } catch (error) {
+    showMsg('Error borrando gasto fijo: ' + error.message, 'bad');
+  }
+}
 
-  document.getElementById('pagos-operativos-metrics').innerHTML = metrics.map(([label,cantidad,monto,cls,extraCls]) => `
-    <div class="priority-mini ${extraCls}">
-      <span>${label} · ${cantidad} movimiento${cantidad === 1 ? '' : 's'}</span>
-      <b class="${cls}">${fmt(monto)}</b>
-    </div>
-  `).join('');
+async function generarGastosFijos(gastoFijoId = null) {
+  try {
+    showMsg('Generando gastos fijos del mes...', 'warn');
 
-  const ordenados = [...pagos].sort((a,b) => {
-    const pa = getPrioridadPago(a);
-    const pb = getPrioridadPago(b);
+    await apiRequest('POST', {
+      type: 'gastos_fijos_generar',
+      gasto_fijo_id: gastoFijoId || null
+    }, { syncLiquidaciones: false, syncGastosFijos: false });
 
-    if (pa.rank !== pb.rank) return pa.rank - pb.rank;
-
-    const fa = a.fecha_vencimiento || '9999-12-31';
-    const fb = b.fecha_vencimiento || '9999-12-31';
-
-    return String(fa).localeCompare(String(fb)) || saldoMovimiento(b) - saldoMovimiento(a);
-  });
-
-  document.getElementById('pagos-prioridad-body').innerHTML = ordenados.length
-    ? ordenados.slice(0, 60).map(m => {
-      const p = getPrioridadPago(m);
-      const esParcial = pagadoParcialMovimiento(m) > 0 && saldoMovimiento(m) > 0;
-
-      return `
-        <tr class="${p.row}">
-          <td>
-            <span class="badge ${p.cls}">${p.label}</span>
-            ${esParcial ? '<span class="badge purple">Parcial</span>' : ''}
-          </td>
-          <td>${esc(m.fecha_vencimiento || '—')}</td>
-          <td>${tipoBadge(m.tipo)}</td>
-          <td>
-            <b>${esc(m.descripcion || '—')}</b>
-            <div class="muted">${esc(m.categoria || 'Sin categoría')} · ${esc(m.proveedor || 'Sin proveedor')}</div>
-            ${!m.cuenta_id ? '<div class="muted red-text">Sin cuenta asignada. Editalo antes de pagar.</div>' : ''}
-          </td>
-          <td class="num">${fmt(m.monto_original ?? m.monto)}</td>
-          <td class="num">${fmt(m.total_pagado_parcial || 0)}</td>
-          <td class="num"><b>${fmt(saldoMovimiento(m))}</b></td>
-          <td>
-            <div class="inline-actions">
-              <button class="purple-btn small" onclick="openPagoParcial('${esc(m.id)}')">Pago parcial</button>
-              <button class="secondary small" onclick="editMovimiento('${esc(m.id)}')">Editar</button>
-              <button class="green small" onclick="markMovimiento('${esc(m.id)}','pagado')">Pagar todo</button>
-            </div>
-          </td>
-        </tr>
-      `;
-    }).join('')
-    : '<tr><td colspan="8" class="empty">No hay pagos pendientes. Raro, sospechoso, pero hermoso.</td></tr>';
-
-  const byCategoria = new Map();
-
-  pagos.forEach(m => {
-    const key = m.categoria || m.tipo || 'Sin categoría';
-    const row = byCategoria.get(key) || { nombre: key, cantidad: 0, monto: 0 };
-    row.cantidad += 1;
-    row.monto += saldoMovimiento(m);
-    byCategoria.set(key, row);
-  });
-
-  const categorias = Array.from(byCategoria.values()).sort((a,b) => b.monto - a.monto);
-
-  document.getElementById('pagos-categorias-body').innerHTML = categorias.length
-    ? categorias.map(row => `
-      <tr>
-        <td><b>${esc(row.nombre)}</b></td>
-        <td class="num">${row.cantidad}</td>
-        <td class="num"><b>${fmt(row.monto)}</b></td>
-      </tr>
-    `).join('')
-    : '<tr><td colspan="3" class="empty">Sin egresos pendientes.</td></tr>';
+    showMsg('Gastos fijos del mes generados/actualizados.');
+    await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
+  } catch (error) {
+    showMsg('Error generando gastos fijos: ' + error.message, 'bad');
+  }
 }
 
 function renderLiquidaciones() {
@@ -941,7 +1370,6 @@ function renderLiquidaciones() {
     ['Próximos 7 días', liq.proximos_7_dias || 0, 'blue-text'],
     ['Próximos 30 días', liq.proximos_30_dias || 0, 'blue-text'],
     ['Total futuro pendiente', liq.total_pendiente || 0, 'green-text'],
-    ['Sin fecha', liq.sin_fecha || 0, 'amber-text'],
     ['Errores', liq.pagos_con_error || 0, (liq.pagos_con_error || 0) > 0 ? 'red-text' : 'green-text']
   ];
 
@@ -963,20 +1391,6 @@ function renderLiquidaciones() {
       </tr>
     `).join('')
     : '<tr><td colspan="3" class="empty">No hay liquidaciones futuras detectadas.</td></tr>';
-
-  const cuentas = Array.isArray(liq.por_cuenta) ? liq.por_cuenta : [];
-
-  document.getElementById('liq-cuentas-body').innerHTML = cuentas.length
-    ? cuentas.map(row => `
-      <tr>
-        <td><b>${esc(row.cuenta || row.cuenta_key || '—')}</b></td>
-        <td class="num">${fmt(row.hoy || 0)}</td>
-        <td class="num">${fmt(row.proximos_7_dias || 0)}</td>
-        <td class="num">${fmt(row.proximos_30_dias || 0)}</td>
-        <td class="num"><b>${fmt(row.monto || 0)}</b></td>
-      </tr>
-    `).join('')
-    : '<tr><td colspan="5" class="empty">No hay liquidaciones por cuenta.</td></tr>';
 }
 
 function renderImpactos() {
@@ -1060,6 +1474,69 @@ function renderCuentas() {
   `;
 }
 
+async function saveCuenta() {
+  const id = document.getElementById('cuenta-id').value;
+  const nombre = document.getElementById('cuenta-nombre').value.trim();
+  const tipo = document.getElementById('cuenta-tipo').value;
+  const saldo = num(document.getElementById('cuenta-saldo').value);
+
+  if (!nombre) {
+    showMsg('Cargá el nombre de la cuenta.', 'warn');
+    return;
+  }
+
+  try {
+    if (id) {
+      await apiRequest('PUT', { type: 'cuenta', id, nombre, tipo, saldo_actual: saldo, activo: true }, { syncLiquidaciones: false, syncGastosFijos: false });
+      showMsg('Cuenta actualizada.');
+    } else {
+      await apiRequest('POST', { type: 'cuenta', nombre, tipo, saldo_actual: saldo, activo: true }, { syncLiquidaciones: false, syncGastosFijos: false });
+      showMsg('Cuenta creada.');
+    }
+
+    clearCuentaForm();
+    await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
+  } catch (error) {
+    showMsg('Error guardando cuenta: ' + error.message, 'bad');
+  }
+}
+
+function editCuenta(id) {
+  const c = STATE.cuentas.find(x => x.id === id);
+  if (!c) return;
+
+  document.getElementById('cuenta-id').value = c.id;
+  document.getElementById('cuenta-nombre').value = c.nombre;
+  document.getElementById('cuenta-tipo').value = c.tipo;
+  document.getElementById('cuenta-saldo').value = num(c.saldo_actual);
+  document.getElementById('btn-cuenta').textContent = 'Actualizar';
+  document.getElementById('cuenta-nombre').focus();
+}
+
+function clearCuentaForm() {
+  document.getElementById('cuenta-id').value = '';
+  document.getElementById('cuenta-nombre').value = '';
+  document.getElementById('cuenta-tipo').value = 'mercado_pago';
+  document.getElementById('cuenta-saldo').value = '';
+  document.getElementById('btn-cuenta').textContent = 'Guardar';
+}
+
+async function updateSaldoCuenta(id) {
+  const input = document.getElementById(`saldo-${id}`);
+  const saldo = num(input.value);
+
+  const ok = confirm('¿Ajustar saldo manualmente? Usalo solo para corregir caja real.');
+  if (!ok) return;
+
+  try {
+    await apiRequest('PUT', { type: 'cuenta', id, saldo_actual: saldo }, { syncLiquidaciones: false, syncGastosFijos: false });
+    showMsg('Saldo ajustado manualmente.');
+    await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
+  } catch (error) {
+    showMsg('Error actualizando saldo: ' + error.message, 'bad');
+  }
+}
+
 function renderCategorias() {
   const categorias = STATE.categorias
     .filter(c => c.activo !== false)
@@ -1104,354 +1581,6 @@ function renderCategorias() {
   `;
 }
 
-function renderSelects() {
-  const cuentas = STATE.cuentas.filter(c => c.activo !== false);
-  const cuentaOptions = ['<option value="">Seleccionar cuenta</option>']
-    .concat(cuentas.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)}</option>`));
-
-  const cuentaOptionalOptions = ['<option value="">Sin cuenta</option>']
-    .concat(cuentas.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)}</option>`));
-
-  document.getElementById('mov-cuenta').innerHTML = cuentaOptions.join('');
-  document.getElementById('mov-cuenta-destino').innerHTML = cuentaOptionalOptions.join('');
-  document.getElementById('gf-cuenta').innerHTML = cuentaOptionalOptions.join('');
-  document.getElementById('pp-cuenta').innerHTML = cuentaOptions.join('');
-
-  filterCategorias();
-  filterGastoFijoCategorias();
-}
-
-function filterCategorias() {
-  const tipo = document.getElementById('mov-tipo').value;
-  const categorias = STATE.categorias.filter(c => c.activo !== false && c.tipo === tipo);
-  const fallback = STATE.categorias.filter(c => c.activo !== false);
-  const rows = categorias.length ? categorias : fallback;
-
-  document.getElementById('mov-categoria').innerHTML = ['<option value="">Sin categoría</option>']
-    .concat(rows.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)} (${esc(c.tipo)})</option>`))
-    .join('');
-}
-
-function filterGastoFijoCategorias() {
-  const tipo = document.getElementById('gf-tipo').value;
-  const categorias = STATE.categorias.filter(c => c.activo !== false && c.tipo === tipo);
-  const fallback = STATE.categorias.filter(c => c.activo !== false);
-  const rows = categorias.length ? categorias : fallback;
-
-  document.getElementById('gf-categoria').innerHTML = ['<option value="">Sin categoría</option>']
-    .concat(rows.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)} (${esc(c.tipo)})</option>`))
-    .join('');
-}
-
-function onMovimientoTipoChange() {
-  filterCategorias();
-  const tipo = document.getElementById('mov-tipo').value;
-
-  if (tipo === 'transferencia') {
-    document.getElementById('mov-estado').value = 'pagado';
-  }
-
-  if (tipo === 'ingreso') {
-    document.getElementById('mov-estado').value = 'pendiente';
-  }
-}
-
-function estadoBadge(estado) {
-  if (estado === 'parcial') return '<span class="badge purple">Parcial</span>';
-  if (estado === 'pendiente') return '<span class="badge warn">Pendiente</span>';
-  if (estado === 'pagado') return '<span class="badge ok">Pagado</span>';
-  if (estado === 'cobrado') return '<span class="badge info">Cobrado</span>';
-  if (estado === 'cancelado') return '<span class="badge bad">Cancelado</span>';
-  return `<span class="badge neutral">${esc(estado)}</span>`;
-}
-
-function tipoBadge(tipo) {
-  const map = {
-    ingreso: 'info',
-    egreso: 'bad',
-    deuda: 'warn',
-    proveedor: 'purple',
-    impuesto: 'bad',
-    reposicion: 'warn',
-    transferencia: 'info',
-    ajuste: 'neutral',
-    otro: 'neutral'
-  };
-
-  return `<span class="badge ${map[tipo] || 'neutral'}">${esc(tipo)}</span>`;
-}
-
-function movimientoRowClass(m) {
-  if (m.estado === 'pendiente' && m.vencido) return 'row-vencido';
-  if (m.estado === 'pendiente' && m.vence_7_dias) return 'row-vence';
-  if (m.estado === 'pagado' || m.estado === 'cobrado') return 'row-ok';
-  return '';
-}
-
-function movimientosFiltrados() {
-  const q = norm(document.getElementById('search').value);
-  let rows = [...STATE.movimientos].filter(m => m.activo !== false);
-
-  if (STATE.tab === 'pendientes') {
-    rows = rows.filter(m => m.estado === 'pendiente' && saldoMovimiento(m) > 0);
-  }
-
-  if (STATE.tab === 'parciales') {
-    rows = rows.filter(m => pagadoParcialMovimiento(m) > 0 && saldoMovimiento(m) > 0);
-  }
-
-  if (STATE.tab === 'vencidos') {
-    rows = rows.filter(m => m.estado === 'pendiente' && m.vencido);
-  }
-
-  if (STATE.tab === 'vence7') {
-    rows = rows.filter(m => m.estado === 'pendiente' && m.vence_7_dias);
-  }
-
-  if (STATE.tab === 'pagados') {
-    rows = rows.filter(m => m.estado === 'pagado' || m.estado === 'cobrado');
-  }
-
-  if (q) {
-    rows = rows.filter(m =>
-      norm(m.descripcion).includes(q) ||
-      norm(m.proveedor).includes(q) ||
-      norm(m.categoria).includes(q) ||
-      norm(m.cuenta).includes(q)
-    );
-  }
-
-  return rows;
-}
-
-function renderMovimientos() {
-  const rows = movimientosFiltrados();
-
-  if (!rows.length) {
-    document.getElementById('movimientos-body').innerHTML = '<tr><td colspan="9" class="empty">No hay movimientos para mostrar.</td></tr>';
-    return;
-  }
-
-  document.getElementById('movimientos-body').innerHTML = rows.map(m => {
-    const visual = estadoVisual(m);
-    const requiereCuenta = ['egreso','deuda','proveedor','impuesto','reposicion','otro','ingreso','transferencia'].includes(m.tipo);
-    const faltaCuenta = requiereCuenta && !m.cuenta_id;
-
-    return `
-      <tr class="${movimientoRowClass(m)}">
-        <td>${estadoBadge(visual)}</td>
-        <td>${tipoBadge(m.tipo)}</td>
-        <td>
-          <b>${esc(m.descripcion)}</b>
-          <div class="muted">${esc(m.categoria || 'Sin categoría')} · ${esc(m.cuenta || 'Sin cuenta')}</div>
-          ${faltaCuenta ? '<div class="muted red-text">Falta cuenta para impactar saldo.</div>' : ''}
-        </td>
-        <td>${esc(m.proveedor || '—')}</td>
-        <td>${esc(m.fecha_vencimiento || '—')}</td>
-        <td class="num">${fmt(m.monto_original ?? m.monto)}</td>
-        <td class="num">${fmt(m.total_pagado_parcial || 0)}</td>
-        <td class="num"><b>${fmt(saldoMovimiento(m))}</b></td>
-        <td>
-          <div class="inline-actions">
-            ${['egreso','deuda','proveedor','impuesto','reposicion','otro'].includes(m.tipo) && saldoMovimiento(m) > 0 ? `<button class="purple-btn small" onclick="openPagoParcial('${esc(m.id)}')">Pago parcial</button>` : ''}
-            <button class="secondary small" onclick="editMovimiento('${esc(m.id)}')">Editar</button>
-            ${m.estado === 'pendiente' && m.tipo === 'ingreso' ? `<button class="green small" onclick="markMovimiento('${esc(m.id)}','cobrado')">Cobrar</button>` : ''}
-            ${m.estado === 'pendiente' && m.tipo !== 'ingreso' ? `<button class="green small" onclick="markMovimiento('${esc(m.id)}','pagado')">Pagar todo</button>` : ''}
-            <button class="red small" onclick="disableMovimiento('${esc(m.id)}')">Borrar</button>
-          </div>
-        </td>
-      </tr>
-    `;
-  }).join('');
-}
-
-function setTab(btn, tab) {
-  STATE.tab = tab;
-  document.querySelectorAll('.tab').forEach(x => x.classList.remove('on'));
-  btn.classList.add('on');
-  renderMovimientos();
-}
-
-function openPagoParcial(movimientoId) {
-  const m = STATE.movimientos.find(x => x.id === movimientoId);
-  if (!m) return;
-
-  document.getElementById('pago-parcial-box').style.display = 'block';
-  document.getElementById('pp-movimiento-id').value = m.id;
-  document.getElementById('pp-monto').value = '';
-  document.getElementById('pp-fecha').value = today();
-  document.getElementById('pp-cuenta').value = m.cuenta_id || '';
-  document.getElementById('pp-notas').value = '';
-
-  document.getElementById('pp-info').innerHTML = `
-    <b>${esc(m.descripcion)}</b><br>
-    Original: <b>${fmt(m.monto_original ?? m.monto)}</b> ·
-    Pagado: <b>${fmt(m.total_pagado_parcial || 0)}</b> ·
-    Saldo: <b>${fmt(saldoMovimiento(m))}</b>
-    ${!m.cuenta_id ? '<br><span class="red-text">Elegí una cuenta para que el saldo baje correctamente.</span>' : ''}
-  `;
-
-  document.getElementById('pp-monto').focus();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function cancelPagoParcial() {
-  document.getElementById('pago-parcial-box').style.display = 'none';
-  document.getElementById('pp-movimiento-id').value = '';
-}
-
-async function savePagoParcial() {
-  const movimientoId = document.getElementById('pp-movimiento-id').value;
-  const monto = num(document.getElementById('pp-monto').value);
-  const cuentaId = document.getElementById('pp-cuenta').value;
-
-  if (!movimientoId) {
-    showMsg('Seleccioná un movimiento para pagar parcialmente.', 'warn');
-    return;
-  }
-
-  if (monto <= 0) {
-    showMsg('El monto del pago parcial tiene que ser mayor a cero.', 'warn');
-    return;
-  }
-
-  if (!cuentaId) {
-    showMsg('Elegí la cuenta usada para pagar. Sin cuenta no hay impacto de saldo.', 'warn');
-    return;
-  }
-
-  try {
-    await apiRequest('POST', {
-      type: 'pago_parcial',
-      movimiento_id: movimientoId,
-      monto,
-      fecha_pago: document.getElementById('pp-fecha').value || today(),
-      cuenta_id: cuentaId,
-      notas: document.getElementById('pp-notas').value.trim() || null
-    }, { syncLiquidaciones: false, syncGastosFijos: false });
-
-    showMsg('Pago parcial registrado e impactado en cuenta.');
-    cancelPagoParcial();
-    await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
-  } catch (error) {
-    showMsg('Error registrando pago parcial: ' + error.message, 'bad');
-  }
-}
-
-async function saveGastoFijo() {
-  const id = document.getElementById('gf-id').value;
-  const nombre = document.getElementById('gf-nombre').value.trim();
-  const tipo = document.getElementById('gf-tipo').value;
-  const monto = num(document.getElementById('gf-monto').value);
-
-  if (!nombre) {
-    showMsg('Cargá el nombre del gasto fijo.', 'warn');
-    return;
-  }
-
-  if (monto <= 0) {
-    showMsg('El monto del gasto fijo tiene que ser mayor a cero.', 'warn');
-    return;
-  }
-
-  const payload = {
-    type: 'gasto_fijo',
-    nombre,
-    tipo,
-    monto,
-    dia_vencimiento: num(document.getElementById('gf-dia').value || 10),
-    categoria_id: document.getElementById('gf-categoria').value || null,
-    cuenta_id: document.getElementById('gf-cuenta').value || null,
-    proveedor: document.getElementById('gf-proveedor').value.trim() || null,
-    notas: document.getElementById('gf-notas').value.trim() || null,
-    activo: true
-  };
-
-  try {
-    if (id) {
-      await apiRequest('PUT', { ...payload, id }, { syncLiquidaciones: false, syncGastosFijos: false });
-      showMsg('Gasto fijo actualizado.');
-    } else {
-      await apiRequest('POST', payload, { syncLiquidaciones: false, syncGastosFijos: false });
-      showMsg('Gasto fijo creado.');
-    }
-
-    clearGastoFijoForm();
-    await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
-  } catch (error) {
-    showMsg('Error guardando gasto fijo: ' + error.message, 'bad');
-  }
-}
-
-function editGastoFijo(id) {
-  const g = STATE.gastosFijos.find(x => x.id === id);
-  if (!g) return;
-
-  document.getElementById('gf-id').value = g.id;
-  document.getElementById('gf-nombre').value = g.nombre || '';
-  document.getElementById('gf-tipo').value = g.tipo || 'egreso';
-  filterGastoFijoCategorias();
-  document.getElementById('gf-monto').value = num(g.monto);
-  document.getElementById('gf-dia').value = num(g.dia_vencimiento || 10);
-  document.getElementById('gf-categoria').value = g.categoria_id || '';
-  document.getElementById('gf-cuenta').value = g.cuenta_id || '';
-  document.getElementById('gf-proveedor').value = g.proveedor || '';
-  document.getElementById('gf-notas').value = g.notas || '';
-  document.getElementById('btn-gf').textContent = 'Actualizar fijo';
-
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function clearGastoFijoForm() {
-  document.getElementById('gf-id').value = '';
-  document.getElementById('gf-nombre').value = '';
-  document.getElementById('gf-tipo').value = 'egreso';
-  document.getElementById('gf-monto').value = '';
-  document.getElementById('gf-dia').value = 10;
-  document.getElementById('gf-categoria').value = '';
-  document.getElementById('gf-cuenta').value = '';
-  document.getElementById('gf-proveedor').value = '';
-  document.getElementById('gf-notas').value = '';
-  document.getElementById('btn-gf').textContent = 'Guardar fijo';
-  filterGastoFijoCategorias();
-}
-
-async function disableGastoFijo(id) {
-  const g = STATE.gastosFijos.find(x => x.id === id);
-  if (!g) return;
-
-  const ok = confirm(`¿Borrar/desactivar el gasto fijo "${g.nombre}"?`);
-  if (!ok) return;
-
-  try {
-    await apiRequest('DELETE', {
-      type: 'gasto_fijo',
-      id
-    }, { syncLiquidaciones: false, syncGastosFijos: false });
-
-    showMsg('Gasto fijo desactivado.');
-    await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
-  } catch (error) {
-    showMsg('Error borrando gasto fijo: ' + error.message, 'bad');
-  }
-}
-
-async function generarGastosFijos(gastoFijoId = null) {
-  try {
-    showMsg('Generando gastos fijos del mes...', 'warn');
-
-    await apiRequest('POST', {
-      type: 'gastos_fijos_generar',
-      gasto_fijo_id: gastoFijoId || null
-    }, { syncLiquidaciones: false, syncGastosFijos: false });
-
-    showMsg('Gastos fijos del mes generados/actualizados.');
-    await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
-  } catch (error) {
-    showMsg('Error generando gastos fijos: ' + error.message, 'bad');
-  }
-}
-
 async function saveCategoria() {
   const id = document.getElementById('cat-id').value;
   const nombre = document.getElementById('cat-nombre').value.trim();
@@ -1488,8 +1617,7 @@ function editCategoria(id) {
   document.getElementById('cat-tipo').value = c.tipo;
   document.getElementById('cat-orden').value = num(c.orden);
   document.getElementById('btn-cat').textContent = 'Actualizar categoría';
-
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  document.getElementById('cat-nombre').focus();
 }
 
 function clearCategoriaForm() {
@@ -1514,265 +1642,6 @@ async function disableCategoria(id) {
   } catch (error) {
     showMsg('Error borrando categoría: ' + error.message, 'bad');
   }
-}
-
-async function saveCuenta() {
-  const id = document.getElementById('cuenta-id').value;
-  const nombre = document.getElementById('cuenta-nombre').value.trim();
-  const tipo = document.getElementById('cuenta-tipo').value;
-  const saldo = num(document.getElementById('cuenta-saldo').value);
-
-  if (!nombre) {
-    showMsg('Cargá el nombre de la cuenta.', 'warn');
-    return;
-  }
-
-  try {
-    if (id) {
-      await apiRequest('PUT', { type: 'cuenta', id, nombre, tipo, saldo_actual: saldo, activo: true }, { syncLiquidaciones: false, syncGastosFijos: false });
-      showMsg('Cuenta actualizada.');
-    } else {
-      await apiRequest('POST', { type: 'cuenta', nombre, tipo, saldo_actual: saldo, activo: true }, { syncLiquidaciones: false, syncGastosFijos: false });
-      showMsg('Cuenta creada.');
-    }
-
-    clearCuentaForm();
-    await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
-  } catch (error) {
-    showMsg('Error guardando cuenta: ' + error.message, 'bad');
-  }
-}
-
-function editCuenta(id) {
-  const c = STATE.cuentas.find(x => x.id === id);
-  if (!c) return;
-
-  document.getElementById('cuenta-id').value = c.id;
-  document.getElementById('cuenta-nombre').value = c.nombre;
-  document.getElementById('cuenta-tipo').value = c.tipo;
-  document.getElementById('cuenta-saldo').value = num(c.saldo_actual);
-  document.getElementById('btn-cuenta').textContent = 'Actualizar';
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function clearCuentaForm() {
-  document.getElementById('cuenta-id').value = '';
-  document.getElementById('cuenta-nombre').value = '';
-  document.getElementById('cuenta-tipo').value = 'mercado_pago';
-  document.getElementById('cuenta-saldo').value = '';
-  document.getElementById('btn-cuenta').textContent = 'Guardar';
-}
-
-async function updateSaldoCuenta(id) {
-  const input = document.getElementById(`saldo-${id}`);
-  const saldo = num(input.value);
-
-  const ok = confirm('¿Ajustar saldo manualmente? Usalo solo para corregir caja real.');
-  if (!ok) return;
-
-  try {
-    await apiRequest('PUT', { type: 'cuenta', id, saldo_actual: saldo }, { syncLiquidaciones: false, syncGastosFijos: false });
-    showMsg('Saldo ajustado manualmente.');
-    await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
-  } catch (error) {
-    showMsg('Error actualizando saldo: ' + error.message, 'bad');
-  }
-}
-
-function validarMovimientoAntesDeGuardar({ tipo, estado, cuentaId, cuentaDestinoId }) {
-  if (tipo === 'transferencia') {
-    if (!cuentaId) return 'Elegí la cuenta origen de la transferencia.';
-    if (!cuentaDestinoId) return 'Elegí la cuenta destino de la transferencia.';
-    if (cuentaId === cuentaDestinoId) return 'La cuenta origen y destino no pueden ser la misma.';
-  }
-
-  if ((estado === 'pagado' || estado === 'cobrado') && ['egreso','deuda','proveedor','impuesto','reposicion','otro','ingreso'].includes(tipo) && !cuentaId) {
-    return 'Elegí una cuenta para impactar el saldo.';
-  }
-
-  return null;
-}
-
-async function saveMovimiento() {
-  const id = document.getElementById('mov-id').value;
-  const descripcion = document.getElementById('mov-descripcion').value.trim();
-  const tipo = document.getElementById('mov-tipo').value;
-  const estado = document.getElementById('mov-estado').value;
-  const monto = num(document.getElementById('mov-monto').value);
-  const cuentaId = document.getElementById('mov-cuenta').value || null;
-  const cuentaDestinoId = document.getElementById('mov-cuenta-destino').value || null;
-
-  if (!descripcion) {
-    showMsg('Cargá una descripción.', 'warn');
-    return;
-  }
-
-  if (monto <= 0) {
-    showMsg('El monto tiene que ser mayor a cero.', 'warn');
-    return;
-  }
-
-  const errorValidacion = validarMovimientoAntesDeGuardar({ tipo, estado, cuentaId, cuentaDestinoId });
-  if (errorValidacion) {
-    showMsg(errorValidacion, 'warn');
-    return;
-  }
-
-  const payload = {
-    type: 'movimiento',
-    descripcion,
-    tipo,
-    estado,
-    monto,
-    categoria_id: document.getElementById('mov-categoria').value || null,
-    cuenta_id: cuentaId,
-    cuenta_destino_id: cuentaDestinoId,
-    proveedor: document.getElementById('mov-proveedor').value.trim() || null,
-    fecha: document.getElementById('mov-fecha').value || today(),
-    fecha_vencimiento: document.getElementById('mov-vencimiento').value || null,
-    fecha_pago: document.getElementById('mov-fecha-pago').value || null,
-    notas: document.getElementById('mov-notas').value.trim() || null,
-    origen: 'manual',
-    activo: true
-  };
-
-  try {
-    if (id) {
-      await apiRequest('PUT', { ...payload, id }, { syncLiquidaciones: false, syncGastosFijos: false });
-      showMsg('Movimiento actualizado.');
-    } else {
-      await apiRequest('POST', payload, { syncLiquidaciones: false, syncGastosFijos: false });
-      showMsg('Movimiento creado.');
-    }
-
-    clearMovimientoForm();
-    await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
-  } catch (error) {
-    showMsg('Error guardando movimiento: ' + error.message, 'bad');
-  }
-}
-
-function editMovimiento(id) {
-  const m = STATE.movimientos.find(x => x.id === id);
-  if (!m) return;
-
-  document.getElementById('mov-id').value = m.id;
-  document.getElementById('mov-descripcion').value = m.descripcion || '';
-  document.getElementById('mov-tipo').value = m.tipo || 'egreso';
-  filterCategorias();
-  document.getElementById('mov-estado').value = m.estado || 'pendiente';
-  document.getElementById('mov-monto').value = num(m.monto);
-  document.getElementById('mov-vencimiento').value = m.fecha_vencimiento || '';
-  document.getElementById('mov-categoria').value = m.categoria_id || '';
-  document.getElementById('mov-cuenta').value = m.cuenta_id || '';
-  document.getElementById('mov-cuenta-destino').value = m.cuenta_destino_id || '';
-  document.getElementById('mov-proveedor').value = m.proveedor || '';
-  document.getElementById('mov-fecha').value = m.fecha || today();
-  document.getElementById('mov-fecha-pago').value = m.fecha_pago || '';
-  document.getElementById('mov-notas').value = m.notas || '';
-  document.getElementById('btn-mov').textContent = 'Actualizar movimiento';
-
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function clearMovimientoForm() {
-  document.getElementById('mov-id').value = '';
-  document.getElementById('mov-descripcion').value = '';
-  document.getElementById('mov-tipo').value = 'egreso';
-  document.getElementById('mov-estado').value = 'pendiente';
-  document.getElementById('mov-monto').value = '';
-  document.getElementById('mov-vencimiento').value = '';
-  document.getElementById('mov-cuenta').value = '';
-  document.getElementById('mov-cuenta-destino').value = '';
-  document.getElementById('mov-proveedor').value = '';
-  document.getElementById('mov-fecha').value = today();
-  document.getElementById('mov-fecha-pago').value = '';
-  document.getElementById('mov-notas').value = '';
-  document.getElementById('btn-mov').textContent = 'Guardar movimiento';
-  filterCategorias();
-}
-
-async function markMovimiento(id, estado) {
-  const m = STATE.movimientos.find(x => x.id === id);
-  if (!m) return;
-
-  if ((estado === 'pagado' || estado === 'cobrado') && !m.cuenta_id) {
-    showMsg('Este movimiento no tiene cuenta asignada. Editalo, elegí cuenta y después pagalo/cobralo.', 'warn');
-    editMovimiento(id);
-    return;
-  }
-
-  if (m.tipo === 'transferencia' && (!m.cuenta_id || !m.cuenta_destino_id)) {
-    showMsg('La transferencia necesita cuenta origen y cuenta destino.', 'warn');
-    editMovimiento(id);
-    return;
-  }
-
-  try {
-    await apiRequest('PUT', {
-      type: 'movimiento',
-      id,
-      estado,
-      fecha_pago: today()
-    }, { syncLiquidaciones: false, syncGastosFijos: false });
-
-    showMsg(estado === 'cobrado' ? 'Movimiento cobrado e impactado en cuenta.' : 'Movimiento pagado e impactado en cuenta.');
-    await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
-  } catch (error) {
-    showMsg('Error actualizando movimiento: ' + error.message, 'bad');
-  }
-}
-
-async function disableMovimiento(id) {
-  const ok = confirm('¿Borrar/desactivar este movimiento? Si tenía impacto en cuenta, se revierte.');
-  if (!ok) return;
-
-  try {
-    await apiRequest('DELETE', { type: 'movimiento', id }, { syncLiquidaciones: false, syncGastosFijos: false });
-    showMsg('Movimiento desactivado. Si tenía impacto en cuenta, fue revertido.');
-    await loadData({ syncLiquidaciones: true, syncGastosFijos: true });
-  } catch (error) {
-    showMsg('Error borrando movimiento: ' + error.message, 'bad');
-  }
-}
-
-function quickMovimiento(tipo, descripcion) {
-  clearMovimientoForm();
-
-  document.getElementById('mov-tipo').value = tipo;
-  filterCategorias();
-
-  document.getElementById('mov-estado').value = 'pendiente';
-  document.getElementById('mov-descripcion').value = descripcion;
-  document.getElementById('mov-fecha').value = today();
-  document.getElementById('mov-proveedor').value = '';
-  document.getElementById('mov-monto').focus();
-}
-
-function quickIngresoManual() {
-  clearMovimientoForm();
-
-  document.getElementById('mov-tipo').value = 'ingreso';
-  filterCategorias();
-
-  document.getElementById('mov-estado').value = 'pendiente';
-  document.getElementById('mov-descripcion').value = 'Ingreso manual pendiente';
-  document.getElementById('mov-proveedor').value = '';
-  document.getElementById('mov-fecha').value = today();
-  document.getElementById('mov-monto').focus();
-}
-
-function quickTransferencia() {
-  clearMovimientoForm();
-
-  document.getElementById('mov-tipo').value = 'transferencia';
-  filterCategorias();
-
-  document.getElementById('mov-estado').value = 'pagado';
-  document.getElementById('mov-descripcion').value = 'Transferencia entre cuentas';
-  document.getElementById('mov-fecha').value = today();
-  document.getElementById('mov-fecha-pago').value = today();
-  document.getElementById('mov-monto').focus();
 }
 
 async function actualizarLiquidaciones() {
