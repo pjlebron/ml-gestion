@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inventario valorizado - ML Gestión</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{max-width:100%;overflow-x:hidden}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f5;color:#171717;font-size:14px}
+.wrap{max-width:1180px;margin:0 auto;padding:18px}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+.title{font-size:24px;font-weight:950;letter-spacing:-.04em}
+.sub{font-size:13px;color:#666;margin-top:5px;line-height:1.45;max-width:850px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+button,.btn{border:none;border-radius:10px;background:#111;color:#fff;padding:9px 13px;font-size:12px;font-weight:850;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+button:hover,.btn:hover{opacity:.88}
+.secondary{background:#fff!important;color:#111!important;border:1px solid #ddd!important}
+.green{background:#20703a!important}
+.red{background:#a32d2d!important}
+.amber{background:#8a5400!important}
+.blue{background:#0c447c!important}
+.purple{background:#44228a!important}
+.card{background:#fff;border:1px solid #e2e2e2;border-radius:16px;padding:15px;margin-bottom:14px;box-shadow:0 1px 2px rgba(0,0,0,.025);width:100%;overflow:hidden}
+.hero{background:#111;color:#fff;border-radius:18px;padding:18px;margin-bottom:14px;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(240px,.8fr);gap:12px;align-items:center}
+.hero-title{font-size:22px;font-weight:950;letter-spacing:-.04em;margin-bottom:6px}
+.hero-copy{font-size:13px;color:#ddd;line-height:1.5}
+.hero-result{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:14px}
+.hero-result span{display:block;font-size:11px;color:#bbb;margin-bottom:4px}
+.hero-result b{font-size:28px;letter-spacing:-.04em}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px}
+label{display:block;font-size:11px;color:#777;margin-bottom:5px}
+input,select{width:100%;border:1px solid #ddd;border-radius:10px;padding:8px 10px;font-size:13px;background:#fff;min-width:0}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px}
+.metric{background:#fff;border:1px solid #e5e5e5;border-radius:14px;padding:14px;min-width:0}
+.metric .l{font-size:11px;color:#777;margin-bottom:5px}
+.metric .v{font-size:22px;font-weight:950;letter-spacing:-.04em;overflow:hidden;text-overflow:ellipsis}
+.metric .s{font-size:11px;color:#888;margin-top:4px;line-height:1.35}
+.green-text{color:#20703a}.red-text{color:#a32d2d}.amber-text{color:#8a5400}.blue-text{color:#0c447c}.purple-text{color:#44228a}.muted-text{color:#666}
+.section-title{font-size:16px;font-weight:950;margin-bottom:10px}
+.muted{font-size:12px;color:#777;line-height:1.45}
+.alert{padding:12px;border-radius:13px;background:#fff8ea;border:1px solid #f3d8a8;color:#633806;font-size:13px;line-height:1.45;margin-bottom:14px}
+.bad-alert{background:#fff0f0;border-color:#f0bcbc;color:#8b1e1e}
+.info-alert{background:#eef6ff;border-color:#c9e0f8;color:#0c447c}
+.badge{display:inline-flex;align-items:center;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:850;white-space:nowrap;margin:2px 3px 2px 0}
+.ok{background:#eaf3de;color:#27500a}
+.bad{background:#fcebeb;color:#a32d2d}
+.warn{background:#faeeda;color:#633806}
+.neutral{background:#f2f2f2;color:#666}
+.info{background:#e6f1fb;color:#0c447c}
+.bp{background:#efe8ff;color:#44228a}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tab{border:1px solid #ddd;background:#fff;color:#555;border-radius:999px;padding:7px 11px;font-size:12px;font-weight:850;cursor:pointer}
+.tab.on{background:#111;color:#fff;border-color:#111}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}
+.list{display:grid;grid-template-columns:1fr;gap:10px}
+.item-card{border:1px solid #eee;background:#fff;border-radius:14px;padding:13px;min-width:0}
+.item-card.bad-card{background:#fff6f6;border-color:#f1c4c4}
+.item-card.warn-card{background:#fffaf0;border-color:#f3d8a8}
+.item-card.ok-card{background:#fbfffb;border-color:#c9e5c5}
+.item-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.item-title{font-weight:950;font-size:14px;line-height:1.3;overflow-wrap:anywhere}
+.item-sub{font-size:12px;color:#777;line-height:1.4;margin-top:3px;overflow-wrap:anywhere}
+.item-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px;margin:10px 0}
+.kv{background:#f7f7f7;border:1px solid #eee;border-radius:10px;padding:8px;min-width:0}
+.kv span{display:block;font-size:10px;color:#777;margin-bottom:3px}
+.kv b{font-size:13px;overflow-wrap:anywhere}
+.item-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+.empty{text-align:center;color:#aaa;padding:22px;font-size:13px}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid #ddd;border-top-color:#111;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.thumb{width:58px;height:58px;border-radius:10px;object-fit:cover;border:1px solid #eee;background:#fafafa}
+.product-head{display:grid;grid-template-columns:58px minmax(0,1fr);gap:10px;align-items:start}
+.search-row{display:grid;grid-template-columns:minmax(0,1.2fr) repeat(3,minmax(120px,.35fr));gap:10px;margin-bottom:10px}
+@media(max-width:900px){
+  .wrap{padding:12px}
+  .hero,.two,.search-row{grid-template-columns:1fr}
+  .hero-result b{font-size:22px}
+  .title{font-size:21px}
+  .card{padding:12px}
+  .actions button,.actions .btn{width:100%}
+  .item-actions a,.item-actions button{flex:1 1 auto}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <div class="title">📦 Inventario valorizado</div>
+      <div class="sub">
+        Primer paso hacia stock multidepósito: Mercado Libre como canal publicado, costos como base y alertas para empezar a ordenar capital inmovilizado.
+      </div>
+    </div>
+    <div class="actions">
+      <a class="btn secondary" href="/">← Dashboard</a>
+      <a class="btn secondary" href="/finanzas.html">💰 War Room</a>
+      <button onclick="loadData()">Actualizar</button>
+    </div>
+  </div>
+
+  <div id="msg"></div>
+
+  <div class="hero">
+    <div>
+      <div class="hero-title">Stock publicado en Mercado Libre</div>
+      <div class="hero-copy">
+        Esto todavía no es stock físico real. Es la foto de lo que tenés publicado en Lebron Store y Fragantify.
+        Desde acá empezamos a construir el multidepósito de verdad: depósito central, Full, reservado, dañado, tránsito y ventas manuales.
+      </div>
+    </div>
+    <div class="hero-result">
+      <span>Valor stock a costo</span>
+      <b id="hero-costo">$0</b>
+      <div class="muted" style="color:#bbb;margin-top:4px" id="hero-note">Cargando...</div>
+    </div>
+  </div>
+
+  <div class="controls card">
+    <div>
+      <label>Cuenta</label>
+      <select id="account" onchange="loadData()">
+        <option value="all">Todas</option>
+        <option value="lebron">Lebron Store</option>
+        <option value="fragantify">Fragantify</option>
+      </select>
+    </div>
+    <div>
+      <label>Días de ventas para promedio</label>
+      <select id="dias" onchange="loadData()">
+        <option value="7">7 días</option>
+        <option value="30" selected>30 días</option>
+        <option value="60">60 días</option>
+        <option value="90">90 días</option>
+      </select>
+    </div>
+    <div>
+      <label>Buscar</label>
+      <input id="search" placeholder="producto, SKU, item ID..." oninput="renderProductos()">
+    </div>
+    <div>
+      <label>Vista</label>
+      <select id="vista" onchange="renderProductos()">
+        <option value="productos">Publicaciones ML</option>
+        <option value="sku">SKU maestro</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="loading" class="card empty">
+    <span class="spinner"></span> Cargando inventario...
+  </div>
+
+  <div id="content" style="display:none">
+    <div class="metrics" id="metrics"></div>
+
+    <div id="warning-box"></div>
+
+    <div class="two">
+      <div class="card">
+        <div class="section-title">Resumen por cuenta</div>
+        <div class="list" id="cuentas-list"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Alertas principales</div>
+        <div class="list" id="alertas-list"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+        <div>
+          <div class="section-title" style="margin:0">Inventario</div>
+          <div class="muted" id="inventario-subtitle">Vista vertical, sin scroll lateral. Porque sufrir con columnas infinitas no aumenta el margen.</div>
+        </div>
+        <span class="badge info" id="count-badge">0 items</span>
+      </div>
+
+      <div class="tabs">
+        <button class="tab on" onclick="setFilter(this,'todos')">Todos</button>
+        <button class="tab" onclick="setFilter(this,'sin_costo')">Sin costo</button>
+        <button class="tab" onclick="setFilter(this,'critico')">Stock crítico</button>
+        <button class="tab" onclick="setFilter(this,'lento')">Stock lento</button>
+        <button class="tab" onclick="setFilter(this,'stock_cero')">Stock cero</button>
+        <button class="tab" onclick="setFilter(this,'pausado_stock')">Pausado con stock</button>
+        <button class="tab" onclick="setFilter(this,'full')">Full</button>
+      </div>
+
+      <div class="list" id="productos-list"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_URL = '/api/inventario';
+
+let DATA = null;
+let FILTER = 'todos';
+
+const num = v => {
+  const n = Number(v ?? 0);
+  return Number.isFinite(n) ? n : 0;
+};
+
+const fmt = n => '$' + Math.round(num(n)).toLocaleString('es-AR');
+const fmtUnits = n => Math.round(num(n)).toLocaleString('es-AR');
+
+const esc = v => String(v ?? '').replace(/[&<>"]/g, c => ({
+  '&':'&amp;',
+  '<':'&lt;',
+  '>':'&gt;',
+  '"':'&quot;'
+}[c]));
+
+const norm = v => String(v ?? '')
+  .trim()
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/\s+/g, ' ');
+
+function showMsg(text, type = 'info') {
+  const cls = type === 'bad' ? 'bad-alert' : type === 'warn' ? 'alert' : 'info-alert';
+  document.getElementById('msg').innerHTML = `<div class="alert ${cls}">${esc(text)}</div>`;
+  setTimeout(() => {
+    document.getElementById('msg').innerHTML = '';
+  }, 5000);
+}
+
+async function loadData() {
+  const account = document.getElementById('account').value;
+  const dias = document.getElementById('dias').value;
+
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('content').style.display = 'none';
+
+  try {
+    const r = await fetch(`${API_URL}?account=${encodeURIComponent(account)}&dias=${encodeURIComponent(dias)}&cb=${Date.now()}`, {
+      cache: 'no-store',
+    });
+
+    const data = await r.json().catch(() => ({}));
+
+    if (!r.ok || data.ok === false) {
+      throw new Error(data.detail || data.error || `Error HTTP ${r.status}`);
+    }
+
+    DATA = data;
+    renderAll();
+  } catch (error) {
+    document.getElementById('loading').innerHTML = `Error cargando inventario: ${esc(error.message)}`;
+  }
+}
+
+function renderAll() {
+  renderResumen();
+  renderCuentas();
+  renderAlertas();
+  renderProductos();
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('content').style.display = 'block';
+}
+
+function renderResumen() {
+  const r = DATA.resumen || {};
+
+  document.getElementById('hero-costo').textContent = fmt(r.valor_stock_costo || 0);
+  document.getElementById('hero-note').textContent = `${fmtUnits(r.unidades_publicadas || 0)} unidades publicadas · ${r.productos || 0} productos / variantes`;
+
+  const metrics = [
+    ['Unidades publicadas', fmtUnits(r.unidades_publicadas || 0), 'stock publicado ML', 'blue-text'],
+    ['Valor a costo', fmt(r.valor_stock_costo || 0), 'capital inmovilizado', 'amber-text'],
+    ['Valor venta actual', fmt(r.valor_stock_venta_actual || 0), 'precio actual ML', 'green-text'],
+    ['Valor venta promedio', fmt(r.valor_stock_venta_promedio || 0), 'según ventas período', 'green-text'],
+    ['Ganancia potencial', fmt(r.ganancia_potencial_promedio || r.ganancia_potencial_actual || 0), 'estimada', 'purple-text'],
+    ['Sin costo', r.productos_sin_costo || 0, 'cargar costo urgente', (r.productos_sin_costo || 0) ? 'red-text' : 'green-text'],
+    ['Stock crítico', r.productos_stock_critico || 0, 'posible reposición', (r.productos_stock_critico || 0) ? 'red-text' : 'green-text'],
+    ['Stock lento', r.productos_stock_lento || 0, 'combo/liquidación', (r.productos_stock_lento || 0) ? 'amber-text' : 'green-text'],
+    ['Full', r.productos_full || 0, 'publicaciones detectadas', 'blue-text'],
+  ];
+
+  document.getElementById('metrics').innerHTML = metrics.map(([l,v,s,cls]) => `
+    <div class="metric">
+      <div class="l">${l}</div>
+      <div class="v ${cls}">${v}</div>
+      <div class="s">${s}</div>
+    </div>
+  `).join('');
+
+  const errores = DATA.errores || [];
+
+  document.getElementById('warning-box').innerHTML = `
+    <div class="alert info-alert">
+      <b>Importante:</b> este módulo mide stock publicado en Mercado Libre, no stock físico real total.
+      Sirve como primer mapa para después crear depósitos internos, movimientos y combos.
+    </div>
+    ${errores.length ? `
+      <div class="alert bad-alert">
+        <b>Errores de cuenta:</b><br>
+        ${errores.map(e => `${esc(e.cuenta)}: ${esc(e.error)}`).join('<br>')}
+      </div>
+    ` : ''}
+  `;
+}
+
+function renderCuentas() {
+  const rows = DATA.por_cuenta || [];
+
+  if (!rows.length) {
+    document.getElementById('cuentas-list').innerHTML = '<div class="empty">Sin datos por cuenta.</div>';
+    return;
+  }
+
+  document.getElementById('cuentas-list').innerHTML = rows.map(c => `
+    <div class="item-card">
+      <div class="item-head">
+        <div>
+          <div class="item-title">${esc(c.cuenta)}</div>
+          <div class="item-sub">${c.productos} productos / variantes · ${fmtUnits(c.unidades)} unidades</div>
+        </div>
+        <span class="badge info">${esc(c.cuenta_key)}</span>
+      </div>
+
+      <div class="item-grid">
+        <div class="kv"><span>Valor costo</span><b>${fmt(c.valor_costo)}</b></div>
+        <div class="kv"><span>Valor venta</span><b>${fmt(c.valor_venta_promedio || c.valor_venta_actual)}</b></div>
+        <div class="kv"><span>Ganancia potencial</span><b>${fmt(c.ganancia_potencial)}</b></div>
+        <div class="kv"><span>Sin costo</span><b>${c.sin_costo}</b></div>
+        <div class="kv"><span>Crítico</span><b>${c.stock_critico}</b></div>
+        <div class="kv"><span>Lento</span><b>${c.stock_lento}</b></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderAlertas() {
+  const a = DATA.alertas || {};
+  const rows = [
+    ['Sin costo', a.sin_costo?.length || 0, 'No se puede valorizar bien ni calcular margen.', 'bad'],
+    ['Sin SKU', a.sin_sku?.length || 0, 'Complica el futuro multidepósito.', 'warn'],
+    ['Stock crítico', a.stock_critico?.length || 0, 'Alta rotación y poco stock.', 'bad'],
+    ['Stock lento', a.stock_lento?.length || 0, 'Capital quieto. Evaluar combo, promo o baja.', 'warn'],
+    ['Activos sin stock', a.activos_sin_stock?.length || 0, 'Publicaciones activas que no venden por falta de stock.', 'bad'],
+    ['Pausados con stock', a.pausados_con_stock?.length || 0, 'Stock publicado pero pausado.', 'warn'],
+  ];
+
+  document.getElementById('alertas-list').innerHTML = rows.map(([title,count,desc,type]) => `
+    <div class="item-card ${count ? (type === 'bad' ? 'bad-card' : 'warn-card') : 'ok-card'}">
+      <div class="item-head">
+        <div>
+          <div class="item-title">${title}</div>
+          <div class="item-sub">${desc}</div>
+        </div>
+        <span class="badge ${count ? (type === 'bad' ? 'bad' : 'warn') : 'ok'}">${count}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function setFilter(btn, filter) {
+  FILTER = filter;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+  btn.classList.add('on');
+  renderProductos();
+}
+
+function itemMatchesFilter(p) {
+  if (FILTER === 'sin_costo') return !p.tiene_costo;
+  if (FILTER === 'critico') return p.alertas?.includes('Stock crítico');
+  if (FILTER === 'lento') return p.alertas?.includes('Stock lento');
+  if (FILTER === 'stock_cero') return p.stock_publicado <= 0;
+  if (FILTER === 'pausado_stock') return p.status === 'paused' && p.stock_publicado > 0;
+  if (FILTER === 'full') return p.es_full;
+  return true;
+}
+
+function itemMatchesSearch(p) {
+  const q = norm(document.getElementById('search').value);
+  if (!q) return true;
+
+  return norm(`${p.producto} ${p.sku} ${p.sku_maestro} ${p.item_id} ${p.cuenta}`).includes(q);
+}
+
+function getCardClass(p) {
+  if (!p.tiene_costo || p.alertas?.includes('Stock crítico') || (p.status === 'active' && p.stock_publicado <= 0)) return 'bad-card';
+  if (p.alertas?.includes('Stock lento') || (p.status === 'paused' && p.stock_publicado > 0)) return 'warn-card';
+  return '';
+}
+
+function renderProductos() {
+  if (!DATA) return;
+
+  const vista = document.getElementById('vista').value;
+  const rows = vista === 'sku'
+    ? getSkuRows()
+    : getProductoRows();
+
+  document.getElementById('count-badge').textContent = `${rows.length} item${rows.length === 1 ? '' : 's'}`;
+
+  if (!rows.length) {
+    document.getElementById('productos-list').innerHTML = '<div class="empty">No hay productos para mostrar.</div>';
+    return;
+  }
+
+  document.getElementById('productos-list').innerHTML = rows.join('');
+}
+
+function getProductoRows() {
+  const productos = (DATA.productos || [])
+    .filter(itemMatchesFilter)
+    .filter(itemMatchesSearch);
+
+  return productos.map(p => {
+    const precioProm = p.precio_promedio_vendido || p.precio_actual;
+    const ventaProm = p.valor_stock_venta_promedio || p.valor_stock_venta_actual;
+    const ganancia = p.ganancia_potencial_promedio || p.ganancia_potencial_actual;
+
+    return `
+      <div class="item-card ${getCardClass(p)}">
+        <div class="product-head">
+          ${p.thumbnail ? `<img class="thumb" src="${esc(p.thumbnail)}" alt="">` : '<div class="thumb"></div>'}
+          <div>
+            <div class="item-head" style="margin-bottom:4px">
+              <div>
+                <div class="item-title">${esc(p.producto)}</div>
+                <div class="item-sub">
+                  ${esc(p.cuenta)} · SKU: ${esc(p.sku || 'Sin SKU')} · Item: ${esc(p.item_id)}
+                  ${p.variation_id ? ` · Var: ${esc(p.variation_id)}` : ''}
+                </div>
+              </div>
+              <div>
+                <span class="badge ${p.status === 'active' ? 'ok' : 'warn'}">${esc(p.status)}</span>
+                ${p.es_full ? '<span class="badge info">Full</span>' : '<span class="badge neutral">No Full</span>'}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          ${(p.alertas || []).map(a => `<span class="badge ${a === 'Sin costo cargado' || a === 'Stock crítico' || a === 'Activo sin stock' ? 'bad' : a === 'Full' ? 'info' : 'warn'}">${esc(a)}</span>`).join('')}
+          <span class="badge bp">${esc(p.recomendacion)}</span>
+        </div>
+
+        <div class="item-grid">
+          <div class="kv"><span>Stock publicado</span><b>${fmtUnits(p.stock_publicado)}</b></div>
+          <div class="kv"><span>Costo unitario</span><b>${p.tiene_costo ? fmt(p.costo_unitario) : 'Sin costo'}</b></div>
+          <div class="kv"><span>Precio actual</span><b>${fmt(p.precio_actual)}</b></div>
+          <div class="kv"><span>Precio prom. vendido</span><b>${fmt(precioProm)}</b></div>
+          <div class="kv"><span>Stock a costo</span><b>${fmt(p.valor_stock_costo)}</b></div>
+          <div class="kv"><span>Stock a venta</span><b>${fmt(ventaProm)}</b></div>
+          <div class="kv"><span>Ganancia potencial</span><b>${fmt(ganancia)}</b></div>
+          <div class="kv"><span>Ventas período</span><b>${fmtUnits(p.ventas_30d_unidades || 0)} u.</b></div>
+          <div class="kv"><span>Días cobertura</span><b>${p.dias_cobertura ?? '—'}</b></div>
+          <div class="kv"><span>Logística</span><b>${esc(p.logistic_type || '—')}</b></div>
+        </div>
+
+        <div class="item-actions">
+          ${p.permalink ? `<a class="btn secondary" href="${esc(p.permalink)}" target="_blank" rel="noreferrer">Abrir publicación</a>` : ''}
+        </div>
+      </div>
+    `;
+  });
+}
+
+function getSkuRows() {
+  const q = norm(document.getElementById('search').value);
+
+  const rows = (DATA.por_sku_maestro || [])
+    .filter(row => {
+      if (!q) return true;
+      return norm(`${row.sku_maestro} ${row.producto_referencia} ${row.cuentas.join(' ')}`).includes(q);
+    })
+    .filter(row => {
+      if (FILTER === 'sin_costo') return row.alertas?.includes('Sin costo cargado');
+      if (FILTER === 'critico') return row.alertas?.includes('Stock crítico');
+      if (FILTER === 'lento') return row.alertas?.includes('Stock lento');
+      if (FILTER === 'stock_cero') return row.unidades_publicadas <= 0;
+      if (FILTER === 'pausado_stock') return row.publicaciones?.some(p => p.status === 'paused' && p.stock_publicado > 0);
+      if (FILTER === 'full') return row.stock_full > 0;
+      return true;
+    });
+
+  return rows.map(row => `
+    <div class="item-card ${row.alertas?.includes('Sin costo cargado') || row.alertas?.includes('Stock crítico') ? 'bad-card' : row.alertas?.includes('Stock lento') ? 'warn-card' : ''}">
+      <div class="item-head">
+        <div>
+          <div class="item-title">${esc(row.sku_maestro)}</div>
+          <div class="item-sub">${esc(row.producto_referencia)} · ${row.cuentas.map(esc).join(' / ')}</div>
+        </div>
+        <span class="badge info">${row.productos} publicación${row.productos === 1 ? '' : 'es'}</span>
+      </div>
+
+      <div>
+        ${(row.alertas || []).map(a => `<span class="badge ${a === 'Sin costo cargado' || a === 'Stock crítico' ? 'bad' : a === 'Full' ? 'info' : 'warn'}">${esc(a)}</span>`).join('')}
+      </div>
+
+      <div class="item-grid">
+        <div class="kv"><span>Unidades publicadas</span><b>${fmtUnits(row.unidades_publicadas)}</b></div>
+        <div class="kv"><span>Stock Full</span><b>${fmtUnits(row.stock_full)}</b></div>
+        <div class="kv"><span>Stock no Full</span><b>${fmtUnits(row.stock_no_full)}</b></div>
+        <div class="kv"><span>Valor costo</span><b>${fmt(row.valor_costo)}</b></div>
+        <div class="kv"><span>Valor venta</span><b>${fmt(row.valor_venta_promedio || row.valor_venta_actual)}</b></div>
+        <div class="kv"><span>Ganancia potencial</span><b>${fmt(row.ganancia_potencial)}</b></div>
+      </div>
+
+      <div class="item-sub">
+        <b>Publicaciones:</b>
+        ${row.publicaciones.map(p => `${esc(p.cuenta)} ${p.es_full ? '(Full)' : ''}: ${fmtUnits(p.stock_publicado)} u.`).join(' · ')}
+      </div>
+    </div>
+  `);
+}
+
+loadData();
+</script>
+</body>
+</html>
