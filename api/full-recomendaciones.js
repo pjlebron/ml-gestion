@@ -14,6 +14,7 @@ const DEFAULT_MIN_UNIDADES = 2;
 const ITEMS_BATCH_SIZE = 20;
 const MAX_OPERATIONS_DAYS = 60;
 const OPERATIONS_LIMIT = 100;
+const ML_DIRECT_RECOMMENDATION_LIMIT = 35;
 
 function num(value) {
   const parsed = Number(value ?? 0);
@@ -111,6 +112,7 @@ async function fetchMlJsonSafe(url, token) {
     return {
       __error: true,
       message: error.message,
+      url,
     };
   }
 }
@@ -224,6 +226,12 @@ function crearProductoBase({ key, cuentaKey, cuenta, producto, itemId, variation
     estado_full_ml: 'sin_datos_ml',
     ml_recomienda: 'sin_dato_directo',
     ml_motivo: 'Todavía no estamos leyendo un endpoint directo de recomendaciones Full; usamos señales logísticas de Mercado Libre y datos propios.',
+
+    ml_recomendacion_directa: false,
+    ml_recomendacion_directa_fuente: null,
+    ml_recomendacion_directa_error: null,
+    ml_recomendacion_directa_raw: null,
+    ml_recomendacion_directa_endpoints: [],
 
     inventory_id: null,
     fulfillment_stock: null,
@@ -451,6 +459,154 @@ async function fetchFulfillmentOperations({ token, sellerId, inventoryId, hasta 
   };
 }
 
+function compactJson(value, max = 700) {
+  try {
+    const text = JSON.stringify(value);
+    if (!text) return null;
+    return text.length > max ? `${text.slice(0, max)}...` : text;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeDirectRecommendationPayload(data, sourceUrl) {
+  if (!data || data.__error) {
+    return {
+      available: false,
+      fuente: sourceUrl,
+      error: data?.message || 'Respuesta inválida',
+      raw_resumen: null,
+    };
+  }
+
+  const payload = data.body || data;
+  const hasPayload = payload && typeof payload === 'object' && Object.keys(payload).length > 0;
+
+  if (!hasPayload) {
+    return {
+      available: false,
+      fuente: sourceUrl,
+      error: 'Respuesta vacía',
+      raw_resumen: null,
+    };
+  }
+
+  const recommendation =
+    payload.recommendation ||
+    payload.recommendation_type ||
+    payload.action ||
+    payload.suggested_action ||
+    payload.status ||
+    payload.result ||
+    payload.type ||
+    payload.title ||
+    null;
+
+  const reason =
+    payload.reason ||
+    payload.message ||
+    payload.description ||
+    payload.detail ||
+    payload.explanation ||
+    payload.name ||
+    null;
+
+  const rawResumen = compactJson(payload);
+
+  if (!recommendation && !reason) {
+    return {
+      available: false,
+      fuente: sourceUrl,
+      error: 'ML respondió, pero sin campos de recomendación reconocibles',
+      raw_resumen: rawResumen,
+    };
+  }
+
+  return {
+    available: true,
+    recomendacion: String(recommendation || 'dato_directo_ml'),
+    motivo: reason
+      ? String(reason)
+      : 'Mercado Libre devolvió un dato directo de recomendación, pero sin explicación textual.',
+    fuente: sourceUrl,
+    raw_resumen: rawResumen,
+    error: null,
+  };
+}
+
+async function fetchMlDirectFullRecommendation({ token, sellerId, itemId, inventoryId }) {
+  const urls = [];
+
+  if (itemId) {
+    urls.push(`${ML_API}/items/${encodeURIComponent(itemId)}/recommendations`);
+  }
+
+  if (sellerId && itemId) {
+    urls.push(`${ML_API}/users/${encodeURIComponent(sellerId)}/items/${encodeURIComponent(itemId)}/recommendations`);
+  }
+
+  if (inventoryId) {
+    urls.push(`${ML_API}/inventories/${encodeURIComponent(inventoryId)}/recommendations`);
+  }
+
+  const errors = [];
+
+  for (const url of urls) {
+    const data = await fetchMlJsonSafe(url, token);
+
+    if (data.__error) {
+      errors.push({
+        url,
+        error: data.message,
+      });
+      continue;
+    }
+
+    const normalized = normalizeDirectRecommendationPayload(data, url);
+
+    if (normalized.available) {
+      return {
+        ...normalized,
+        endpoints_consultados: urls,
+      };
+    }
+
+    errors.push({
+      url,
+      error: normalized.error,
+      raw_resumen: normalized.raw_resumen,
+    });
+  }
+
+  return {
+    available: false,
+    recomendacion: 'sin_dato_directo',
+    motivo: 'Mercado Libre no devolvió una recomendación directa usable por API para este producto.',
+    fuente: null,
+    raw_resumen: null,
+    error: errors.length
+      ? errors.map(e => `${e.url}: ${e.error}`).slice(0, 3).join(' | ')
+      : 'No había endpoints directos para consultar',
+    endpoints_consultados: urls,
+  };
+}
+
+function aplicarRecomendacionDirectaMl(producto, directData) {
+  producto.ml_recomendacion_directa = Boolean(directData?.available);
+  producto.ml_recomendacion_directa_fuente = directData?.fuente || null;
+  producto.ml_recomendacion_directa_error = directData?.error || null;
+  producto.ml_recomendacion_directa_raw = directData?.raw_resumen || null;
+  producto.ml_recomendacion_directa_endpoints = directData?.endpoints_consultados || [];
+
+  if (directData?.available) {
+    producto.ml_recomienda = directData.recomendacion || 'dato_directo_ml';
+    producto.ml_motivo = `Recomendación directa Mercado Libre: ${directData.recomendacion || 'dato directo'}. ${directData.motivo || ''}`.trim();
+    return;
+  }
+
+  producto.ml_motivo = `${producto.ml_motivo} Recomendación directa ML: no disponible por API para este producto.`;
+}
+
 async function mergeMlItems({ req, res, productos, requestedAccounts, hasta }) {
   const byAccount = {};
 
@@ -479,6 +635,8 @@ async function mergeMlItems({ req, res, productos, requestedAccounts, hasta }) {
       mlDataByAccount[accountKey] = {};
     }
   }
+
+  let directRecommendationRequests = 0;
 
   for (const producto of productos) {
     const token = tokenByAccount[producto.cuenta_key];
@@ -548,6 +706,23 @@ async function mergeMlItems({ req, res, productos, requestedAccounts, hasta }) {
       producto.estado_full_ml = 'sin_logistica';
       producto.ml_recomienda = 'sin_dato_directo';
       producto.ml_motivo = 'No se pudo leer logistic_type ni inventory_id de la publicación.';
+    }
+
+    if (token && directRecommendationRequests < ML_DIRECT_RECOMMENDATION_LIMIT) {
+      directRecommendationRequests += 1;
+
+      const directData = await fetchMlDirectFullRecommendation({
+        token,
+        sellerId: token.user_id,
+        itemId: producto.item_id,
+        inventoryId,
+      });
+
+      aplicarRecomendacionDirectaMl(producto, directData);
+    } else if (directRecommendationRequests >= ML_DIRECT_RECOMMENDATION_LIMIT) {
+      producto.ml_recomendacion_directa = false;
+      producto.ml_recomendacion_directa_error = `No se consultó recomendación directa ML porque se alcanzó el límite interno de ${ML_DIRECT_RECOMMENDATION_LIMIT} productos por request.`;
+      producto.ml_motivo = `${producto.ml_motivo} Recomendación directa ML: no consultada por límite interno.`;
     }
   }
 }
@@ -624,8 +799,6 @@ function clasificarProductoFull(producto, opciones) {
     return 'falta_datos';
   }
 
-  // Regla clave: si la publicación no está activa, no debe aparecer como acción directa.
-  // Puede ser una oportunidad, pero primero hay que reactivar/resolver revisión.
   if (!estaPublicacionActiva(producto)) {
     producto.recomendacion_sistema = 'Revisar publicación';
     producto.prioridad = round(producto.ganancia_pre_full + producto.unidades_vendidas * 300 + producto.margen_pre_full * 50, 2);
@@ -761,6 +934,12 @@ function limpiarProducto(producto) {
     ml_motivo: producto.ml_motivo,
     estado_full_ml: producto.estado_full_ml,
 
+    ml_recomendacion_directa: producto.ml_recomendacion_directa,
+    ml_recomendacion_directa_fuente: producto.ml_recomendacion_directa_fuente,
+    ml_recomendacion_directa_error: producto.ml_recomendacion_directa_error,
+    ml_recomendacion_directa_raw: producto.ml_recomendacion_directa_raw,
+    ml_recomendacion_directa_endpoints: producto.ml_recomendacion_directa_endpoints,
+
     recomendacion_sistema: producto.recomendacion_sistema,
     unidades_sugeridas_full: producto.unidades_sugeridas_full,
     dias_cobertura: producto.dias_cobertura,
@@ -861,6 +1040,10 @@ export default async function handler(req, res) {
       testearFull.reduce((sum, p) => sum + num(p.ganancia_pre_full), 0) +
       reponerFull.reduce((sum, p) => sum + num(p.ganancia_pre_full), 0);
 
+    const productosConMlDirecto = productos.filter(p => p.ml_recomendacion_directa).length;
+    const productosSinMlDirecto = productos.filter(p => !p.ml_recomendacion_directa).length;
+    const productosConErrorMlDirecto = productos.filter(p => p.ml_recomendacion_directa_error).length;
+
     res.status(200).json({
       ok: true,
       tipo: 'asistente_full',
@@ -873,8 +1056,9 @@ export default async function handler(req, res) {
         min_unidades: minUnidades,
         max_unidades: maxUnidades,
         operaciones_full_max_dias: MAX_OPERATIONS_DAYS,
+        ml_direct_recommendation_limit: ML_DIRECT_RECOMMENDATION_LIMIT,
       },
-      nota: 'Este módulo usa inventory_id desde /items, consulta stock real en /inventories/{inventory_id}/stock/fulfillment y operaciones recientes en /stock/fulfillment/operations/search. Si la publicación no está activa, se separa como Revisar publicación y no como acción directa.',
+      nota: 'Este módulo usa inventory_id desde /items, consulta stock real en /inventories/{inventory_id}/stock/fulfillment, operaciones recientes en /stock/fulfillment/operations/search e intenta leer recomendación directa de Mercado Libre por API. Si ML no devuelve recomendación directa usable, lo informa sin inventar datos.',
       resumen_ia: resumenTexto({
         enviarAhora,
         testearFull,
@@ -895,6 +1079,9 @@ export default async function handler(req, res) {
         falta_datos: faltaDatos.length,
         unidades_sugeridas_full: unidadesSugeridas,
         ganancia_potencial_base: round(gananciaPotencialBase),
+        ml_recomendaciones_directas_encontradas: productosConMlDirecto,
+        ml_recomendaciones_directas_sin_dato: productosSinMlDirecto,
+        ml_recomendaciones_directas_con_error: productosConErrorMlDirecto,
       },
       enviar_ahora: enviarAhora.slice(0, 50),
       testear_full: testearFull.slice(0, 50),
@@ -907,6 +1094,7 @@ export default async function handler(req, res) {
         ventas_returned: ventasData.returned,
         costos_cargados: Object.keys(costosData.costos || {}).length,
         cuentas_consultadas: requestedAccounts,
+        ml_direct_recommendation_limit: ML_DIRECT_RECOMMENDATION_LIMIT,
       },
     });
   } catch (error) {
