@@ -8,6 +8,9 @@ import {
 const ML_API = 'https://api.mercadolibre.com';
 const MP_API = 'https://api.mercadopago.com';
 
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
 const DEFAULT_DATE_FROM = '2026-01-01';
 const PAGE_LIMIT = 50;
 const MAX_PAGES_PER_ACCOUNT = 20;
@@ -80,6 +83,72 @@ async function fetchInternalJson(url, req) {
   }
 
   return data;
+}
+
+async function supabaseVentasRequest(path) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('Faltan variables SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY en Vercel');
+  }
+
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    method: 'GET',
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  const data = await response.json().catch(() => []);
+
+  if (!response.ok) {
+    throw new Error(data?.message || data?.error || data?.hint || `Error Supabase HTTP ${response.status}`);
+  }
+
+  return data;
+}
+
+async function fetchEnviosManual() {
+  const rows = await supabaseVentasRequest('ml_envios_manual?select=*');
+  return Array.isArray(rows) ? rows : [];
+}
+
+function buildEnviosManualMap(rows = []) {
+  const map = {};
+
+  rows.forEach(row => {
+    const account = String(row.cuenta_key || '').trim();
+    const envioId = String(row.envio_id || '').trim();
+    const orderId = String(row.order_id || '').trim();
+
+    if (!account) return;
+
+    if (envioId) {
+      map[`${account}:shipment:${envioId}`] = row;
+    }
+
+    if (orderId) {
+      map[`${account}:order:${orderId}`] = row;
+    }
+  });
+
+  return map;
+}
+
+function getEnvioManual(row, enviosManualMap = {}) {
+  const account = row.cuenta_key || row.account || '';
+  const envioId = row.envio_id ? String(row.envio_id) : '';
+  const orderId = row.order_id ? String(row.order_id) : '';
+
+  if (account && envioId && enviosManualMap[`${account}:shipment:${envioId}`]) {
+    return enviosManualMap[`${account}:shipment:${envioId}`];
+  }
+
+  if (account && orderId && enviosManualMap[`${account}:order:${orderId}`]) {
+    return enviosManualMap[`${account}:order:${orderId}`];
+  }
+
+  return null;
 }
 
 function getSkuFromOrderItem(orderItem = {}) {
@@ -313,6 +382,27 @@ function detectarFlex(shipData) {
     tags.includes('self_service');
 }
 
+function detectarTurbo(shipData) {
+  if (!shipData) return false;
+
+  const tags = Array.isArray(shipData.tags) ? shipData.tags : [];
+
+  const fields = [
+    shipData.logistic_type,
+    shipData.mode,
+    shipData.sub_mode,
+    shipData.shipping_option?.name,
+    shipData.shipping_option?.id,
+    shipData.shipping_option?.shipping_method_type,
+    shipData.shipping_option?.display,
+    shipData.shipping_method?.type,
+    shipData.shipping_method?.name,
+    ...tags,
+  ];
+
+  return fields.some(value => String(value ?? '').toLowerCase().includes('turbo'));
+}
+
 function sumDiscounts(discounts) {
   if (!Array.isArray(discounts)) return 0;
   return discounts.reduce((sum, discount) => sum + absNumber(discount.promoted_amount || discount.amount || discount.value), 0);
@@ -341,8 +431,8 @@ function getShipmentSellerCostRaw(shipData, shipmentCosts) {
   return positives.length ? Math.min(...positives) : 0;
 }
 
-function getShipmentSellerCost({ shipData, shipmentCosts, isFlex }) {
-  if (isFlex) return 0;
+function getShipmentSellerCost({ shipData, shipmentCosts, isFlex, isTurbo }) {
+  if (isFlex || isTurbo) return 0;
   return getShipmentSellerCostRaw(shipData, shipmentCosts);
 }
 
@@ -492,8 +582,11 @@ async function normalizarOrden(order, token, account) {
   const mp = resumirMercadoPago(mpPayments);
   const precioTotal = toNumber(order.total_amount) || orderItems.precio_items || payments.transaction_amount;
   const isFlex = detectarFlex(shipData);
+  const isTurbo = detectarTurbo(shipData);
   const rawSellerCost = getShipmentSellerCostRaw(shipData, shipmentCosts);
-  const sellerCost = billing.cargo_envio_ml || getShipmentSellerCost({ shipData, shipmentCosts, isFlex }) || 0;
+  const sellerCost = isTurbo
+    ? 0
+    : billing.cargo_envio_ml || getShipmentSellerCost({ shipData, shipmentCosts, isFlex, isTurbo }) || 0;
   const shipmentBonus = getShipmentBonus({ shipData, shipmentCosts, sellerCost, rawSellerCost, isFlex });
 
   const orderData = {
@@ -509,6 +602,7 @@ async function normalizarOrden(order, token, account) {
     mp,
     precioTotal,
     isFlex,
+    isTurbo,
     rawSellerCost,
     cargoVenta: billing.cargo_venta || payments.marketplace_fee || orderItems.sale_fee || mp.mp_charges_fee_total || mp.mp_fee_details_total || 0,
     cargoEnvioMl: sellerCost,
@@ -549,6 +643,7 @@ function construirFilasPorItem(data) {
     retenciones,
     otrosGastos,
     isFlex,
+    isTurbo,
     rawSellerCost,
   } = data;
 
@@ -633,6 +728,8 @@ function construirFilasPorItem(data) {
       mp_shipping_amount: prorratear(mp.mp_shipping_amount, item, precioTotal, cantidadItemsDistintos),
 
       es_flex: isFlex,
+      es_turbo: isTurbo,
+      tipo_envio_detectado: isTurbo ? 'turbo' : isFlex ? 'flex' : 'otro',
       envio_id: shipping.id || null,
       localidad,
       partido,
@@ -797,11 +894,55 @@ function getMensajeriaFlex(row, localidadesMap) {
   return 0;
 }
 
-function aplicarRentabilidadSupabase(rows, costosMap, localidadesMap) {
+function aplicarRentabilidadSupabase(rows, costosMap, localidadesMap, enviosManualMap = {}) {
   return rows.map(row => {
     const costoInfo = getCostoProducto(row, costosMap);
-    const mensajeria = row.es_flex ? getMensajeriaFlex(row, localidadesMap) : 0;
-    const flexSinMensajeria = !!row.es_flex && mensajeria === 0;
+    const envioManual = getEnvioManual(row, enviosManualMap);
+    const mensajeriaAutomatica = row.es_flex ? getMensajeriaFlex(row, localidadesMap) : 0;
+
+    let envioRealizadoPor = row.es_turbo ? 'yo' : row.es_flex ? 'mensajeria' : 'mercado_libre';
+    let descuentaEnvio = !!row.es_flex;
+    let costoEnvioManual = null;
+    let envioManualAplicado = false;
+    let mensajeria = 0;
+
+    if (row.es_turbo) {
+      envioRealizadoPor = 'yo';
+      descuentaEnvio = false;
+      costoEnvioManual = 0;
+      mensajeria = 0;
+    } else if (row.es_flex) {
+      if (envioManual) {
+        envioManualAplicado = true;
+        envioRealizadoPor = envioManual.envio_realizado_por || 'mensajeria';
+        descuentaEnvio = envioManual.descuenta_envio !== false;
+
+        const tieneCostoManual = envioManual.costo_envio_manual !== null &&
+          envioManual.costo_envio_manual !== undefined &&
+          envioManual.costo_envio_manual !== '';
+
+        costoEnvioManual = tieneCostoManual ? toNumber(envioManual.costo_envio_manual) : null;
+
+        if (envioRealizadoPor === 'yo' || descuentaEnvio === false) {
+          mensajeria = 0;
+        } else if (tieneCostoManual) {
+          mensajeria = costoEnvioManual;
+        } else {
+          mensajeria = mensajeriaAutomatica;
+        }
+      } else {
+        envioRealizadoPor = 'mensajeria';
+        descuentaEnvio = true;
+        mensajeria = mensajeriaAutomatica;
+      }
+    } else {
+      envioRealizadoPor = 'mercado_libre';
+      descuentaEnvio = false;
+      mensajeria = 0;
+    }
+
+    const flexSinMensajeria = !!row.es_flex && mensajeria === 0 && envioRealizadoPor !== 'yo';
+    const envioCosto = row.es_turbo ? 0 : round2(toNumber(row.cargo_envio_ml) + mensajeria);
     const ganancia = round2(toNumber(row.cobro_neto) - costoInfo.costo - mensajeria);
     const margen = toNumber(row.precio_total) > 0 ? round2(ganancia / toNumber(row.precio_total) * 100) : 0;
 
@@ -814,14 +955,20 @@ function aplicarRentabilidadSupabase(rows, costosMap, localidadesMap) {
       sin_costo: !costoInfo.tieneCosto,
       bonificado: costoInfo.tieneCosto && costoInfo.costo === 0,
 
+      envio_realizado_por: envioRealizadoPor,
+      descuenta_envio: descuentaEnvio,
+      envio_manual_aplicado: envioManualAplicado,
+      envio_manual_id: envioManual?.id || null,
+      costo_envio_manual: costoEnvioManual,
+      mensajeria_automatica: mensajeriaAutomatica,
       mensajeria,
       envio_flex_manual: mensajeria,
-      envio_costo: round2(toNumber(row.cargo_envio_ml) + mensajeria),
+      envio_costo: envioCosto,
       flex_sin_mensajeria: flexSinMensajeria,
 
       ganancia,
       margen,
-      rentabilidad_fuente: 'api_ventas_costos_y_mensajeria_supabase',
+      rentabilidad_fuente: 'api_ventas_costos_mensajeria_y_envios_manual_supabase',
     };
   });
 }
@@ -1016,6 +1163,18 @@ export default async function handler(req, res) {
     const costosMap = buildCostosMap(costosData.costos || {});
     const localidadesMap = buildLocalidadesMap(localidadesData || {});
 
+    let enviosManualData = [];
+    let enviosManualError = null;
+
+    try {
+      enviosManualData = await fetchEnviosManual();
+    } catch (error) {
+      enviosManualError = error.message;
+      enviosManualData = [];
+    }
+
+    const enviosManualMap = buildEnviosManualMap(enviosManualData);
+
     const accounts = {};
     const allRowsRaw = [];
 
@@ -1058,7 +1217,7 @@ export default async function handler(req, res) {
     }
 
     const rowsWithSharedPackagesFixed = normalizarPaquetesCompartidos(allRowsRaw);
-    const rowsWithRentabilidad = aplicarRentabilidadSupabase(rowsWithSharedPackagesFixed, costosMap, localidadesMap);
+    const rowsWithRentabilidad = aplicarRentabilidadSupabase(rowsWithSharedPackagesFixed, costosMap, localidadesMap, enviosManualMap);
     const dedupeResult = deduplicarOrdenes(rowsWithRentabilidad);
     const allOrders = dedupeResult.orders;
 
@@ -1095,16 +1254,18 @@ export default async function handler(req, res) {
       duplicados_eliminados: dedupeResult.duplicados,
       truncated: Object.values(accounts).some(a => a.truncated),
       rentabilidad: {
-        fuente: 'api_ventas_costos_y_mensajeria_supabase',
+        fuente: 'api_ventas_costos_mensajeria_y_envios_manual_supabase',
         costos_cargados: Object.keys(costosData.costos || {}).length,
         localidades_cargadas: localidadesMap.rows.length,
+        envios_manual_cargados: enviosManualData.length,
         costos_error: costosData.error || null,
         localidades_error: localidadesData.error || null,
+        envios_manual_error: enviosManualError,
         sin_costo: sinCosto,
         flex_sin_mensajeria: flexSinMensajeria,
         mensajeria_total: mensajeriaTotal,
         ganancia_total: gananciaTotal,
-        regla: 'Venta Flex descuenta mensajería Supabase. Venta no Flex no descuenta mensajería manual.',
+        regla: 'Turbo no descuenta envío. Flex descuenta mensajería salvo que esté marcado como realizado por la agencia.',
       },
       orders: allOrders,
     });
